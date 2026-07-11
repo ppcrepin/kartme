@@ -2,10 +2,25 @@
 
 Liste vivante des jeux de mots et clins d'œil karting/course à réutiliser dans l'app (badges, notifications, écrans vides, messages de partage...). On complète au fil de l'eau.
 
-## Exemples de départ
+## Jeux de mots
 
 - **Il est 2h moins le kart** — écran d'attente / heure de course qui approche
 - *(à compléter...)*
+
+## Badges proposés (v0.3, catalogue MVP ~10 badges)
+
+| Badge | Déclencheur |
+|---|---|
+| Premier tour de piste | 1ère course jouée |
+| Champagne ! | 1ère victoire |
+| Habitué des stands | 10 courses jouées |
+| Pilier du paddock | 50 courses jouées |
+| Centurion du bitume | 100 courses jouées |
+| Triple champagne | 3 podiums d'affilée |
+| Remontada | Plus grosse remontée d'Elo en une course |
+| Chute libre | Plus grosse chute d'Elo en une course |
+| Premier coéquipier | Premier ami ajouté |
+| Effet boule de neige | Une de tes invitations a fait rejoindre un nouveau joueur à l'appli |
 
 ## Où les utiliser
 
