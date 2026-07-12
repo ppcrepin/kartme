@@ -1,4 +1,6 @@
-# KartMe — Cahier des charges v0.3 (brouillon de travail)
+# KartMe — Cahier des charges v0.4 (brouillon de travail)
+
+> Voir aussi la **carte de navigation complète** : `docs/navigation-map.html` (chaque bouton → sa destination, zéro cul-de-sac).
 
 > **Statut : non définitif.** Ce document évolue en continu à mesure des échanges. Il reste au minimum deux chantiers avant une v1 figée : la validation des écrans détaillés dans le nouveau langage graphique retenu, et les nombreuses questions listées en fin de document (§16). Ne rien coder à partir de ce document tant qu'il n'a pas été explicitement validé point par point.
 
@@ -78,11 +80,20 @@ Une simulation (60-300 joueurs, plusieurs milliers de courses, tailles de groupe
 
 *Cette amplitude s'élargira donc naturellement avec l'usage réel de l'app — exactement comme aux échecs, où le range 100-2900 n'existe que parce qu'il y a des millions de parties cumulées.*
 
-### 5.4 Paliers de rang (visuel, en complément du chiffre)
+### 5.4 Paliers de rang / grades (validés)
 
-- **6 paliers**, bornes espacées d'environ 250 points chacune (Elo brut, référence à 1000 = départ = milieu de tableau).
-- **Style de nom retenu** : univers karting/course pur, progression narrative façon "de débutant à légende" (ex. Rookie → Confirmé → Pro → Légende du bitume).
-- **⚠️ Ouvert** : les bornes exactes des 6 paliers doivent être recalculées maintenant que la cible finale est 100-2500 (les bornes discutées initialement étaient calées sur l'ancienne amplitude ~1600) — voir §16.2. Idem pour les 6 noms définitifs, à proposer et choisir.
+Le chiffre Elo reste la référence précise, doublé d'un **grade visuel**. **6 grades**, bornes régulières sur l'échelle 100-2500 (Elo de départ 1000 = bas du 3e grade), noms "univers karting" validés :
+
+| Grade | Bornes Elo |
+|---|---|
+| Kartambolage | 100 – 699 |
+| Roue Libre | 700 – 999 |
+| Rookie | 1000 – 1299 |
+| Missile des Stands | 1300 – 1699 |
+| Fusée du Paddock | 1700 – 2099 |
+| Légende du Bitume | 2100 + |
+
+Le grade est affiché sur le profil (à côté de l'Elo) et une **échelle des grades** dédiée (écran R2) montre les 6 paliers et où l'on se situe.
 
 ## 6. Couche sociale
 
@@ -151,13 +162,25 @@ Après une première piste jugée trop générique ("sport premium épuré", éc
 - Titres à emphase bicolore (un mot clé en rouge au sein d'une phrase blanche).
 - Labels "eyebrow" en petites capitales espacées.
 
-### 9.2 ⚠️ Ce qui reste à valider avant les écrans détaillés
+### 9.2 Composants revalidés dans le style Editorial Grand Prix
 
-Les décisions suivantes avaient été prises pour l'ancienne direction ("sport premium épuré") et **n'ont pas encore été revalidées** dans le nouveau langage "Editorial Grand Prix" — elles sont probablement à revoir :
-- Style de navigation (barre d'onglets icônes + labels ? Toujours pertinent avec une identité aussi éditoriale, ou faut-il quelque chose de plus sur-mesure ?)
-- Langage de formes (coins 8-12px choisis pour l'ancienne direction — l'esprit "affiche/filet géométrique" de la nouvelle direction pourrait appeler des coins plus nets, voire carrés)
-- Densité par écran (le principe "aéré, peu d'éléments" reste probablement valide mais à reconfirmer)
-- Les **13 écrans mockés en v1** (connexion, accueil courses, création de course, invitation, saisie du classement, résultat/partage, classements, amis, profil d'un ami, mon profil, badges, réglages, état vide) ont été produits dans l'ancien style et **doivent être refaits** dans "Editorial Grand Prix" avant validation finale — voir §16.1.
+- **Navigation** : barre d'onglets à 4 entrées (Courses · Classements · Amis · Profil), **icônes en traits fins + labels en petites capitales**, présente et alignée identiquement en bas de **tous** les écrans in-app (seule exception : connexion, non authentifié ; et les cartes de partage, qui sont des exports).
+- **Langage de formes** : **angles nets** (esprit ticket/affiche imprimée), quasi aucun arrondi ; seuls les boutons d'action principaux gardent la forme pilule.
+- **Avatars** : pas de photo — **initiales dans un cercle en traits fins** (cohérent avec le parti "line art", et pas de stockage/modération de photo à gérer).
+- **Densité** : aéré, peu d'éléments par écran, gros chiffres (confirmé).
+- **Accès réglages** : icône **engrenage bien visible** en haut de l'onglet Profil (pas de 5e onglet).
+
+### 9.3 Loi de conception : aucun bouton sans destination
+
+**Règle absolue posée par le client** : aucun bouton ne doit être un cul-de-sac. Chaque élément interactif mène soit à un écran défini, soit à une action terminale explicite (interrupteur, feuille de partage du téléphone, toast de confirmation). Tout écran non-racine possède un retour. Cette règle est matérialisée par la **carte de navigation complète** (voir §9.4) et vérifiée par audit adversarial systématique.
+
+### 9.4 Architecture de navigation
+
+Une carte de navigation exhaustive a été produite : elle liste chaque écran et, pour chaque bouton, sa destination. Elle couvre l'authentification (S0, S0b-d), les 4 onglets et leurs écrans (Courses C1-C11, Classements L1, Amis F1-F2 + profil P, Profil R1-R5), et toute la branche Réglages jusque-là inexistante (S1 → Compte S2/S2a-e, Notifications S3, Aide & support S4/S4a-d), plus les écrans transverses (feuille "Ajouter des pilotes" C5, sélecteurs de circuit/date C3/C3b/C4, motif de signalement M1). Cette carte a passé **3 tours d'audit adversarial** (culs-de-sac, écrans orphelins, retours manquants) jusqu'à un état propre.
+
+### 9.5 ⚠️ Reste à produire (écrans détaillés)
+
+Les écrans détaillés doivent être **rendus visuellement dans le style Editorial Grand Prix**, branche par branche, à partir de la carte de navigation, puis validés un par un. Points spécifiques déjà actés à intégrer : feuille "Ajouter des pilotes" unifiée (amis / nom libre / lien-QR) ; grille de course affichant rang + Elo par pilote ; bouton Partager sur les résultats ; carte de partage avec date + coureurs hors podium ; écran d'échelle des grades. Les cas limites (duel 2 pilotes en format "VS", grande course 12+ avec listes défilantes) ont été maquettés et audités.
 
 ## 10. Modèle économique et maîtrise des coûts
 
@@ -183,8 +206,11 @@ Gratuit, sans publicité ni paiement au démarrage — monétisation étudiée p
 | Étape | Statut |
 |---|---|
 | Style général (palette, typographie, motifs) | ✅ Validé — Editorial Grand Prix, Rosso Corsa |
-| Composants de navigation (barre d'onglets, formes, densité) | ⏳ À revalider dans le nouveau style |
-| Écrans détaillés (13 écrans identifiés) | ⏳ À refaire dans le nouveau style, puis à valider un par un |
+| Composants de navigation (barre d'onglets, formes, avatars, densité) | ✅ Validé dans le nouveau style |
+| Grades Elo (6 paliers, noms + bornes) | ✅ Validé |
+| Carte de navigation complète (zéro cul-de-sac) | ✅ Validée (3 tours d'audit) |
+| Écrans détaillés rendus dans le style Rosso Corsa | ⏳ En cours, branche par branche, à valider un par un |
+| Badges (revue un par un) | ⏳ À faire ensemble |
 | Charte complète (logo définitif, icône d'app, typographie sous licence) | ⏳ Non commencé |
 
 ---
@@ -196,21 +222,18 @@ Stack technique · formule et paramètres Elo (K=32, diviseur 400, plancher 100,
 ## 16. Questions ouvertes (exhaustif)
 
 ### 16.1 Design & écrans détaillés
-- Refaire les 13 écrans identifiés (connexion, état vide, accueil courses, création de course, invitation QR, saisie du classement, résultat/partage, classements, liste d'amis, profil d'un ami, mon profil, catalogue de badges, réglages) dans le style Editorial Grand Prix.
-- Style de navigation (barre d'onglets) à revalider dans ce nouveau langage graphique.
-- Langage de formes (coins arrondis vs angles nets) à revalider — l'ancien choix (8-12px) datait de la direction abandonnée.
+- **Rendre visuellement** tous les écrans de la carte de navigation dans le style Editorial Grand Prix, branche par branche, puis les valider un par un.
 - Choix d'une police serif définitive sous licence commerciale (Georgia est un placeholder de mockup).
 - Conception du logo/wordmark définitif et de l'icône d'application (App Store / Play Store).
 - Style d'illustration complet au-delà de l'icône "montre" (ex. illustrations pour les badges, les états vides, les écrans d'erreur).
-- Palette complémentaire pour les états sémantiques (succès/erreur/avertissement) cohérente avec le rouge Ferrari déjà très utilisé comme accent principal — comment distinguer visuellement "victoire" de "erreur" si les deux tentent d'utiliser une teinte proche du rouge ?
-- Avatars utilisateurs : photo de profil réelle autorisée (upload) ou uniquement avatars génériques/initiales ?
+- Palette complémentaire pour les états sémantiques (succès/avertissement) — le rouge Ferrari est déjà utilisé comme accent ET comme "perte d'Elo" (choix assumé, doublé du signe ▼/−) ; reste à définir une teinte pour l'erreur/avertissement qui ne se confonde pas.
+- *(Résolus : style de navigation, langage de formes, avatars en initiales — cf. §9.2.)*
 
 ### 16.2 Elo & gamification
-- Bornes exactes des 6 paliers de rang, recalculées sur la cible 100-2500 (à proposer).
-- Noms définitifs des 6 paliers (à proposer, style "univers karting pur").
-- Validation finale du catalogue de badges (~10 proposés dans `PUNS.md`) — noms, déclencheurs, et cohérence avec les nouveaux paliers.
-- Faut-il des badges liés à des seuils d'Elo (ex. "atteindre tel palier") en plus des badges liés au nombre de courses ?
+- **Revue des badges un par un** (nom + condition + icône) — décidé, à faire ensemble ; le catalogue de ~10 dans `PUNS.md` sert de base.
+- Faut-il des badges liés aux **grades/seuils d'Elo** (ex. "atteindre Missile des Stands") en plus des badges liés au nombre de courses ?
 - Enrichissement continu de `PUNS.md` (jeux de mots) — à faire au fil de l'eau avec le client.
+- *(Résolus : bornes des 6 grades et noms — cf. §5.4.)*
 
 ### 16.3 Modération & légal
 - Process concret derrière "boîte de réception simple" : qui la consulte, sous quel délai, quelles catégories de signalement (comportement, fausse invitation, classement contesté...) ?

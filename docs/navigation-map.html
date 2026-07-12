@@ -1,0 +1,415 @@
+<!doctype html>
+<title>KartMe — Carte de navigation complète</title>
+
+<style>
+  :root {
+    --page-bg: #0a0706; --bg: #0d0908; --bg-e: #171110; --bg-e2: #1f1613; --line: #2c1f1c;
+    --ink: #f2ede9; --ink-dim: #a08d87; --ink-dim2: #9c8880;
+    --accent: #e10600; --pos: #6fae82; --new: #d99a4e;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--page-bg); color: var(--ink); font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; line-height: 1.5; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 3rem 1.4rem 6rem; }
+  .banner { display: flex; gap: 4px; margin-bottom: 2rem; }
+  .banner span { flex: 1; height: 4px; background: var(--accent); }
+  .banner span:nth-child(odd) { background: transparent; }
+  .eyebrow { font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  h1 { font-family: Georgia, "Times New Roman", serif; font-size: 2rem; font-weight: 800; margin: 0.4rem 0 0.5rem; }
+  .sub { color: var(--ink-dim); max-width: 680px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1.6rem 0 2.4rem; font-size: 0.78rem; color: var(--ink-dim); }
+  .legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  .tabgroup { margin-top: 2.6rem; }
+  .tabgroup > h2 { font-family: Georgia, serif; font-size: 1.35rem; font-weight: 800; border-bottom: 1px solid var(--line); padding-bottom: 0.5rem; margin-bottom: 1.2rem; }
+  .tabgroup > h2 small { font-family: -apple-system, sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-dim2); font-weight: 600; margin-left: 0.5rem; }
+
+  .screen { background: var(--bg-e); border: 1px solid var(--line); border-radius: 4px; padding: 0.9rem 1.1rem; margin-bottom: 0.9rem; }
+  .screen.new { border-left: 3px solid var(--new); }
+  .screen.fix { border-left: 3px solid var(--accent); }
+  .screen h3 { font-size: 0.95rem; margin: 0 0 0.1rem; display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+  .screen h3 .code { font-family: ui-monospace, monospace; font-size: 0.72rem; color: var(--accent); background: rgba(225,6,0,0.1); padding: 0.05rem 0.4rem; border-radius: 3px; }
+  .screen h3 .flag { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 3px; }
+  .screen h3 .flag.new { color: var(--new); border: 1px solid var(--new); }
+  .screen h3 .flag.fix { color: var(--accent); border: 1px solid var(--accent); }
+  .screen .desc { font-size: 0.78rem; color: var(--ink-dim2); margin: 0.15rem 0 0.6rem; }
+  .btns { list-style: none; margin: 0; padding: 0; }
+  .btns li { display: flex; align-items: baseline; gap: 0.5rem; padding: 0.28rem 0; border-top: 1px solid var(--line); font-size: 0.82rem; }
+  .btns li:first-child { border-top: none; }
+  .b { font-weight: 600; color: var(--ink); flex-shrink: 0; }
+  .arrow { color: var(--ink-dim2); }
+  .dest { color: var(--ink-dim); }
+  .dest .to { color: var(--pos); font-weight: 600; }
+  .dest .term { color: var(--ink-dim2); font-style: italic; }
+  .dest .tonew { color: var(--new); font-weight: 600; }
+
+  .callout { background: var(--bg-e2); border: 1px solid var(--line); border-radius: 4px; padding: 1rem 1.2rem; margin: 1.4rem 0; font-size: 0.86rem; }
+  .callout b { color: var(--accent); }
+  table.grades { width: 100%; border-collapse: collapse; margin-top: 0.6rem; font-size: 0.82rem; }
+  table.grades td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--line); }
+  table.grades td:first-child { font-weight: 700; color: var(--accent); font-family: Georgia, serif; }
+  table.grades td:last-child { font-variant-numeric: tabular-nums; color: var(--ink-dim); text-align: right; }
+  .foot { color: var(--ink-dim2); font-size: 0.85rem; margin-top: 3rem; text-align: center; }
+</style>
+
+<div class="wrap">
+  <div class="banner"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="eyebrow">KartMe · Architecture de navigation</div>
+  <h1>Carte complète — aucun bouton sans destination</h1>
+  <p class="sub">Chaque écran de l'app, et pour chaque bouton/élément interactif, l'écran vers lequel il mène. Règle appliquée : zéro cul-de-sac. Un élément mène soit à un autre écran, soit à une action terminale explicite (interrupteur, feuille de partage du téléphone, toast de confirmation).</p>
+
+  <div class="legend">
+    <span><span class="dot" style="background:var(--pos)"></span> mène à un écran existant</span>
+    <span><span class="dot" style="background:var(--new)"></span> mène à un écran encore à concevoir</span>
+    <span><span class="dot" style="background:var(--ink-dim2)"></span> action terminale (pas un nouvel écran)</span>
+    <span><span class="dot" style="background:var(--accent)"></span> écran à corriger suite à tes retours</span>
+  </div>
+
+  <div class="callout">
+    <b>Écrans nouveaux ou à corriger repérés grâce à tes remarques :</b> feuille « Ajouter des pilotes » unifiée (C5), sélecteur de circuit (C3), détail course avec rang+Elo (C6, à corriger), bouton Partager sur les résultats + carte enrichie date/coureurs (C9/C11, à corriger), échelle des grades (R2), et toute la branche Réglages (S1→S4d), jusqu'ici inexistante.
+  </div>
+
+  <!-- AUTH -->
+  <div class="tabgroup">
+    <h2>Authentification <small>hors barre d'onglets</small></h2>
+
+    <div class="screen">
+      <h3><span class="code">S0</span> Connexion / Inscription</h3>
+      <div class="desc">Seul écran sans barre d'onglets (non authentifié).</div>
+      <ul class="btns">
+        <li><span class="b">Continuer avec Google</span><span class="arrow">→</span><span class="dest">OAuth ; nouveau compte → <span class="tonew">S0d Choix du pseudo</span>, sinon <span class="to">C1</span></span></li>
+        <li><span class="b">Continuer avec Apple</span><span class="arrow">→</span><span class="dest">OAuth ; nouveau compte → <span class="tonew">S0d Choix du pseudo</span>, sinon <span class="to">C1</span></span></li>
+        <li><span class="b">Se connecter (email + mdp)</span><span class="arrow">→</span><span class="dest"><span class="to">C1 Accueil</span>, ou erreur affichée sous les champs</span></li>
+        <li><span class="b">Créer un compte</span><span class="arrow">→</span><span class="dest"><span class="tonew">S0b Inscription email</span></span></li>
+        <li><span class="b">Mot de passe oublié ?</span><span class="arrow">→</span><span class="dest"><span class="tonew">S0c Réinitialisation</span></span></li>
+      </ul>
+    </div>
+    <div class="screen new">
+      <h3><span class="code">S0d</span> Choix du pseudo (1er lancement OAuth) <span class="flag new">à concevoir</span></h3>
+      <div class="desc">Un compte Google/Apple n'a pas de pseudo — on le demande une fois (l'Elo démarre à 1000, grade Rookie). Étape d'onboarding : pas de « retour » classique (déjà authentifié), mais une échappatoire explicite.</div>
+      <ul class="btns">
+        <li><span class="b">Valider mon pseudo</span><span class="arrow">→</span><span class="dest"><span class="to">C1 Accueil</span></span></li>
+        <li><span class="b">Annuler l'inscription (se déconnecter)</span><span class="arrow">→</span><span class="dest"><span class="term">déconnexion</span> → <span class="to">S0</span></span></li>
+      </ul>
+    </div>
+    <div class="screen new">
+      <h3><span class="code">S0b</span> Inscription email <span class="flag new">à concevoir</span></h3>
+      <div class="desc">Pseudo + email + mot de passe.</div>
+      <ul class="btns">
+        <li><span class="b">Créer mon compte</span><span class="arrow">→</span><span class="dest"><span class="to">C1 Accueil</span> (compte créé)</span></li>
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest"><span class="to">S0</span></span></li>
+      </ul>
+    </div>
+    <div class="screen new">
+      <h3><span class="code">S0c</span> Réinitialisation du mot de passe <span class="flag new">à concevoir</span></h3>
+      <ul class="btns">
+        <li><span class="b">Envoyer le lien</span><span class="arrow">→</span><span class="dest"><span class="term">email envoyé + écran de confirmation</span></span></li>
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest"><span class="to">S0</span></span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- COURSES -->
+  <div class="tabgroup">
+    <h2>Onglet 1 — Courses</h2>
+
+    <div class="screen">
+      <h3><span class="code">C1</span> Accueil Courses</h3>
+      <div class="desc">À venir / Passées. État vide si aucune course.</div>
+      <ul class="btns">
+        <li><span class="b">+ Organiser une session</span><span class="arrow">→</span><span class="dest"><span class="to">C2 Créer une course</span></span></li>
+        <li><span class="b">Course « À venir » (je suis admin)</span><span class="arrow">→</span><span class="dest"><span class="to">C6 Détail course (admin)</span></span></li>
+        <li><span class="b">Course « À venir » (je suis participant)</span><span class="arrow">→</span><span class="dest"><span class="to">C6′ Détail course (participant)</span></span></li>
+        <li><span class="b">Course « Passée »</span><span class="arrow">→</span><span class="dest"><span class="to">C9 Résultats détaillés</span></span></li>
+      </ul>
+    </div>
+
+    <div class="screen fix">
+      <h3><span class="code">C2</span> Créer une course <span class="flag fix">à corriger</span></h3>
+      <div class="desc">Seul l'organisateur pré-rempli. Circuit + date + pilotes.</div>
+      <ul class="btns">
+        <li><span class="b">Circuit — rechercher</span><span class="arrow">→</span><span class="dest"><span class="tonew">C3 Sélecteur de circuit</span></span></li>
+        <li><span class="b">Date / heure</span><span class="arrow">→</span><span class="dest"><span class="tonew">C4 Sélecteur date/heure</span></span></li>
+        <li><span class="b">+ Ajouter des pilotes</span><span class="arrow">→</span><span class="dest"><span class="tonew">C5 Feuille « Ajouter des pilotes »</span></span></li>
+        <li><span class="b">Créer la course</span><span class="arrow">→</span><span class="dest"><span class="to">C6 Détail course (prête)</span></span></li>
+        <li><span class="b">Annuler / Retour</span><span class="arrow">→</span><span class="dest"><span class="to">C1</span> (abandonne la création)</span></li>
+      </ul>
+    </div>
+
+    <div class="screen new">
+      <h3><span class="code">C3</span> Sélecteur de circuit <span class="flag new">à concevoir</span></h3>
+      <div class="desc">Recherche + liste préremplie des circuits FR.</div>
+      <ul class="btns">
+        <li><span class="b">Taper un circuit de la liste</span><span class="arrow">→</span><span class="dest">retour <span class="to">C2</span> (circuit rempli)</span></li>
+        <li><span class="b">Mon circuit n'est pas là</span><span class="arrow">→</span><span class="dest"><span class="tonew">C3b Ajouter un circuit (nom libre)</span></span></li>
+        <li><span class="b">Annuler / Fermer</span><span class="arrow">→</span><span class="dest">retour <span class="to">C2</span> sans changer le circuit</span></li>
+      </ul>
+    </div>
+    <div class="screen new">
+      <h3><span class="code">C3b</span> Ajouter un circuit <span class="flag new">à concevoir</span></h3>
+      <ul class="btns">
+        <li><span class="b">Enregistrer</span><span class="arrow">→</span><span class="dest">retour <span class="to">C2</span> (circuit ajouté à la liste globale)</span></li>
+        <li><span class="b">Annuler</span><span class="arrow">→</span><span class="dest">retour <span class="to">C3</span></span></li>
+      </ul>
+    </div>
+    <div class="screen new">
+      <h3><span class="code">C4</span> Sélecteur date / heure <span class="flag new">à concevoir</span></h3>
+      <ul class="btns">
+        <li><span class="b">Confirmer</span><span class="arrow">→</span><span class="dest">retour <span class="to">C2</span></span></li>
+        <li><span class="b">Annuler / Fermer</span><span class="arrow">→</span><span class="dest">retour <span class="to">C2</span> sans changer la date</span></li>
+      </ul>
+    </div>
+
+    <div class="screen new">
+      <h3><span class="code">C5</span> Feuille « Ajouter des pilotes » <span class="flag new">à concevoir</span></h3>
+      <div class="desc">Répond à ton point : une seule feuille, 3 façons de faire (fluide). Remplace la séparation floue écran 4 / écran 5.</div>
+      <ul class="btns">
+        <li><span class="b">Onglet « Mes amis » — cocher</span><span class="arrow">→</span><span class="dest"><span class="term">ajoute/retire instantanément</span></span></li>
+        <li><span class="b">Onglet « Nom libre » — saisir</span><span class="arrow">→</span><span class="dest"><span class="term">crée un profil fantôme attendu</span></span></li>
+        <li><span class="b">Onglet « Lien / QR »</span><span class="arrow">→</span><span class="dest"><span class="term">affiche QR + lien → feuille de partage du téléphone</span></span></li>
+        <li><span class="b">Valider la sélection</span><span class="arrow">→</span><span class="dest">retour <span class="to">C2</span> (pilotes ajoutés)</span></li>
+        <li><span class="b">Fermer (croix)</span><span class="arrow">→</span><span class="dest">retour <span class="to">C2</span> sans committer les changements</span></li>
+      </ul>
+    </div>
+
+    <div class="screen fix">
+      <h3><span class="code">C6</span> Détail course — prête (admin) <span class="flag fix">à corriger</span></h3>
+      <div class="desc">Grille avec, à côté de chaque nom, <b style="color:var(--accent)">le rang + l'Elo</b> (ton point).</div>
+      <ul class="btns">
+        <li><span class="b">Saisir le classement</span><span class="arrow">→</span><span class="dest"><span class="to">C7 Saisie (admin)</span></span></li>
+        <li><span class="b">Inviter d'autres pilotes</span><span class="arrow">→</span><span class="dest"><span class="tonew">C5 Ajouter des pilotes</span></span></li>
+        <li><span class="b">Modifier la course</span><span class="arrow">→</span><span class="dest"><span class="to">C2</span> (mode édition)</span></li>
+        <li><span class="b">Annuler la course (si pas de résultat)</span><span class="arrow">→</span><span class="dest"><span class="term">confirmation</span> → <span class="to">C1</span></span></li>
+        <li><span class="b">Taper un pilote de la grille</span><span class="arrow">→</span><span class="dest"><span class="to">P Profil du pilote</span></span></li>
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest"><span class="to">C1</span></span></li>
+      </ul>
+    </div>
+    <div class="screen fix">
+      <h3><span class="code">C6′</span> Détail course — prête (participant) <span class="flag fix">à corriger</span></h3>
+      <div class="desc">Même grille, sans « Saisir ». <b style="color:var(--accent)">Corrigé (B1/B4) :</b> RSVP + sortie + bascule en attente.</div>
+      <ul class="btns">
+        <li><span class="b">Taper un pilote</span><span class="arrow">→</span><span class="dest"><span class="to">P Profil</span></span></li>
+        <li><span class="b">Je serai là / Je me retire</span><span class="arrow">→</span><span class="dest"><span class="term">RSVP mis à jour ; « Je me retire » → <span class="to">C1</span></span></span></li>
+        <li><span class="b">(quand l'admin lance la saisie)</span><span class="arrow">→</span><span class="dest">bascule automatique vers <span class="to">C8 En attente</span></span></li>
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest"><span class="to">C1</span></span></li>
+      </ul>
+    </div>
+
+    <div class="screen">
+      <h3><span class="code">C7</span> Saisie du classement (admin) <span class="flag fix">à corriger</span></h3>
+      <ul class="btns">
+        <li><span class="b">Glisser-déposer</span><span class="arrow">→</span><span class="dest"><span class="term">réordonne la liste</span></span></li>
+        <li><span class="b">Valider le classement</span><span class="arrow">→</span><span class="dest"><span class="term">confirmation + recalcul Elo</span> → <span class="to">C9 Résultats</span></span></li>
+        <li><span class="b">Annuler / Retour</span><span class="arrow">→</span><span class="dest"><span class="to">C6</span> (abandonne sans recalcul)</span></li>
+      </ul>
+    </div>
+    <div class="screen">
+      <h3><span class="code">C8</span> En attente du classement (participant)</h3>
+      <div class="desc">Drapeau à damier flottant, vu pendant que l'admin saisit.</div>
+      <ul class="btns">
+        <li><span class="b">Relancer l'organisateur</span><span class="arrow">→</span><span class="dest"><span class="term">notification envoyée + toast</span></span></li>
+        <li><span class="b">(automatique à la validation)</span><span class="arrow">→</span><span class="dest"><span class="to">C9 Résultats</span></span></li>
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest"><span class="to">C1</span> (on garde sa place, notif à la validation)</span></li>
+      </ul>
+    </div>
+
+    <div class="screen fix">
+      <h3><span class="code">C9</span> Résultats détaillés <span class="flag fix">à corriger</span></h3>
+      <div class="desc">Tous les coureurs. <b style="color:var(--accent)">Ajout du bouton Partager</b> (ton point : la porte d'entrée manquait).</div>
+      <ul class="btns">
+        <li><span class="b">Taper un pilote</span><span class="arrow">→</span><span class="dest"><span class="to">C10 Détail Elo par paire</span></span></li>
+        <li><span class="b">Partager</span><span class="arrow">→</span><span class="dest"><span class="to">C11 Carte de partage</span></span></li>
+        <li><span class="b">Modifier le classement (admin, &lt; 24h)</span><span class="arrow">→</span><span class="dest"><span class="to">C7 Saisie</span> (recalcul auto)</span></li>
+        <li><span class="b">Signaler un classement erroné (participant)</span><span class="arrow">→</span><span class="dest"><span class="tonew">M1 Motif de signalement</span></span></li>
+        <li><span class="b">Retour (contextuel)</span><span class="arrow">→</span><span class="dest">selon l'origine : <span class="to">P</span> ou <span class="to">R5</span> ; sinon (C7 validé, C8, deep-link notif) → <span class="to">C1</span></span></li>
+      </ul>
+    </div>
+    <div class="screen">
+      <h3><span class="code">C10</span> Détail Elo par paire</h3>
+      <ul class="btns">
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest"><span class="to">C9</span></span></li>
+      </ul>
+    </div>
+    <div class="screen fix">
+      <h3><span class="code">C11</span> Carte de partage <span class="flag fix">à corriger</span></h3>
+      <div class="desc"><b style="color:var(--accent)">Ajout : date + coureurs hors podium</b> (ton point).</div>
+      <ul class="btns">
+        <li><span class="b">Partager</span><span class="arrow">→</span><span class="dest"><span class="term">feuille de partage du téléphone (Instagram, WhatsApp…)</span></span></li>
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest"><span class="to">C9</span></span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- CLASSEMENTS -->
+  <div class="tabgroup">
+    <h2>Onglet 2 — Classements</h2>
+    <div class="screen">
+      <h3><span class="code">L1</span> Classements</h3>
+      <ul class="btns">
+        <li><span class="b">Bascule Amis / Global</span><span class="arrow">→</span><span class="dest"><span class="term">filtre la liste</span></span></li>
+        <li><span class="b">Taper un joueur</span><span class="arrow">→</span><span class="dest"><span class="to">P Profil</span></span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- AMIS -->
+  <div class="tabgroup">
+    <h2>Onglet 3 — Amis</h2>
+    <div class="screen">
+      <h3><span class="code">F1</span> Amis</h3>
+      <ul class="btns">
+        <li><span class="b">Rechercher un pilote</span><span class="arrow">→</span><span class="dest"><span class="tonew">F2 Recherche de pilotes</span></span></li>
+        <li><span class="b">Onglet « Reçues » — Accepter</span><span class="arrow">→</span><span class="dest"><span class="term">devient ami + toast</span></span></li>
+        <li><span class="b">Onglet « Reçues » — Refuser</span><span class="arrow">→</span><span class="dest"><span class="term">demande retirée</span></span></li>
+        <li><span class="b">Onglet « Envoyées » — Annuler</span><span class="arrow">→</span><span class="dest"><span class="term">demande envoyée retirée</span> (répond au manque signalé)</span></li>
+        <li><span class="b">Taper un ami</span><span class="arrow">→</span><span class="dest"><span class="to">P Profil</span></span></li>
+      </ul>
+    </div>
+    <div class="screen new">
+      <h3><span class="code">F2</span> Recherche de pilotes <span class="flag new">à concevoir</span></h3>
+      <ul class="btns">
+        <li><span class="b">Taper un résultat</span><span class="arrow">→</span><span class="dest"><span class="to">P Profil</span></span></li>
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest"><span class="to">F1</span></span></li>
+      </ul>
+    </div>
+    <div class="screen fix">
+      <h3><span class="code">P</span> Profil d'un pilote <span class="flag fix">à corriger</span></h3>
+      <div class="desc"><b style="color:var(--accent)">Règle self/autrui (B8) :</b> si le pilote tapé = moi (depuis un classement/une grille), redirection directe vers <span class="to">R1 Mon profil</span>. Sinon on affiche P ci-dessous.</div>
+      <ul class="btns">
+        <li><span class="b">Ami : taper une course de l'historique</span><span class="arrow">→</span><span class="dest"><span class="to">C9 Résultats</span></span></li>
+        <li><span class="b">Ami : taper un badge</span><span class="arrow">→</span><span class="dest"><span class="tonew">R4 (retour → P)</span></span></li>
+        <li><span class="b">Ami : taper son grade</span><span class="arrow">→</span><span class="dest"><span class="tonew">R2 (retour → P)</span></span></li>
+        <li><span class="b">Non-ami : Ajouter en ami</span><span class="arrow">→</span><span class="dest"><span class="term">demande envoyée + toast</span></span></li>
+        <li><span class="b">Ami : Retirer des amis</span><span class="arrow">→</span><span class="dest"><span class="term">confirmation + retrait</span> (manque signalé)</span></li>
+        <li><span class="b">Menu « … » : Bloquer</span><span class="arrow">→</span><span class="dest"><span class="term">confirmation + blocage</span></span></li>
+        <li><span class="b">Menu « … » : Signaler</span><span class="arrow">→</span><span class="dest"><span class="tonew">M1 Motif de signalement</span></span></li>
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest">écran d'origine (<span class="to">F1</span>, <span class="to">F2</span>, <span class="to">L1</span>, <span class="to">C6</span>, <span class="to">C6′</span>)</span></li>
+      </ul>
+    </div>
+    <div class="screen new">
+      <h3><span class="code">M1</span> Motif de signalement <span class="flag new">à concevoir</span></h3>
+      <div class="desc">Écran mutualisé (depuis C9 « classement erroné » ou P « signaler un joueur »). Liste de motifs + envoi en modération.</div>
+      <ul class="btns">
+        <li><span class="b">Envoyer le signalement</span><span class="arrow">→</span><span class="dest"><span class="term">envoi + toast</span> → retour à l'écran d'origine (<span class="to">C9</span> ou <span class="to">P</span>)</span></li>
+        <li><span class="b">Annuler</span><span class="arrow">→</span><span class="dest">retour à l'écran d'origine (<span class="to">C9</span> ou <span class="to">P</span>)</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- PROFIL -->
+  <div class="tabgroup">
+    <h2>Onglet 4 — Profil</h2>
+    <div class="screen fix">
+      <h3><span class="code">R1</span> Mon profil <span class="flag fix">à corriger</span></h3>
+      <div class="desc"><b style="color:var(--accent)">Engrenage Réglages bien visible</b> en haut à droite (ton point). Elo + grade affichés.</div>
+      <ul class="btns">
+        <li><span class="b">Engrenage (haut droite)</span><span class="arrow">→</span><span class="dest"><span class="tonew">S1 Réglages</span></span></li>
+        <li><span class="b">Taper mon grade</span><span class="arrow">→</span><span class="dest"><span class="tonew">R2 Échelle des grades</span></span></li>
+        <li><span class="b">Voir tous mes badges</span><span class="arrow">→</span><span class="dest"><span class="to">R3 Catalogue de badges</span></span></li>
+        <li><span class="b">Taper une stat (courses / podiums)</span><span class="arrow">→</span><span class="dest"><span class="tonew">R5 Mon historique</span></span></li>
+      </ul>
+    </div>
+    <div class="screen new">
+      <h3><span class="code">R2</span> Échelle des grades <span class="flag new">à concevoir</span></h3>
+      <div class="desc">Les 6 paliers et où je me situe (répond à ton point : les grades n'apparaissaient nulle part).</div>
+      <table class="grades">
+        <tr><td>Kartambolage</td><td>100 – 699</td></tr>
+        <tr><td>Roue Libre</td><td>700 – 999</td></tr>
+        <tr><td>Rookie</td><td>1000 – 1299</td></tr>
+        <tr><td>Missile des Stands</td><td>1300 – 1699</td></tr>
+        <tr><td>Fusée du Paddock</td><td>1700 – 2099</td></tr>
+        <tr><td>Légende du Bitume</td><td>2100 +</td></tr>
+      </table>
+      <ul class="btns" style="margin-top:0.6rem;">
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest"><span class="to">R1</span> (ou P si vu depuis un ami)</span></li>
+      </ul>
+    </div>
+    <div class="screen">
+      <h3><span class="code">R3</span> Catalogue de badges</h3>
+      <ul class="btns">
+        <li><span class="b">Taper un badge</span><span class="arrow">→</span><span class="dest"><span class="tonew">R4 Détail d'un badge</span></span></li>
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest"><span class="to">R1</span></span></li>
+      </ul>
+    </div>
+    <div class="screen new">
+      <h3><span class="code">R4</span> Détail d'un badge <span class="flag new">à concevoir</span></h3>
+      <div class="desc">Nom, condition de déblocage, date d'obtention (ou « à débloquer »).</div>
+      <ul class="btns">
+        <li><span class="b">Retour (contextuel)</span><span class="arrow">→</span><span class="dest"><span class="to">R3</span> si vu depuis mon profil, <span class="to">P</span> si vu depuis un ami</span></li>
+      </ul>
+    </div>
+    <div class="screen new">
+      <h3><span class="code">R5</span> Mon historique de courses <span class="flag new">à concevoir</span></h3>
+      <ul class="btns">
+        <li><span class="b">Taper une course</span><span class="arrow">→</span><span class="dest"><span class="to">C9 Résultats</span></span></li>
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest"><span class="to">R1</span></span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- REGLAGES -->
+  <div class="tabgroup">
+    <h2>Réglages <small>accès via l'engrenage sur R1 — toute cette branche était manquante</small></h2>
+
+    <div class="screen new">
+      <h3><span class="code">S1</span> Réglages <span class="flag new">à concevoir</span></h3>
+      <div class="desc">« Langue » retirée au lancement (une seule langue → pas de bouton inutile).</div>
+      <ul class="btns">
+        <li><span class="b">Compte</span><span class="arrow">→</span><span class="dest"><span class="tonew">S2 Compte</span></span></li>
+        <li><span class="b">Notifications</span><span class="arrow">→</span><span class="dest"><span class="tonew">S3 Notifications</span></span></li>
+        <li><span class="b">Aide &amp; support</span><span class="arrow">→</span><span class="dest"><span class="tonew">S4 Aide &amp; support</span></span></li>
+        <li><span class="b">Se déconnecter</span><span class="arrow">→</span><span class="dest"><span class="term">confirmation</span> → <span class="to">S0</span></span></li>
+        <li><span class="b">Fermer</span><span class="arrow">→</span><span class="dest"><span class="to">R1</span></span></li>
+      </ul>
+    </div>
+    <div class="screen new">
+      <h3><span class="code">S2</span> Compte <span class="flag new">à concevoir</span></h3>
+      <ul class="btns">
+        <li><span class="b">Modifier le pseudo</span><span class="arrow">→</span><span class="dest"><span class="tonew">S2a champ + Enregistrer</span></span></li>
+        <li><span class="b">Modifier l'email</span><span class="arrow">→</span><span class="dest"><span class="tonew">S2b champ + vérification</span></span></li>
+        <li><span class="b">Modifier le mot de passe</span><span class="arrow">→</span><span class="dest"><span class="tonew">S2c ancien + nouveau</span></span></li>
+        <li><span class="b">Confidentialité du profil (public / amis)</span><span class="arrow">→</span><span class="dest"><span class="tonew">S2d choix</span></span></li>
+        <li><span class="b">Supprimer mon compte</span><span class="arrow">→</span><span class="dest"><span class="tonew">S2e confirmation forte (RGPD)</span> → <span class="to">S0</span></span></li>
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest"><span class="to">S1</span></span></li>
+      </ul>
+    </div>
+    <div class="screen new">
+      <h3><span class="code">S2a–S2e</span> Pseudo · Email · Mot de passe · Confidentialité · Suppression <span class="flag new">à concevoir</span></h3>
+      <div class="desc">Écrans de saisie/choix ouverts depuis S2. Chacun a Enregistrer (ou Confirmer) + Annuler.</div>
+      <ul class="btns">
+        <li><span class="b">S2a/b/c Enregistrer</span><span class="arrow">→</span><span class="dest"><span class="term">sauvegarde + toast</span> → retour <span class="to">S2</span></span></li>
+        <li><span class="b">S2d Confidentialité (public / amis)</span><span class="arrow">→</span><span class="dest"><span class="term">choix enregistré</span> → retour <span class="to">S2</span></span></li>
+        <li><span class="b">S2e Supprimer (confirmation forte RGPD)</span><span class="arrow">→</span><span class="dest">suppression → <span class="to">S0</span> ; Annuler → <span class="to">S2</span></span></li>
+        <li><span class="b">Annuler / Retour (tous)</span><span class="arrow">→</span><span class="dest"><span class="to">S2</span></span></li>
+      </ul>
+    </div>
+    <div class="screen new">
+      <h3><span class="code">S3</span> Notifications <span class="flag new">à concevoir</span></h3>
+      <div class="desc">Interrupteurs (les 3 notifications essentielles du MVP). Chaque notif reçue ouvre l'écran concerné (deep-link).</div>
+      <ul class="btns">
+        <li><span class="b">Invitation à une course (on/off)</span><span class="arrow">→</span><span class="dest"><span class="term">interrupteur</span> · notif → <span class="to">C6′</span></span></li>
+        <li><span class="b">Résultat d'une course saisi (on/off)</span><span class="arrow">→</span><span class="dest"><span class="term">interrupteur</span> · notif → <span class="to">C9</span></span></li>
+        <li><span class="b">Demande d'ami (on/off)</span><span class="arrow">→</span><span class="dest"><span class="term">interrupteur</span> · notif → <span class="to">F1</span></span></li>
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest"><span class="to">S1</span></span></li>
+      </ul>
+    </div>
+    <div class="screen new">
+      <h3><span class="code">S4</span> Aide &amp; support <span class="flag new">à concevoir</span></h3>
+      <ul class="btns">
+        <li><span class="b">Questions fréquentes (FAQ)</span><span class="arrow">→</span><span class="dest"><span class="tonew">S4a FAQ</span></span></li>
+        <li><span class="b">Nous contacter</span><span class="arrow">→</span><span class="dest"><span class="tonew">S4b Contact</span></span></li>
+        <li><span class="b">Conditions d'utilisation (CGU)</span><span class="arrow">→</span><span class="dest"><span class="tonew">S4c CGU</span></span></li>
+        <li><span class="b">Politique de confidentialité</span><span class="arrow">→</span><span class="dest"><span class="tonew">S4d Confidentialité</span></span></li>
+        <li><span class="b">Version de l'app</span><span class="arrow">→</span><span class="dest"><span class="term">information (terminal)</span></span></li>
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest"><span class="to">S1</span></span></li>
+      </ul>
+    </div>
+    <div class="screen new">
+      <h3><span class="code">S4a–S4d</span> FAQ · Contact · CGU · Confidentialité <span class="flag new">à concevoir</span></h3>
+      <div class="desc">Écrans de contenu. Chacun a un bouton <b>Retour → S4</b>. Contact : formulaire → envoi + toast de confirmation.</div>
+    </div>
+  </div>
+
+  <p class="foot">Cette carte est le squelette. Prochaine étape proposée : je rends visuellement, branche par branche, les écrans « à concevoir » et « à corriger » (en commençant par ceux que tu veux) — puis l'agent challenge revérifie qu'aucun bouton ne reste orphelin. On attaque aussi la revue des badges un par un.</p>
+</div>
