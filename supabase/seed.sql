@@ -1,0 +1,4 @@
+-- Seed local KartSquad
+-- Les données de départ (grades, karting de démo, comptes de test) seront
+-- ajoutées au lot où le schéma métier est défini (backend). Pour l'instant,
+-- ce fichier est un placeholder qui garantit que `supabase db reset` passe.
