@@ -62,8 +62,16 @@ e2e/             tests Playwright
 docs/            cahier des charges, roadmap, artefacts de design
 ```
 
+## Aperçu web
+
+La cible web est déployée automatiquement sur GitHub Pages à chaque push :
+
+**→ https://ppcrepin.github.io/kartme/**
+
 ## Documentation
 
+- [`docs/architecture-it.html`](docs/architecture-it.html) — l'architecture IT
+  (couches, où tester, outils & comptes) — doc de référence.
 - [`docs/cahier-des-charges.md`](docs/cahier-des-charges.md) — la source de
   vérité produit.
 - [`docs/roadmap.md`](docs/roadmap.md) — la feuille de route par phases.

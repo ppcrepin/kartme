@@ -1,0 +1,187 @@
+<!doctype html>
+<title>KartSquad — Architecture IT</title>
+<style>
+  :root{--page-bg:#0a0706;--bg-e:#171110;--bg-e2:#1f1613;--line:#2c1f1c;--ink:#f2ede9;--ink-dim:#a08d87;--ink-dim2:#9c8880;--accent:#e10600;--gold:#e2c14d;--pos:#6fae82;--blue:#5b9bd5;--purple:#c77dff}
+  *{box-sizing:border-box}
+  body{background:var(--page-bg);color:var(--ink);font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;margin:0;line-height:1.55}
+  .wrap{max-width:860px;margin:0 auto;padding:3rem 1.4rem 6rem}
+  .banner{display:flex;gap:4px;margin-bottom:2rem}
+  .banner span{flex:1;height:4px;background:var(--accent)}
+  .banner span:nth-child(odd){background:transparent}
+  .eyebrow{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-family:Georgia,"Times New Roman",serif;font-size:2rem;font-weight:800;margin:.4rem 0 .5rem}
+  .sub{color:var(--ink-dim);max-width:680px}
+  h2{font-family:Georgia,serif;font-size:1.3rem;font-weight:800;margin:2.8rem 0 .5rem;border-bottom:1px solid var(--line);padding-bottom:.5rem}
+  h2 .n{color:var(--accent);font-size:.8rem;font-family:ui-monospace,monospace;margin-right:.5rem}
+  p{margin:.5rem 0}
+  b{color:var(--ink)}
+  code{background:var(--bg-e2);border:1px solid var(--line);padding:.05rem .35rem;border-radius:3px;color:var(--ink);font-size:.9em;font-family:ui-monospace,monospace}
+
+  /* 3 couches */
+  .layers{display:flex;flex-direction:column;gap:.6rem;margin:1.4rem 0}
+  .layer{background:var(--bg-e);border:1px solid var(--line);border-left:3px solid var(--c);border-radius:5px;padding:.9rem 1.1rem}
+  .layer .top{display:flex;align-items:center;gap:.6rem}
+  .layer .ic{width:30px;height:30px;flex-shrink:0;border:1.4px solid var(--c);border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .layer .ic svg{width:16px;height:16px;stroke:var(--c);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .layer .role{font-weight:800;color:var(--c);font-size:.95rem}
+  .layer .tech{margin-left:auto;font-size:.72rem;color:var(--ink-dim2);font-family:ui-monospace,monospace;text-align:right}
+  .layer .desc{font-size:.83rem;color:var(--ink-dim);margin-top:.45rem}
+  .conn{text-align:center;color:var(--ink-dim2);font-size:1.1rem;line-height:.4}
+
+  /* flow */
+  .flow{background:var(--bg-e);border:1px solid var(--line);border-radius:5px;padding:1.1rem 1.2rem;margin:1.2rem 0;font-family:ui-monospace,monospace;font-size:.8rem;color:var(--ink-dim);overflow-x:auto}
+  .flow .step{display:flex;gap:.7rem;padding:.35rem 0}
+  .flow .a{color:var(--accent);flex-shrink:0}
+  .flow .g{color:var(--gold);flex-shrink:0}
+  .flow b{color:var(--ink)}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.82rem}
+  th,td{text-align:left;padding:.6rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--ink-dim2);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
+  td b{color:var(--ink)}
+  .who-toi{color:var(--gold);font-weight:700}
+  .who-moi{color:var(--blue);font-weight:700}
+  .cost-free{color:var(--pos)}
+  .tbl-wrap{overflow-x:auto}
+
+  /* steps test */
+  .tests{margin:1.2rem 0}
+  .tstep{display:flex;gap:.9rem;padding:.9rem 0;border-top:1px solid var(--line)}
+  .tstep:first-child{border-top:none}
+  .tstep .badge{flex-shrink:0;width:30px;height:30px;border-radius:50%;background:var(--bg-e2);border:1.5px solid var(--accent);color:var(--accent);font-family:Georgia,serif;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:.85rem}
+  .tstep .body{flex:1}
+  .tstep .h{font-weight:800;font-size:.92rem}
+  .tstep .h .when{font-size:.68rem;font-weight:700;color:var(--pos);border:1px solid var(--pos);border-radius:999px;padding:.05rem .5rem;margin-left:.5rem;vertical-align:middle}
+  .tstep .h .later{color:var(--ink-dim2);border-color:var(--line)}
+  .tstep .d{font-size:.82rem;color:var(--ink-dim);margin-top:.25rem}
+
+  .note{background:var(--bg-e2);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:4px;padding:.85rem 1rem;margin:1.1rem 0;font-size:.85rem;color:var(--ink-dim)}
+  .note b{color:var(--gold)}
+  .foot{margin-top:3rem;background:var(--bg-e2);border:1px solid var(--line);border-radius:4px;padding:1rem 1.2rem;font-size:.82rem;color:var(--ink-dim)}
+  .foot b{color:var(--ink)}
+  .legend{font-size:.72rem;color:var(--ink-dim2);margin-top:.4rem}
+  .legend .who-toi,.legend .who-moi{margin-right:1rem}
+</style>
+<div class="wrap">
+  <div class="banner"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="eyebrow">KartSquad · Comment ça marche techniquement</div>
+  <h1>Architecture IT</h1>
+  <p class="sub">Comment l'app est construite, où tu peux la tester à chaque étape, quels outils entrent en jeu et qui doit créer quel compte. Ce document est la référence — on le relit et on le met à jour à chaque nouveau lot.</p>
+
+  <h2><span class="n">1</span>Les trois couches</h2>
+  <p class="sub">Image mentale : un restaurant. La salle, la cuisine, les prestataires.</p>
+  <div class="layers">
+    <div class="layer" style="--c:var(--accent)">
+      <div class="top">
+        <div class="ic"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/></svg></div>
+        <div class="role">Le client — l'app</div>
+        <div class="tech">Expo · React Native</div>
+      </div>
+      <div class="desc"><b>Ce que voient et touchent les utilisateurs</b> : écrans, boutons, animations. Une seule base de code produit <b>iOS + Android + Web</b>. C'est la « salle » du restaurant. Elle ne stocke rien de sensible : elle demande tout au backend.</div>
+    </div>
+    <div class="conn">↓ demande / reçoit ↑</div>
+    <div class="layer" style="--c:var(--blue)">
+      <div class="top">
+        <div class="ic"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></svg></div>
+        <div class="role">Le backend — la mémoire &amp; les règles</div>
+        <div class="tech">Supabase</div>
+      </div>
+      <div class="desc"><b>Le cœur du système</b> : qui est inscrit, quelles courses, quels Elo. Il applique les règles (« seul l'admin saisit le classement ») et vérifie à chaque requête <i>« as-tu le droit&nbsp;? »</i>. C'est la « cuisine + le coffre-fort ». <b>Toute la sécurité anti-triche vit ici.</b></div>
+    </div>
+    <div class="conn">↓ s'appuie sur ↑</div>
+    <div class="layer" style="--c:var(--purple)">
+      <div class="top">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <div class="role">Les services annexes</div>
+        <div class="tech">Expo Push · PostHog · Hébergeur web</div>
+      </div>
+      <div class="desc"><b>Les prestataires</b> : notifications push (« ton Elo a bougé »), statistiques d'usage, hébergement du site web. On les branche au fur et à mesure, seulement quand on en a besoin.</div>
+    </div>
+  </div>
+  <div class="note"><b>Le point clé :</b> le téléphone ne calcule jamais l'Elo lui-même et ne stocke rien de critique. Tout passe par Supabase qui vérifie les droits. C'est ce qui rend la triche difficile — on ne peut pas « bidouiller l'app » pour gonfler son classement.</div>
+
+  <h2><span class="n">2</span>Le trajet d'une action</h2>
+  <p class="sub">Exemple concret : un admin saisit le classement final d'une course.</p>
+  <div class="flow">
+    <div class="step"><span class="a">📱 App</span><span>l'admin saisit l'ordre d'arrivée et valide</span></div>
+    <div class="step"><span class="g">🔒 Supabase</span><span>vérifie : <b>es-tu bien l'admin de cette course&nbsp;?</b> → oui</span></div>
+    <div class="step"><span class="g">💾 Supabase</span><span>enregistre le classement (immuable, horodaté)</span></div>
+    <div class="step"><span class="g">🧮 Supabase</span><span>recalcule l'Elo de <b>tous</b> les participants (côté serveur)</span></div>
+    <div class="step"><span class="g">🔔 Push</span><span>notifie chacun : « ton Elo a bougé, +18&nbsp;»</span></div>
+    <div class="step"><span class="a">📱 App</span><span>tous les téléphones se rafraîchissent en temps réel</span></div>
+  </div>
+  <p class="sub">Le recalcul se fait <b>dans la cuisine</b>, jamais sur le téléphone. C'est la garantie anti-triche.</p>
+
+  <h2><span class="n">3</span>Où tu peux tester l'app</h2>
+  <p class="sub">Quatre façons, de la plus rapide à la plus « vraie ». On les débloque au fil de la roadmap.</p>
+  <div class="tests">
+    <div class="tstep">
+      <div class="badge">1</div>
+      <div class="body">
+        <div class="h">Lien web <span class="when">Disponible maintenant</span></div>
+        <div class="d">Un simple <b>lien</b> à ouvrir dans ton navigateur (ordi ou mobile). Rien à installer. Le plus rapide pour valider l'avancement à chaque lot. <b>C'est le mode recommandé pour la phase actuelle.</b></div>
+      </div>
+    </div>
+    <div class="tstep">
+      <div class="badge">2</div>
+      <div class="body">
+        <div class="h">Expo Go <span class="when later">Bientôt</span></div>
+        <div class="d">Tu installes l'app gratuite <b>« Expo Go »</b> (App Store / Play Store), tu scannes un QR code, et KartSquad tourne dedans sur ton vrai téléphone. Aucun compte développeur requis.</div>
+      </div>
+    </div>
+    <div class="tstep">
+      <div class="badge">3</div>
+      <div class="body">
+        <div class="h">Beta build <span class="when later">Phase beta</span></div>
+        <div class="d">Une <b>vraie app KartSquad</b> installée via <b>TestFlight</b> (iOS) ou un <b>lien Google Play</b> (Android) : icône, notifications, rendu réel. Tu peux inviter des amis testeurs.</div>
+      </div>
+    </div>
+    <div class="tstep">
+      <div class="badge">4</div>
+      <div class="body">
+        <div class="h">Production <span class="when later">Lancement 🚀</span></div>
+        <div class="d">L'app publiée sur l'<b>App Store</b> et le <b>Play Store</b>, + le site web, téléchargeable par tout le monde.</div>
+      </div>
+    </div>
+  </div>
+
+  <h2><span class="n">4</span>Les outils &amp; les comptes</h2>
+  <p class="sub">Qui crée quoi, et combien ça coûte. La plupart des comptes t'appartiennent (ce sont <i>tes</i> propriétés) — mais rien n'est urgent, on les active un par un.</p>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Outil</th><th>Rôle</th><th>Qui crée</th><th>Coût</th></tr></thead>
+    <tbody>
+      <tr><td><b>GitHub</b></td><td>Stocke le code</td><td class="who-toi">Toi ✅</td><td class="cost-free">Gratuit</td></tr>
+      <tr><td><b>Supabase</b></td><td>Backend : base de données, comptes, sécurité</td><td class="who-toi">Toi</td><td>Gratuit jusqu'à ~50 000 actifs/mois, puis ~25 $/mois</td></tr>
+      <tr><td><b>Expo (EAS)</b></td><td>Fabrique les apps iOS/Android, les envoie aux stores</td><td class="who-toi">Toi</td><td class="cost-free">Gratuit au début</td></tr>
+      <tr><td><b>Compte Apple Developer</b></td><td>Publier sur l'App Store</td><td class="who-toi">Toi</td><td>99 $/an</td></tr>
+      <tr><td><b>Compte Google Play</b></td><td>Publier sur le Play Store</td><td class="who-toi">Toi</td><td>25 $ une fois</td></tr>
+      <tr><td><b>Hébergeur web</b> (Vercel/Netlify)</td><td>Héberge le site + les liens de preview</td><td class="who-moi">Moi/Toi</td><td class="cost-free">Gratuit au début</td></tr>
+      <tr><td><b>PostHog</b></td><td>Statistiques d'usage (où ça coince)</td><td class="who-toi">Toi</td><td>Gratuit jusqu'à ~1 M d'événements/mois</td></tr>
+      <tr><td><b>Domaine</b> <code>kartsquad.app</code></td><td>L'adresse du site</td><td class="who-toi">Toi</td><td>~15–20 €/an</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="legend"><span class="who-toi">■ Toi</span> compte à ton nom, ta propriété &nbsp;·&nbsp; <span class="who-moi">■ Moi/Toi</span> je peux démarrer sur un palier gratuit</p>
+  <div class="note"><b>Budget de démarrage :</b> ~0 € tant qu'on développe. Puis ~99 $/an (Apple) + ~20 €/an (domaine) au moment de publier. Le reste reste gratuit très longtemps grâce aux paliers gratuits — cohérent avec l'objectif de coût maîtrisé.</div>
+
+  <h2><span class="n">5</span>Comment mon code arrive jusqu'à toi</h2>
+  <div class="flow">
+    <div class="step"><span class="a">✍️ Code</span><span>j'écris et je commit</span></div>
+    <div class="step"><span class="g">🐙 GitHub</span><span>stocke le changement</span></div>
+    <div class="step"><span class="g">🤖 CI</span><span>relance <b>automatiquement</b> les tests, le typage, le style</span></div>
+    <div class="step"><span class="g">🚀 Déploiement</span><span>si tout est vert → mise en ligne automatique</span></div>
+    <div class="step"><span class="a">🔗 Toi</span><span>nouveau lien web / nouvelle beta à cliquer</span></div>
+  </div>
+  <p class="sub">La <b>CI</b> (mise en place au lot 0.1) est le filet de sécurité : elle bloque tout changement cassé <b>avant</b> qu'il arrive chez toi. C'est ce qui te permet de valider sans tout revérifier à la main.</p>
+
+  <div class="foot">
+    <b>L'ordre logique des choses</b><br>
+    <b>1. Maintenant</b> → lien web cliquable du shell (premier vrai test).<br>
+    <b>2. Ensuite</b> → compte Supabase, quand on attaque comptes utilisateurs &amp; base de données.<br>
+    <b>3. Plus tard</b> → comptes Apple/Google + Expo, pour une app installable et des beta testeurs.<br>
+    <b>4. Au lancement</b> → publication sur les stores.<br><br>
+    <span style="color:var(--ink-dim2)">KartSquad · Architecture IT · v1 — mis à jour au lot 0.1</span>
+  </div>
+</div>
