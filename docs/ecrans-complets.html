@@ -82,6 +82,27 @@
   .bd.on{border-color:var(--accent)} .bd svg{width:16px;height:16px}
   .bd.on svg{stroke:var(--accent)} .bd.off svg{stroke:var(--ink-dim2);opacity:.6}
   .foot{max-width:760px;margin:4rem auto 0;text-align:center;color:var(--ink-dim);font-size:.85rem}
+
+  @media print {
+    @page { size: A4; margin: 10mm 8mm; }
+    body { background:var(--page-bg) !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .intro, .world, .foot { display:none; }
+    .branch { break-before: page; break-after: avoid; margin: 0 0 1rem; font-size: 1rem; padding-bottom:.4rem; }
+    .branch:first-of-type { break-before: avoid; }
+    .grid { display:block; }
+    .cell {
+      break-after: page;
+      break-inside: avoid;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:.7rem;
+      padding-top: 1.2rem;
+    }
+    .cell:last-child { break-after: avoid; }
+    .phone { width: 68mm; max-width:68mm; aspect-ratio:9/18.5; margin:0 auto; }
+    .cell .label, .cell .note { max-width: 90mm; text-align:center; }
+  }
 </style>
 
 <div class="wrap">
