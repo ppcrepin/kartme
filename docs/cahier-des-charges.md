@@ -1,6 +1,6 @@
-# KartMe — Cahier des charges v0.4 (brouillon de travail)
+# KartMe — Cahier des charges v0.5 (brouillon de travail)
 
-> Voir aussi la **carte de navigation complète** : `docs/navigation-map.html` (chaque bouton → sa destination, zéro cul-de-sac).
+> Voir aussi : **carte de navigation** `docs/navigation-map.html` (chaque bouton → sa destination, zéro cul-de-sac) · **39 écrans rendus** `docs/ecrans-complets.html` · **cas limites** `docs/ecrans-cas-limites.html`.
 
 > **Statut : non définitif.** Ce document évolue en continu à mesure des échanges. Il reste au minimum deux chantiers avant une v1 figée : la validation des écrans détaillés dans le nouveau langage graphique retenu, et les nombreuses questions listées en fin de document (§16). Ne rien coder à partir de ce document tant qu'il n'a pas été explicitement validé point par point.
 
@@ -178,9 +178,15 @@ Après une première piste jugée trop générique ("sport premium épuré", éc
 
 Une carte de navigation exhaustive a été produite : elle liste chaque écran et, pour chaque bouton, sa destination. Elle couvre l'authentification (S0, S0b-d), les 4 onglets et leurs écrans (Courses C1-C11, Classements L1, Amis F1-F2 + profil P, Profil R1-R5), et toute la branche Réglages jusque-là inexistante (S1 → Compte S2/S2a-e, Notifications S3, Aide & support S4/S4a-d), plus les écrans transverses (feuille "Ajouter des pilotes" C5, sélecteurs de circuit/date C3/C3b/C4, motif de signalement M1). Cette carte a passé **3 tours d'audit adversarial** (culs-de-sac, écrans orphelins, retours manquants) jusqu'à un état propre.
 
-### 9.5 ⚠️ Reste à produire (écrans détaillés)
+### 9.5 Écrans détaillés — v1 rendue et auditée
 
-Les écrans détaillés doivent être **rendus visuellement dans le style Editorial Grand Prix**, branche par branche, à partir de la carte de navigation, puis validés un par un. Points spécifiques déjà actés à intégrer : feuille "Ajouter des pilotes" unifiée (amis / nom libre / lien-QR) ; grille de course affichant rang + Elo par pilote ; bouton Partager sur les résultats ; carte de partage avec date + coureurs hors podium ; écran d'échelle des grades. Les cas limites (duel 2 pilotes en format "VS", grande course 12+ avec listes défilantes) ont été maquettés et audités.
+Les **39 écrans** de la carte de navigation ont été rendus dans le style Editorial Grand Prix (`docs/ecrans-complets.html`), organisés par branche (Authentification, Courses, Classements, Amis, Profil, Réglages), avec un **monde narratif unique aux chiffres Elo réellement calculés** (course exemple à somme nulle : +18 / 0 / −3 / −6 / −9). Rendu audité de façon adversariale avant présentation (chiffres, couverture de la carte, cohérence narrative) puis corrigé. Intègrent tous les points actés : feuille "Ajouter des pilotes" unifiée (amis / nom libre / lien-QR), grille de course avec grade + Elo par pilote, RSVP actionnable côté participant, bouton Partager sur les résultats, carte de partage avec date + tous les coureurs, échelle des grades, bouton Réglages explicite, sections demandes reçues **et** envoyées. Les cas limites (duel 2 pilotes "VS", grande course 12+) sont dans `docs/ecrans-cas-limites.html`.
+
+**Règles complémentaires issues de l'audit (retenues, à confirmer par le client)** :
+- Les **profils fantômes n'apparaissent pas dans le classement "Amis"** (visibles dans "Global" uniquement) — un fantôme n'est l'ami de personne tant qu'il n'a pas réclamé son profil.
+- Le libellé de fin de préparation est **"Clôturer les invitations"** ; l'état suivant s'affiche "invitations ouvertes" → "prête" → "en attente du classement".
+
+**Reste à faire** : validation écran par écran par le client, puis revue des badges un par un (§16.2).
 
 ## 10. Modèle économique et maîtrise des coûts
 
@@ -209,7 +215,8 @@ Gratuit, sans publicité ni paiement au démarrage — monétisation étudiée p
 | Composants de navigation (barre d'onglets, formes, avatars, densité) | ✅ Validé dans le nouveau style |
 | Grades Elo (6 paliers, noms + bornes) | ✅ Validé |
 | Carte de navigation complète (zéro cul-de-sac) | ✅ Validée (3 tours d'audit) |
-| Écrans détaillés rendus dans le style Rosso Corsa | ⏳ En cours, branche par branche, à valider un par un |
+| Écrans détaillés rendus dans le style Rosso Corsa (39 écrans) | ✅ v1 rendue + auditée — validation client écran par écran à faire |
+| Cas limites (duel 2 pilotes, grande course 12+) | ✅ Maquettés + audités |
 | Badges (revue un par un) | ⏳ À faire ensemble |
 | Charte complète (logo définitif, icône d'app, typographie sous licence) | ⏳ Non commencé |
 

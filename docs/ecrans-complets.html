@@ -1,0 +1,703 @@
+<!doctype html>
+<title>KartMe — Écrans complets par branche (Rosso Corsa)</title>
+
+<style>
+  :root {
+    --page-bg:#0a0706; --bg:#0d0908; --bg-e:#171110; --bg-e2:#1f1613; --line:#2c1f1c;
+    --ink:#f2ede9; --ink-dim:#a08d87; --ink-dim2:#9c8880;
+    --accent:#e10600; --pos:#6fae82; --r:3px;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--page-bg);color:var(--ink);font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;margin:0}
+  .wrap{max-width:1320px;margin:0 auto;padding:3rem 1.5rem 5rem}
+  .intro{max-width:760px;margin:0 auto 2.2rem;text-align:center}
+  .eyebrow{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-family:Georgia,"Times New Roman",serif;font-size:2rem;font-weight:800;margin:.5rem 0 .6rem;text-wrap:balance}
+  .intro p{color:var(--ink-dim);line-height:1.6}
+  .world{max-width:760px;margin:0 auto 2.6rem;background:var(--bg-e);border:1px solid var(--line);border-radius:var(--r);padding:1rem 1.2rem;font-size:.82rem;color:var(--ink-dim);line-height:1.6}
+  .world b{color:var(--ink)}
+  .branch{max-width:1320px;margin:3.4rem 0 1.2rem;font-family:Georgia,serif;font-size:1.2rem;font-weight:800;border-bottom:1px solid var(--line);padding-bottom:.6rem}
+  .branch:first-of-type{margin-top:0}
+  .branch small{font-family:-apple-system,sans-serif;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-dim2);font-weight:600;margin-left:.6rem}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1.7rem}
+  .cell{display:flex;flex-direction:column;gap:.6rem}
+  .cell .label{font-size:.84rem;font-weight:700}
+  .cell .label .code{font-family:ui-monospace,monospace;font-size:.7rem;color:var(--accent);background:rgba(225,6,0,.1);padding:.05rem .4rem;border-radius:3px;margin-right:.35rem}
+  .cell .note{font-size:.76rem;color:var(--ink-dim2);line-height:1.5}
+
+  .phone{background:var(--bg);border:1px solid var(--line);width:100%;aspect-ratio:9/18.5;overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .scr{flex:1;display:flex;flex-direction:column;min-height:0;padding:1rem .95rem .5rem;overflow:hidden}
+  .scr.scroll{overflow-y:auto}
+  .dashes{display:flex;height:5px;flex-shrink:0}
+  .dashes span{flex:1;background:var(--accent)}
+  .dashes span:nth-child(odd){background:transparent}
+
+  .h-title{font-family:Georgia,serif;font-size:1.15rem;font-weight:800}
+  .h-sub{font-size:.68rem;color:var(--ink-dim2);margin-top:.15rem;text-transform:uppercase;letter-spacing:.05em}
+  .lbl{font-size:.6rem;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-dim2);font-weight:700}
+  .card{background:var(--bg-e);border:1px solid var(--line);border-radius:var(--r);padding:.68rem .85rem}
+  .card+.card{margin-top:.45rem}
+  .row{display:flex;align-items:center;justify-content:space-between}
+  .g05{gap:.5rem}
+  .av{width:28px;height:28px;border-radius:50%;flex-shrink:0;border:1.3px solid var(--ink-dim2);display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;font-size:.58rem;font-weight:700;color:var(--ink-dim)}
+  .av.me{border-color:var(--accent);color:var(--accent)}
+  .av.lg{width:44px;height:44px;font-size:.8rem}
+  .btn{display:block;text-align:center;border:1.3px solid var(--accent);color:var(--accent);font-weight:700;font-size:.74rem;letter-spacing:.03em;text-transform:uppercase;padding:.62rem;border-radius:999px}
+  .btn.solid{background:var(--accent);color:#fff}
+  .btn.ghost{border-color:var(--ink-dim2);color:var(--ink-dim)}
+  .btn.txt{border:none;color:var(--ink-dim);font-weight:600;text-transform:none;letter-spacing:0;padding:.4rem}
+  .pill{display:inline-flex;align-items:center;gap:.15rem;font-size:.64rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .pill.up{color:var(--pos)} .pill.down{color:var(--accent)} .pill.flat{color:var(--ink-dim2)}
+  .tag{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:.14rem .48rem;border:1px solid var(--line);color:var(--ink-dim);white-space:nowrap}
+  .tag.red{border-color:var(--accent);color:var(--accent)}
+  .tag.grn{border-color:var(--pos);color:var(--pos)}
+  .field{border:1px solid var(--line);border-radius:var(--r);padding:.6rem .8rem;font-size:.76rem;color:var(--ink-dim);margin-bottom:.45rem}
+  .drag{width:13px;height:13px;opacity:.5;background:repeating-linear-gradient(0deg,var(--ink-dim) 0 1.5px,transparent 1.5px 4px)}
+  .medal{width:20px;height:20px;border:1.3px solid;display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;font-size:.58rem;font-weight:800;flex-shrink:0}
+  .medal.g{border-color:#e2c14d;color:#e2c14d}.medal.s{border-color:#cfd4da;color:#cfd4da}.medal.b{border-color:#c98a55;color:#c98a55}
+  .pos{font-family:Georgia,serif;font-weight:800;width:16px;text-align:center;flex-shrink:0;color:var(--ink-dim)}
+  .tabbar{display:flex;justify-content:space-around;padding:.5rem .2rem .35rem;border-top:1px solid var(--line);flex-shrink:0;background:var(--bg)}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:.22rem;font-size:.55rem;color:var(--ink-dim2);font-weight:700;letter-spacing:.01em;text-transform:uppercase;flex:1;white-space:nowrap}
+  .tab.active{color:var(--accent)}
+  .tab svg{width:16px;height:16px}
+  .toggle{display:flex;border:1px solid var(--line);border-radius:999px;padding:.14rem}
+  .toggle span{flex:1;text-align:center;font-size:.65rem;font-weight:700;padding:.35rem;border-radius:999px;color:var(--ink-dim);text-transform:uppercase}
+  .toggle span.on{background:var(--accent);color:#fff}
+  .search{border:1px solid var(--line);border-radius:var(--r);padding:.5rem .75rem;font-size:.72rem;color:var(--ink-dim)}
+  .back{font-size:.72rem;color:var(--ink-dim);margin-bottom:.5rem}
+  .sw{width:30px;height:17px;border-radius:999px;background:var(--accent);position:relative;flex-shrink:0}
+  .sw::after{content:"";position:absolute;right:2px;top:2px;width:13px;height:13px;border-radius:50%;background:#fff}
+  .sw.off{background:var(--bg-e2)}
+  .sw.off::after{left:2px;right:auto;background:var(--ink-dim2)}
+  .sheet{background:var(--bg-e);border-top:1.5px solid var(--accent);flex:1;margin-top:2.2rem;border-radius:8px 8px 0 0;padding:.9rem .95rem;display:flex;flex-direction:column}
+  .flag{transform-origin:left center;animation:wave 2.2s ease-in-out infinite}
+  @keyframes wave{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg) skewX(-6deg)}}
+  @media (prefers-reduced-motion:reduce){.flag{animation:none}}
+  .grade-row{display:flex;align-items:center;justify-content:space-between;padding:.45rem .6rem;border:1px solid var(--line);border-radius:var(--r);margin-bottom:.4rem;font-size:.72rem}
+  .grade-row.on{border-color:var(--accent);background:rgba(225,6,0,.06)}
+  .grade-row b{font-family:Georgia,serif}
+  .spark{width:100%;height:38px}
+  .bgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:.45rem}
+  .bd{aspect-ratio:1;border:1.3px solid var(--line);display:flex;align-items:center;justify-content:center}
+  .bd.on{border-color:var(--accent)} .bd svg{width:16px;height:16px}
+  .bd.on svg{stroke:var(--accent)} .bd.off svg{stroke:var(--ink-dim2);opacity:.6}
+  .foot{max-width:760px;margin:4rem auto 0;text-align:center;color:var(--ink-dim);font-size:.85rem}
+</style>
+
+<div class="wrap">
+  <div class="intro">
+    <div class="eyebrow">KartMe · Editorial Grand Prix — Rosso Corsa</div>
+    <h1>Écrans complets, branche par branche</h1>
+    <p>39 écrans rendus couvrant l'intégralité de la carte de navigation (S4c et S4d partagent un gabarit commun de page légale). Chaque bouton visible correspond à une destination de la carte — zéro cul-de-sac. Rappel du style validé : angles nets partout, seuls les boutons d'action gardent la forme pilule (décision actée §9.2).</p>
+  </div>
+  <div class="world"><b>Monde narratif unique</b> (chiffres Elo réellement calculés, somme nulle) — course « Karting Vaux-le-Pénil, sam. 18 juillet, 18h » : Paul 1000 → 1er <b style="color:var(--pos)">+18</b> (1018) · Théo 1200 → 2e <b>0</b> (1200) · Léa 1100 → 3e −3 (1097) · Marine 1000 → 4e −6 (994, redescend en Roue Libre) · Hugo 900 → 5e −9 (891). Classement amis après course : Théo, Léa, Paul, Marine, Hugo.</div>
+
+  <!-- ============ AUTH ============ -->
+  <div class="branch">Branche Authentification <small>sans barre d'onglets (non connecté)</small></div>
+  <div class="grid">
+
+    <div class="cell"><div class="label"><span class="code">S0</span>Connexion</div>
+      <div class="phone"><div class="dashes"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="scr" style="justify-content:center;text-align:center;gap:1rem;padding-bottom:1rem">
+          <div><div style="font-family:Georgia,serif;font-size:1.6rem;font-weight:800">KartMe</div><div class="h-sub" style="margin-top:.3rem">Fais évoluer ton Elo, course après course</div></div>
+          <div style="display:flex;flex-direction:column;gap:.42rem">
+            <div class="btn ghost">Continuer avec Google</div>
+            <div class="btn ghost">Continuer avec Apple</div>
+            <div class="lbl" style="margin:.3rem 0">ou</div>
+            <div class="field">Adresse email</div><div class="field">Mot de passe</div>
+            <div class="btn solid">Se connecter</div>
+            <div class="btn txt">Créer un compte</div>
+            <div class="btn txt" style="font-size:.66rem">Mot de passe oublié ?</div>
+          </div>
+        </div></div>
+      <div class="note">→ C1 (connexion), S0b (créer), S0c (oublié), S0d (1er OAuth).</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">S0b</span>Inscription email</div>
+      <div class="phone"><div class="scr" style="justify-content:center;gap:.5rem">
+        <div class="back">‹ Retour</div>
+        <div class="h-title">Créer un compte</div>
+        <div class="h-sub" style="margin-bottom:.7rem">Ton Elo démarre à 1000 — grade Rookie</div>
+        <div class="field">Pseudo</div><div class="field">Adresse email</div><div class="field">Mot de passe</div>
+        <div style="flex:1"></div><div class="btn solid">Créer mon compte</div>
+      </div></div>
+      <div class="note">Créer → C1 · Retour → S0.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">S0c</span>Mot de passe oublié</div>
+      <div class="phone"><div class="scr" style="justify-content:center;gap:.5rem">
+        <div class="back">‹ Retour</div>
+        <div class="h-title">Réinitialiser</div>
+        <div class="h-sub" style="margin-bottom:.7rem">On t'envoie un lien par email</div>
+        <div class="field">Adresse email</div>
+        <div style="flex:1"></div><div class="btn solid">Envoyer le lien</div>
+      </div></div>
+      <div class="note">Envoyer → confirmation « email envoyé » · Retour → S0.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">S0d</span>Choix du pseudo (1er OAuth)</div>
+      <div class="phone"><div class="scr" style="justify-content:center;gap:.5rem;text-align:center">
+        <div class="h-title">Bienvenue, pilote</div>
+        <div class="h-sub" style="margin-bottom:.7rem">Choisis ton nom de course</div>
+        <div class="field" style="text-align:left">Pseudo</div>
+        <div class="card row"><span style="font-size:.72rem;color:var(--ink-dim)">Elo de départ</span><b style="font-family:Georgia,serif">1000 · Rookie</b></div>
+        <div style="flex:1"></div>
+        <div class="btn solid">Valider mon pseudo</div>
+        <div class="btn txt" style="font-size:.66rem">Annuler l'inscription (se déconnecter)</div>
+      </div></div>
+      <div class="note">Valider → C1 · Annuler → déconnexion → S0.</div>
+    </div>
+  </div>
+
+  <!-- ============ COURSES ============ -->
+  <div class="branch">Branche Courses <small>onglet 1</small></div>
+  <div class="grid">
+
+    <div class="cell"><div class="label"><span class="code">C1</span>Accueil Courses</div>
+      <div class="phone"><div class="scr">
+        <div class="lbl">Salut Paul</div><div class="h-title">Tes courses</div>
+        <div class="card" style="border-color:var(--accent);margin-top:.6rem"><div class="lbl" style="color:var(--accent)">Nouvelle course</div><div style="font-family:Georgia,serif;font-weight:800;margin-top:.15rem">+ Organiser une session</div></div>
+        <div class="h-sub" style="margin-top:.7rem">À venir</div>
+        <div class="card row"><div><div style="font-weight:700;font-size:.8rem">Karting Vaux-le-Pénil</div><div class="h-sub" style="margin-top:.15rem">Sam. 18 juil. 18h · 5 pilotes</div></div><span class="tag">Prête</span></div>
+        <div class="h-sub" style="margin-top:.7rem">Passées</div>
+        <div class="card row"><div><div style="font-weight:700;font-size:.8rem">Session nocturne indoor</div><div class="h-sub" style="margin-top:.15rem">2e / 4 pilotes</div></div><span class="pill up">▲ +12</span></div>
+        <div style="flex:1"></div>
+      </div><div class="tabbar" data-active="courses"></div></div>
+      <div class="note">Organiser → C2 · course à venir → C6/C6′ selon rôle · passée → C9.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">C2</span>Créer une course</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Annuler</div>
+        <div class="h-title">Créer une course</div>
+        <div style="margin-top:.7rem">
+          <div class="field">Circuit — rechercher…</div>
+          <div class="field">Date · heure</div>
+          <div class="h-sub" style="margin:.5rem 0 .35rem">Pilotes</div>
+          <div class="card row"><div class="row g05"><div class="av me">PA</div><span style="font-size:.76rem">Paul (toi)</span></div><span class="tag red">Organisateur</span></div>
+          <div class="card row" style="border-style:dashed;color:var(--ink-dim)"><span style="font-size:.76rem">+ Ajouter des pilotes</span><span>›</span></div>
+        </div>
+        <div style="flex:1"></div><div class="btn solid">Créer la course</div>
+      </div><div class="tabbar" data-active="courses"></div></div>
+      <div class="note">Circuit → C3 · date → C4 · ajouter → C5 · créer → C6 · annuler → C1.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">C3</span>Sélecteur de circuit</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Annuler</div>
+        <div class="h-title" style="font-size:1rem">Choisir un circuit</div>
+        <div class="search" style="margin:.6rem 0">Rechercher… « vaux »</div>
+        <div class="card row"><span style="font-size:.78rem;font-weight:600">Karting Vaux-le-Pénil</span><span class="tag">77</span></div>
+        <div class="card row"><span style="font-size:.78rem">Vaulx-en-Velin Indoor</span><span class="tag">69</span></div>
+        <div style="flex:1"></div>
+        <div class="btn ghost">Mon circuit n'est pas là</div>
+      </div><div class="tabbar" data-active="courses"></div></div>
+      <div class="note">Taper un circuit → C2 rempli · absent → C3b · annuler → C2.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">C3b</span>Ajouter un circuit</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Annuler</div>
+        <div class="h-title" style="font-size:1rem">Nouveau circuit</div>
+        <div class="h-sub" style="margin-bottom:.6rem">Il sera proposé aux autres pilotes</div>
+        <div class="field">Nom du circuit</div>
+        <div class="field">Ville (facultatif)</div>
+        <div style="flex:1"></div><div class="btn solid">Enregistrer</div>
+      </div><div class="tabbar" data-active="courses"></div></div>
+      <div class="note">Enregistrer → C2 (ajouté à la liste globale) · annuler → C3.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">C4</span>Sélecteur date / heure</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Annuler</div>
+        <div class="h-title" style="font-size:1rem">Date et heure</div>
+        <div class="card" style="margin-top:.6rem;text-align:center;font-family:Georgia,serif;font-weight:800">Samedi 18 juillet</div>
+        <div class="card" style="text-align:center;font-family:Georgia,serif;font-weight:800">18 : 00</div>
+        <div style="flex:1"></div><div class="btn solid">Confirmer</div>
+      </div><div class="tabbar" data-active="courses"></div></div>
+      <div class="note">Confirmer → C2 · annuler → C2 sans changement.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">C5</span>Feuille « Ajouter des pilotes »</div>
+      <div class="phone"><div class="scr" style="padding:0;background:rgba(0,0,0,.4)">
+        <div class="sheet">
+          <div class="row"><b style="font-family:Georgia,serif">Ajouter des pilotes</b><span style="color:var(--ink-dim2)">✕</span></div>
+          <div class="toggle" style="margin:.6rem 0"><span class="on">Amis</span><span>Nom libre</span><span>Lien / QR</span></div>
+          <div class="card row"><div class="row g05"><div class="av">TH</div><span style="font-size:.76rem">Théo</span></div><span class="tag grn">✓ Ajouté</span></div>
+          <div class="card row"><div class="row g05"><div class="av">LE</div><span style="font-size:.76rem">Léa</span></div><span class="tag grn">✓ Ajoutée</span></div>
+          <div class="h-sub" style="margin-top:.5rem;text-transform:none;letter-spacing:0">« Nom libre » crée un profil fantôme (ex. Marine, Hugo, pas encore sur l'app) · « Lien/QR » pour inviter les absents de l'app</div>
+          <div style="flex:1"></div>
+          <div class="btn solid">Valider la sélection</div>
+        </div>
+      </div></div>
+      <div class="note">Une seule feuille, 3 modes (répond au flou écran 4/5). Valider → C2 · ✕ → C2 sans committer.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">C6</span>Détail course — admin</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour</div>
+        <div class="h-title" style="font-size:1rem">Karting Vaux-le-Pénil</div>
+        <div class="h-sub">Sam. 18 juil. 18h · invitations ouvertes</div>
+        <div class="h-sub" style="margin-top:.6rem">Sur la grille · 5 pilotes</div>
+        <div class="card row"><div class="row g05"><div class="av me">PA</div><span style="font-size:.74rem">Paul</span></div><span style="font-size:.66rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1000</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av">TH</div><span style="font-size:.74rem">Théo</span></div><span style="font-size:.66rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1200</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av">LE</div><span style="font-size:.74rem">Léa</span></div><span style="font-size:.66rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1100</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av">MA</div><span style="font-size:.74rem">Marine</span></div><span style="font-size:.66rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1000</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av">HU</div><span style="font-size:.74rem">Hugo</span></div><span style="font-size:.66rem;color:var(--ink-dim)">Roue Libre · <b style="font-family:Georgia,serif">900</b></span></div>
+        <div style="flex:1"></div>
+        <div class="btn">Inviter d'autres pilotes</div>
+        <div class="btn solid" style="margin-top:.35rem">Saisir le classement</div>
+        <div class="btn txt" style="font-size:.64rem">Modifier · Annuler la course</div>
+      </div><div class="tabbar" data-active="courses"></div></div>
+      <div class="note"><b style="color:var(--accent)">Corrigé :</b> grade + Elo à côté de chaque nom. Saisir → C7 · inviter → C5 · pilote → P.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">C6′</span>Détail course — participant</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour</div>
+        <div class="h-title" style="font-size:1rem">Karting Vaux-le-Pénil</div>
+        <div class="h-sub">Sam. 18 juil. 18h · organisée par Paul</div>
+        <div class="card row" style="margin-top:.55rem"><span style="font-size:.72rem">Ta présence</span><span><span class="tag grn">✓ Je serai là</span> <span class="tag">Me retirer</span></span></div>
+        <div class="h-sub" style="margin-top:.5rem">Sur la grille · 5 pilotes</div>
+        <div class="card row"><div class="row g05"><div class="av">PA</div><span style="font-size:.72rem">Paul</span></div><span style="font-size:.64rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1000</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av me">TH</div><span style="font-size:.72rem">Théo (toi)</span></div><span style="font-size:.64rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1200</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av">LE</div><span style="font-size:.72rem">Léa</span></div><span style="font-size:.64rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1100</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av">MA</div><span style="font-size:.72rem">Marine</span></div><span style="font-size:.64rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1000</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av">HU</div><span style="font-size:.72rem">Hugo</span></div><span style="font-size:.64rem;color:var(--ink-dim)">Roue Libre · <b style="font-family:Georgia,serif">900</b></span></div>
+        <div style="flex:1"></div>
+      </div><div class="tabbar" data-active="courses"></div></div>
+      <div class="note">RSVP actionnable (✓ Je serai là / Me retirer → C1) · grille complète 5/5 · bascule auto → C8 quand l'admin lance la saisie · retour → C1.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">C7</span>Saisie du classement (admin)</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Annuler (sans recalcul)</div>
+        <div class="h-title" style="font-size:1rem">Classement final</div>
+        <div class="h-sub" style="margin-bottom:.5rem">Glisse pour réordonner</div>
+        <div class="card row"><div class="row g05"><span class="pos">1</span><div class="av me">PA</div><span style="font-size:.74rem;font-weight:600">Paul</span></div><div class="drag"></div></div>
+        <div class="card row"><div class="row g05"><span class="pos">2</span><div class="av">TH</div><span style="font-size:.74rem;font-weight:600">Théo</span></div><div class="drag"></div></div>
+        <div class="card row"><div class="row g05"><span class="pos">3</span><div class="av">LE</div><span style="font-size:.74rem;font-weight:600">Léa</span></div><div class="drag"></div></div>
+        <div class="card row"><div class="row g05"><span class="pos">4</span><div class="av">MA</div><span style="font-size:.74rem;font-weight:600">Marine</span></div><div class="drag"></div></div>
+        <div class="card row"><div class="row g05"><span class="pos">5</span><div class="av">HU</div><span style="font-size:.74rem;font-weight:600">Hugo</span></div><div class="drag"></div></div>
+        <div style="flex:1"></div>
+        <div class="h-sub" style="text-align:center;text-transform:none;letter-spacing:0;margin-bottom:.35rem">Modifiable pendant 24h</div>
+        <div class="btn solid">Valider le classement</div>
+      </div><div class="tabbar" data-active="courses"></div></div>
+      <div class="note">Valider → recalcul Elo → C9 · annuler → C6.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">C8</span>En attente (participant)</div>
+      <div class="phone"><div class="scr" style="justify-content:center;align-items:center;text-align:center;gap:.9rem">
+        <svg class="flag" width="70" height="58" viewBox="0 0 76 62" fill="none"><line x1="6" y1="2" x2="6" y2="60" stroke="#a08d87" stroke-width="2.4"/><rect x="10" y="6" width="56" height="34" fill="none" stroke="#e10600" stroke-width="1.4"/><rect x="10" y="6" width="14" height="8.5" fill="#e10600"/><rect x="38" y="6" width="14" height="8.5" fill="#e10600"/><rect x="24" y="14.5" width="14" height="8.5" fill="#e10600"/><rect x="52" y="14.5" width="14" height="8.5" fill="#e10600"/><rect x="10" y="23" width="14" height="8.5" fill="#e10600"/><rect x="38" y="23" width="14" height="8.5" fill="#e10600"/><rect x="24" y="31.5" width="14" height="8.5" fill="#e10600"/><rect x="52" y="31.5" width="14" height="8.5" fill="#e10600"/></svg>
+        <div><div style="font-family:Georgia,serif;font-weight:800">Résultats en préparation</div><div class="h-sub" style="margin-top:.3rem;text-transform:none;letter-spacing:0">Paul saisit le classement…</div></div>
+        <div class="btn txt" style="font-size:.68rem">Relancer l'organisateur</div>
+        <div class="btn txt" style="font-size:.68rem;color:var(--ink-dim2)">‹ Retour aux courses</div>
+      </div><div class="tabbar" data-active="courses"></div></div>
+      <div class="note">Bascule auto → C9 à la validation · relancer → notification + toast · retour → C1.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">C9</span>Résultats détaillés</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour</div>
+        <div class="h-title" style="font-size:1rem">Classement complet</div>
+        <div class="h-sub" style="margin-bottom:.45rem">Vaux-le-Pénil · sam. 18 juil. · 5 pilotes</div>
+        <div class="card row"><div class="row g05"><div class="medal g">1</div><div class="av me">PA</div><span style="font-size:.73rem;font-weight:700">Paul</span></div><span class="pill up">▲ +18</span></div>
+        <div class="card row"><div class="row g05"><div class="medal s">2</div><div class="av">TH</div><span style="font-size:.73rem;font-weight:700">Théo</span></div><span class="pill flat">= 0</span></div>
+        <div class="card row"><div class="row g05"><div class="medal b">3</div><div class="av">LE</div><span style="font-size:.73rem;font-weight:700">Léa</span></div><span class="pill down">▼ −3</span></div>
+        <div class="card row"><div class="row g05"><span class="pos">4</span><div class="av">MA</div><span style="font-size:.73rem;font-weight:700">Marine</span></div><span class="pill down">▼ −6</span></div>
+        <div class="card row"><div class="row g05"><span class="pos">5</span><div class="av">HU</div><span style="font-size:.73rem;font-weight:700">Hugo</span></div><span class="pill down">▼ −9</span></div>
+        <div class="h-sub" style="margin-top:.4rem;text-transform:none;letter-spacing:0;text-align:center">Tape un pilote pour le détail par duel</div>
+        <div style="flex:1"></div>
+        <div class="btn solid">Partager le résultat</div>
+        <div class="btn txt" style="font-size:.64rem">Modifier (admin, &lt;24h) · Signaler une erreur</div>
+      </div><div class="tabbar" data-active="courses"></div></div>
+      <div class="note">Théo fait un vrai match nul (0). Partager → C11 · pilote → C10 · modifier → C7 · signaler → M1.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">C10</span>Détail Elo par paire</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour aux résultats</div>
+        <div class="row g05"><div class="av me lg">PA</div><div><div style="font-weight:700;font-size:.8rem">Paul — 1er</div><div class="h-sub" style="text-transform:none;letter-spacing:0">1000 → 1018 Elo</div></div></div>
+        <div class="h-sub" style="margin:.6rem 0 .35rem;text-transform:none;letter-spacing:0">Battre plus fort rapporte plus</div>
+        <div class="card row"><div class="row g05"><div class="av">TH</div><span style="font-size:.72rem">Théo · battu (1200)</span></div><span class="pill up">+6</span></div>
+        <div class="card row"><div class="row g05"><div class="av">LE</div><span style="font-size:.72rem">Léa · battue (1100)</span></div><span class="pill up">+5</span></div>
+        <div class="card row"><div class="row g05"><div class="av">MA</div><span style="font-size:.72rem">Marine · battue (1000)</span></div><span class="pill up">+4</span></div>
+        <div class="card row"><div class="row g05"><div class="av">HU</div><span style="font-size:.72rem">Hugo · battu (900)</span></div><span class="pill up">+3</span></div>
+        <div class="card" style="margin-top:.5rem;border-color:var(--accent);background:rgba(225,6,0,.06)"><div class="row"><b style="font-size:.78rem">Total</b><b style="font-family:Georgia,serif;font-size:1.05rem;color:var(--pos)">▲ +18</b></div></div>
+        <div style="flex:1"></div>
+      </div><div class="tabbar" data-active="courses"></div></div>
+      <div class="note">6+5+4+3 = 18 ✓. Retour → C9.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">C11</span>Carte de partage</div>
+      <div class="phone"><div class="dashes"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="scr" style="align-items:center;text-align:center;padding-bottom:1rem">
+          <div class="lbl" style="color:var(--accent)">KartMe</div>
+          <div class="h-title" style="font-size:.95rem;margin-top:.2rem">Karting Vaux-le-Pénil</div>
+          <div class="h-sub">Samedi 18 juillet 2026</div>
+          <div style="display:flex;align-items:flex-end;gap:.9rem;margin:.9rem 0 .6rem">
+            <div style="text-align:center"><div class="medal s" style="margin:0 auto">2</div><div style="font-size:.62rem;margin-top:.25rem">Théo</div><span class="pill flat">= 0</span></div>
+            <div style="text-align:center"><div class="medal g" style="margin:0 auto;width:26px;height:26px">1</div><div style="font-size:.66rem;margin-top:.25rem;font-weight:700">Paul</div><span class="pill up">▲ +18</span></div>
+            <div style="text-align:center"><div class="medal b" style="margin:0 auto">3</div><div style="font-size:.62rem;margin-top:.25rem">Léa</div><span class="pill down">▼ −3</span></div>
+          </div>
+          <div style="width:100%;font-size:.66rem;color:var(--ink-dim)">
+            <div class="row" style="padding:.2rem .4rem;border-top:1px solid var(--line)"><span>4 · Marine</span><span class="pill down">▼ −6</span></div>
+            <div class="row" style="padding:.2rem .4rem;border-top:1px solid var(--line)"><span>5 · Hugo</span><span class="pill down">▼ −9</span></div>
+          </div>
+          <div class="h-sub" style="margin-top:.4rem;text-transform:none;letter-spacing:0">kartme.app</div>
+          <div style="flex:1"></div>
+          <div class="btn solid" style="width:100%">Partager</div>
+          <div class="btn txt" style="font-size:.66rem">‹ Retour</div>
+        </div>
+      <div class="dashes"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+      <div class="note"><b style="color:var(--accent)">Corrigé :</b> date + tous les coureurs (4e/5e sous le podium). Partager → feuille du téléphone.</div>
+    </div>
+  </div>
+
+  <!-- ============ CLASSEMENTS ============ -->
+  <div class="branch">Branche Classements <small>onglet 2</small></div>
+  <div class="grid">
+    <div class="cell"><div class="label"><span class="code">L1</span>Classements</div>
+      <div class="phone"><div class="scr">
+        <div class="h-title">Classements</div>
+        <div class="toggle" style="margin:.7rem 0"><span class="on">Amis</span><span>Global</span></div>
+        <div class="card row"><div class="row g05"><span class="pos">1</span><div class="av">TH</div><span style="font-size:.76rem;font-weight:700">Théo</span></div><b style="font-family:Georgia,serif">1200</b></div>
+        <div class="card row"><div class="row g05"><span class="pos">2</span><div class="av">LE</div><span style="font-size:.76rem;font-weight:700">Léa</span></div><b style="font-family:Georgia,serif">1097</b></div>
+        <div class="card row" style="border-color:var(--accent)"><div class="row g05"><span class="pos">3</span><div class="av me">PA</div><span style="font-size:.76rem;font-weight:700">Paul (toi)</span></div><b style="font-family:Georgia,serif">1018</b></div>
+        <div class="h-sub" style="margin-top:.5rem;text-transform:none;letter-spacing:0">Les profils fantômes (Marine, Hugo…) apparaissent dans « Global » uniquement — le classement Amis ne montre que tes amis.</div>
+        <div style="flex:1"></div>
+      </div><div class="tabbar" data-active="classements"></div></div>
+      <div class="note">Elo post-course (1200/1097/1018). Règle actée : fantômes hors du classement Amis. Taper un joueur → P (ou R1 si moi).</div>
+    </div>
+  </div>
+
+  <!-- ============ AMIS ============ -->
+  <div class="branch">Branche Amis <small>onglet 3</small></div>
+  <div class="grid">
+
+    <div class="cell"><div class="label"><span class="code">F1</span>Amis</div>
+      <div class="phone"><div class="scr">
+        <div class="h-title">Amis</div>
+        <div class="search" style="margin:.6rem 0">Rechercher un pilote</div>
+        <div class="h-sub">Demande reçue (1)</div>
+        <div class="card row"><div class="row g05"><div class="av">JU</div><span style="font-size:.74rem">Julie</span></div><span><span class="tag red">Accepter</span> <span class="tag">Refuser</span></span></div>
+        <div class="h-sub" style="margin-top:.5rem">Demande envoyée (1)</div>
+        <div class="card row"><div class="row g05"><div class="av">MR</div><span style="font-size:.74rem">Marco_78</span></div><span class="tag">Annuler</span></div>
+        <div class="h-sub" style="margin-top:.5rem">Mes amis (2)</div>
+        <div class="card row"><div class="row g05"><div class="av">TH</div><span style="font-size:.74rem;font-weight:600">Théo</span></div><span style="font-size:.68rem;color:var(--ink-dim)">1200</span></div>
+        <div class="card row"><div class="row g05"><div class="av">LE</div><span style="font-size:.74rem;font-weight:600">Léa</span></div><span style="font-size:.68rem;color:var(--ink-dim)">1097</span></div>
+        <div style="flex:1"></div>
+      </div><div class="tabbar" data-active="amis"></div></div>
+      <div class="note">Reçues (accepter/refuser) ET envoyées (annuler) visibles. Rechercher → F2 · ami → P.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">F2</span>Recherche de pilotes</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour</div>
+        <div class="search" style="margin-bottom:.6rem">« mar »</div>
+        <div class="card row"><div class="row g05"><div class="av">MA</div><span style="font-size:.76rem">Marine</span></div><span style="font-size:.7rem;color:var(--ink-dim)">994</span></div>
+        <div class="card row"><div class="row g05"><div class="av">MR</div><span style="font-size:.76rem">Marco_78</span></div><span style="font-size:.7rem;color:var(--ink-dim)">1140</span></div>
+        <div style="flex:1"></div>
+      </div><div class="tabbar" data-active="amis"></div></div>
+      <div class="note">Résultat → P · retour → F1.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">P</span>Profil d'un pilote</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour</div>
+        <div class="row"><div class="row g05"><div class="av lg">TH</div><div><div style="font-weight:700;font-size:.85rem">Théo</div><div class="h-sub" style="text-transform:none;letter-spacing:0">Rookie · 1200</div></div></div><span style="color:var(--ink-dim2)">…</span></div>
+        <div class="card" style="margin-top:.6rem;text-align:center"><div class="lbl">Face à face</div><div style="font-family:Georgia,serif;font-weight:800;margin-top:.15rem">Toi 2 — 1 Lui</div></div>
+        <div class="h-sub" style="margin:.5rem 0 .25rem">Évolution Elo</div>
+        <svg class="spark" viewBox="0 0 200 38" style="height:32px"><polyline points="0,26 40,22 80,28 120,14 160,18 200,10" fill="none" stroke="#e10600" stroke-width="2"/></svg>
+        <div class="h-sub" style="margin:.4rem 0 .25rem">Badges</div>
+        <div class="bgrid">
+          <div class="bd on"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M5 3v18M5 4h13l-2 3 2 3H5"/></svg></div>
+          <div class="bd on"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M10 2h4v5l2 3v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V10l2-3V2Z"/></svg></div>
+          <div class="bd off"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="4" y="4" width="16" height="16"/></svg></div>
+          <div class="bd off"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M4 14l6-8 4 5 6-9"/></svg></div>
+        </div>
+        <div class="h-sub" style="margin:.4rem 0 .25rem">Dernières courses</div>
+        <div class="card row"><span style="font-size:.7rem">Karting Vaux-le-Pénil · 2e</span><span class="pill flat">= 0</span></div>
+        <div style="flex:1"></div>
+        <div class="btn txt" style="font-size:.62rem;color:var(--ink-dim2)">… : Retirer des amis · Bloquer · Signaler — non-ami : bouton « Ajouter en ami » à la place</div>
+      </div><div class="tabbar" data-active="amis"></div></div>
+      <div class="note">Si le pilote tapé = moi → redirection R1. Badge → R4 · grade → R2 · course de l'historique → C9 · signaler → M1 · non-ami : « Ajouter en ami » (demande envoyée + toast).</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">M1</span>Motif de signalement</div>
+      <div class="phone"><div class="scr" style="padding:0;background:rgba(0,0,0,.4)">
+        <div class="sheet">
+          <div class="row"><b style="font-family:Georgia,serif">Signaler</b><span style="color:var(--ink-dim2)">✕</span></div>
+          <div class="h-sub" style="margin:.4rem 0 .6rem;text-transform:none;letter-spacing:0">Ton signalement part en modération</div>
+          <div class="card">Classement erroné</div>
+          <div class="card">Comportement déplacé</div>
+          <div class="card">Usurpation d'identité</div>
+          <div class="card">Autre (préciser)</div>
+          <div style="flex:1"></div>
+          <div class="btn solid">Envoyer le signalement</div>
+        </div>
+      </div></div>
+      <div class="note">Mutualisé C9/P. Envoyer → toast → retour origine · ✕ → retour origine.</div>
+    </div>
+  </div>
+
+  <!-- ============ PROFIL ============ -->
+  <div class="branch">Branche Profil <small>onglet 4</small></div>
+  <div class="grid">
+
+    <div class="cell"><div class="label"><span class="code">R1</span>Mon profil</div>
+      <div class="phone"><div class="scr">
+        <div class="row"><div class="row g05"><div class="av me lg">PA</div><div><div style="font-weight:700;font-size:.85rem">Paul</div><div class="h-sub" style="text-transform:none;letter-spacing:0">Rookie</div></div></div>
+        <span style="border:1.3px solid var(--ink-dim);border-radius:999px;padding:.3rem .6rem;font-size:.62rem;color:var(--ink-dim);font-weight:700">⚙ RÉGLAGES</span></div>
+        <div style="font-family:Georgia,serif;font-size:2.1rem;font-weight:800;margin-top:.5rem">1018</div>
+        <svg class="spark" viewBox="0 0 200 38"><polyline points="0,30 40,26 80,18 120,22 160,12 200,6" fill="none" stroke="#e10600" stroke-width="2"/></svg>
+        <div class="row" style="margin-top:.6rem;gap:.45rem">
+          <div class="card" style="flex:1;text-align:center"><b style="font-family:Georgia,serif">28</b><div class="h-sub">Courses</div></div>
+          <div class="card" style="flex:1;text-align:center"><b style="font-family:Georgia,serif">5</b><div class="h-sub">Podiums</div></div>
+        </div>
+        <div class="h-sub" style="margin:.55rem 0 .3rem">Badges — voir tout</div>
+        <div class="bgrid">
+          <div class="bd on"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M5 3v18M5 4h13l-2 3 2 3H5"/></svg></div>
+          <div class="bd on"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M10 2h4v5l2 3v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V10l2-3V2Z"/></svg></div>
+          <div class="bd on"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M3 17c3-1 3-5 6-5s3 4 6 4 3-4 6-4"/></svg></div>
+          <div class="bd off"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="4" y="4" width="16" height="16"/></svg></div>
+        </div>
+        <div style="flex:1"></div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note"><b style="color:var(--accent)">Corrigé :</b> bouton Réglages explicite (pilule ⚙, plus une icône discrète). Grade → R2 · badges → R3 · stats → R5.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">R2</span>Échelle des grades</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour</div>
+        <div class="h-title" style="font-size:1rem">Les grades</div>
+        <div class="h-sub" style="margin-bottom:.6rem">Ton Elo trace ta carrière</div>
+        <div class="grade-row"><b>Légende du Bitume</b><span>2100 +</span></div>
+        <div class="grade-row"><b>Fusée du Paddock</b><span>1700 – 2099</span></div>
+        <div class="grade-row"><b>Missile des Stands</b><span>1300 – 1699</span></div>
+        <div class="grade-row on"><b>Rookie — toi (1018)</b><span>1000 – 1299</span></div>
+        <div class="grade-row"><b>Roue Libre</b><span>700 – 999</span></div>
+        <div class="grade-row"><b>Kartambolage</b><span>100 – 699</span></div>
+        <div style="flex:1"></div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">Les 6 grades validés. Retour contextuel → R1 ou P.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">R3</span>Catalogue de badges</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour</div>
+        <div class="h-title" style="font-size:1rem">Mes badges</div>
+        <div class="h-sub" style="margin-bottom:.6rem">3 / 10 débloqués — catalogue à valider ensemble</div>
+        <div class="bgrid" style="gap:.5rem">
+          <div class="bd on"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M5 3v18M5 4h13l-2 3 2 3H5"/></svg></div>
+          <div class="bd on"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M10 2h4v5l2 3v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V10l2-3V2Z"/></svg></div>
+          <div class="bd on"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M3 17c3-1 3-5 6-5s3 4 6 4 3-4 6-4"/></svg></div>
+          <div class="bd off"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="4" y="4" width="16" height="16"/></svg></div>
+          <div class="bd off"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M4 4h12v6a6 6 0 0 1-6 6 6 6 0 0 1-6-6V4Z"/></svg></div>
+          <div class="bd off"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M4 14l6-8 4 5 6-9"/></svg></div>
+          <div class="bd off"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg></div>
+          <div class="bd off"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 3v3M12 18v3M4 12H1M23 12h-3"/></svg></div>
+          <div class="bd off"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></div>
+          <div class="bd off"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M6 20 18 4M6 4h6v6"/></svg></div>
+        </div>
+        <div style="flex:1"></div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">Badge → R4 · retour → R1.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">R4</span>Détail d'un badge</div>
+      <div class="phone"><div class="scr" style="justify-content:center;align-items:center;text-align:center;gap:.8rem">
+        <div class="bd on" style="width:70px;height:70px"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" style="width:30px;height:30px"><path d="M10 2h4v5l2 3v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V10l2-3V2Z"/></svg></div>
+        <div><div style="font-family:Georgia,serif;font-weight:800">Champagne !</div><div class="h-sub" style="margin-top:.3rem;text-transform:none;letter-spacing:0">Première victoire</div></div>
+        <div class="card" style="width:100%"><span style="font-size:.72rem;color:var(--ink-dim)">Débloqué le 18 juillet 2026 — Vaux-le-Pénil</span></div>
+        <div class="btn txt" style="font-size:.68rem">‹ Retour</div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">Retour contextuel → R3 ou P.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">R5</span>Mon historique</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour</div>
+        <div class="h-title" style="font-size:1rem">Mes courses</div>
+        <div class="h-sub" style="margin-bottom:.5rem">28 courses · 5 podiums</div>
+        <div class="card row"><div><div style="font-weight:700;font-size:.76rem">Karting Vaux-le-Pénil</div><div class="h-sub" style="margin-top:.12rem">1er / 5 · 18 juil.</div></div><span class="pill up">▲ +18</span></div>
+        <div class="card row"><div><div style="font-weight:700;font-size:.76rem">Session nocturne indoor</div><div class="h-sub" style="margin-top:.12rem">2e / 4 · 30 juin</div></div><span class="pill up">▲ +12</span></div>
+        <div class="card row"><div><div style="font-weight:700;font-size:.76rem">GP des potes</div><div class="h-sub" style="margin-top:.12rem">4e / 6 · 12 juin</div></div><span class="pill down">▼ −7</span></div>
+        <div style="flex:1"></div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">Course → C9 · retour → R1.</div>
+    </div>
+  </div>
+
+  <!-- ============ REGLAGES ============ -->
+  <div class="branch">Branche Réglages <small>via ⚙ sur R1 — « Langue » masquée (une seule langue au lancement)</small></div>
+  <div class="grid">
+
+    <div class="cell"><div class="label"><span class="code">S1</span>Réglages</div>
+      <div class="phone"><div class="scr">
+        <div class="back">✕ Fermer</div>
+        <div class="h-title">Réglages</div>
+        <div style="margin-top:.7rem">
+          <div class="card row"><span style="font-size:.76rem">Compte</span><span style="color:var(--ink-dim2)">›</span></div>
+          <div class="card row"><span style="font-size:.76rem">Notifications</span><span style="color:var(--ink-dim2)">›</span></div>
+          <div class="card row"><span style="font-size:.76rem">Aide &amp; support</span><span style="color:var(--ink-dim2)">›</span></div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="btn txt" style="color:var(--accent);text-transform:uppercase;font-weight:700">Se déconnecter</div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">Compte → S2 · notifs → S3 · aide → S4 · déconnexion → confirmation → S0 · fermer → R1.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">S2</span>Compte</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour</div>
+        <div class="h-title" style="font-size:1rem">Compte</div>
+        <div style="margin-top:.6rem">
+          <div class="card row"><span style="font-size:.76rem">Pseudo</span><span style="color:var(--ink-dim2)">Paul ›</span></div>
+          <div class="card row"><span style="font-size:.76rem">Email</span><span style="color:var(--ink-dim2)">p•••@gmail.com ›</span></div>
+          <div class="card row"><span style="font-size:.76rem">Mot de passe</span><span style="color:var(--ink-dim2)">›</span></div>
+          <div class="card row"><span style="font-size:.76rem">Confidentialité du profil</span><span style="color:var(--ink-dim2)">Public ›</span></div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="btn txt" style="color:var(--ink-dim2);font-size:.66rem">Supprimer mon compte</div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">Pseudo → S2a · email → S2b · mdp → S2c · confidentialité → S2d · suppression → S2e · retour → S1.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">S2a</span>Modifier le pseudo</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Annuler</div>
+        <div class="h-title" style="font-size:1rem">Pseudo</div>
+        <div class="field" style="margin-top:.6rem">Paul</div>
+        <div class="h-sub" style="text-transform:none;letter-spacing:0">Visible par tous les pilotes</div>
+        <div style="flex:1"></div><div class="btn solid">Enregistrer</div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">Enregistrer → toast → S2 · annuler → S2.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">S2b</span>Modifier l'email</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Annuler</div>
+        <div class="h-title" style="font-size:1rem">Email</div>
+        <div class="field" style="margin-top:.6rem">Nouvelle adresse email</div>
+        <div class="h-sub" style="text-transform:none;letter-spacing:0">Un email de vérification sera envoyé</div>
+        <div style="flex:1"></div><div class="btn solid">Enregistrer</div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">Enregistrer → vérification + toast → S2 · annuler → S2.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">S2c</span>Mot de passe</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Annuler</div>
+        <div class="h-title" style="font-size:1rem">Mot de passe</div>
+        <div class="field" style="margin-top:.6rem">Mot de passe actuel</div>
+        <div class="field">Nouveau mot de passe</div>
+        <div style="flex:1"></div><div class="btn solid">Enregistrer</div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">Enregistrer → toast → S2 · annuler → S2.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">S2d</span>Confidentialité du profil</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour</div>
+        <div class="h-title" style="font-size:1rem">Confidentialité</div>
+        <div class="card row" style="margin-top:.6rem;border-color:var(--accent)"><span style="font-size:.76rem;font-weight:700">Public</span><span class="tag red">Actif</span></div>
+        <div class="h-sub" style="text-transform:none;letter-spacing:0;margin:.2rem 0 .5rem">Ton Elo et ton historique sont visibles par tous les inscrits</div>
+        <div class="card row"><span style="font-size:.76rem">Amis uniquement</span><span class="tag">Choisir</span></div>
+        <div style="flex:1"></div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">Choix enregistré → S2 · retour → S2.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">S2e</span>Supprimer mon compte</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Annuler</div>
+        <div class="h-title" style="font-size:1rem;color:var(--accent)">Supprimer le compte</div>
+        <div class="card" style="margin-top:.6rem"><span style="font-size:.72rem;color:var(--ink-dim);line-height:1.5">Tes données personnelles seront supprimées définitivement. Tes courses passées resteront, anonymisées (« Joueur supprimé »), pour préserver l'Elo des autres pilotes.</span></div>
+        <div class="field" style="margin-top:.5rem">Tape « SUPPRIMER » pour confirmer</div>
+        <div style="flex:1"></div><div class="btn solid">Supprimer définitivement</div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">RGPD (règle §8 du cahier). Supprimer → S0 · annuler → S2.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">S3</span>Notifications</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour</div>
+        <div class="h-title" style="font-size:1rem">Notifications</div>
+        <div style="margin-top:.6rem">
+          <div class="card row"><span style="font-size:.74rem">Invitation à une course</span><span class="sw"></span></div>
+          <div class="card row"><span style="font-size:.74rem">Résultat d'une course saisi</span><span class="sw"></span></div>
+          <div class="card row"><span style="font-size:.74rem">Demande d'ami</span><span class="sw off"></span></div>
+        </div>
+        <div class="h-sub" style="margin-top:.5rem;text-transform:none;letter-spacing:0">Chaque notification ouvre l'écran concerné</div>
+        <div style="flex:1"></div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">Interrupteurs (3 notifs MVP). Deep-links : → C6′ / C9 / F1. Retour → S1.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">S4</span>Aide &amp; support</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour</div>
+        <div class="h-title" style="font-size:1rem">Aide &amp; support</div>
+        <div style="margin-top:.6rem">
+          <div class="card row"><span style="font-size:.76rem">Questions fréquentes</span><span style="color:var(--ink-dim2)">›</span></div>
+          <div class="card row"><span style="font-size:.76rem">Nous contacter</span><span style="color:var(--ink-dim2)">›</span></div>
+          <div class="card row"><span style="font-size:.76rem">Conditions d'utilisation</span><span style="color:var(--ink-dim2)">›</span></div>
+          <div class="card row"><span style="font-size:.76rem">Politique de confidentialité</span><span style="color:var(--ink-dim2)">›</span></div>
+          <div class="card row"><span style="font-size:.76rem">Version</span><span style="color:var(--ink-dim2)">1.0.0</span></div>
+        </div>
+        <div style="flex:1"></div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">FAQ → S4a · contact → S4b · CGU → S4c · confidentialité → S4d · retour → S1.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">S4a</span>FAQ</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour</div>
+        <div class="h-title" style="font-size:1rem">Questions fréquentes</div>
+        <div class="card" style="margin-top:.6rem"><b style="font-size:.74rem">Comment mon Elo est-il calculé ?</b></div>
+        <div class="card"><b style="font-size:.74rem">Comment réclamer un profil fantôme ?</b></div>
+        <div class="card"><b style="font-size:.74rem">Qui peut modifier un classement ?</b></div>
+        <div style="flex:1"></div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">Question → réponse dépliée sur place · retour → S4.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">S4b</span>Nous contacter</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Annuler</div>
+        <div class="h-title" style="font-size:1rem">Nous contacter</div>
+        <div class="field" style="margin-top:.6rem">Sujet</div>
+        <div class="field" style="height:90px">Ton message…</div>
+        <div style="flex:1"></div><div class="btn solid">Envoyer</div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">Envoyer → toast de confirmation → S4 · annuler → S4.</div>
+    </div>
+
+    <div class="cell"><div class="label"><span class="code">S4c · S4d</span>CGU · Confidentialité</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour</div>
+        <div class="h-title" style="font-size:1rem">Conditions d'utilisation</div>
+        <div class="h-sub" style="margin:.5rem 0">Dernière mise à jour : —</div>
+        <div style="font-size:.68rem;color:var(--ink-dim);line-height:1.6">Document légal (contenu à rédiger — voir questions ouvertes §16.3 du cahier des charges). Même gabarit pour la politique de confidentialité.</div>
+        <div style="flex:1"></div>
+      </div><div class="tabbar" data-active="profil"></div></div>
+      <div class="note">Écrans de contenu, retour → S4.</div>
+    </div>
+  </div>
+
+  <p class="foot">40 écrans couvrant l'intégralité de la carte de navigation. Chaque note sous un écran rappelle où mènent ses boutons. Audité avant présentation — dis-moi ce qu'il faut ajuster écran par écran.</p>
+</div>
+
+<script>
+  const TABS=[
+    ['courses','Courses','<path d="M5 3v18M5 4h13l-2 3 2 3H5"/>'],
+    ['classements','Classements','<path d="M4 20V11M11 20V4M18 20v-7"/>'],
+    ['amis','Amis','<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M14.5 15a5 5 0 0 1 6 5"/>'],
+    ['profil','Profil','<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/>'],
+  ];
+  document.querySelectorAll('.tabbar[data-active]').forEach(bar=>{
+    const a=bar.getAttribute('data-active');
+    bar.innerHTML=TABS.map(([id,label,path])=>`<div class="tab${id===a?' active':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${path}</svg>${label}</div>`).join('');
+  });
+</script>

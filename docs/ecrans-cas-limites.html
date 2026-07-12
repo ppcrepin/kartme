@@ -1,0 +1,269 @@
+<!doctype html>
+<title>KartMe — Cas limites : 2 pilotes & grande course</title>
+
+<style>
+  :root {
+    --page-bg: #0a0706; --page-ink: #f2ede9; --page-dim: #9a8a85;
+    --bg: #0d0908; --bg-e: #171110; --bg-e2: #1f1613; --line: #2c1f1c;
+    --ink: #f2ede9; --ink-dim: #a08d87; --ink-dim2: #9c8880;
+    --accent: #e10600; --pos: #6fae82;
+    --r: 3px;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--page-bg); color: var(--page-ink); font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+  .intro { max-width: 740px; margin: 0 auto 2.4rem; text-align: center; }
+  .eyebrow { font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  h1 { font-family: Georgia, "Times New Roman", serif; font-size: 2rem; font-weight: 800; margin: 0.5rem 0 0.6rem; text-wrap: balance; }
+  .intro p { color: var(--page-dim); line-height: 1.6; }
+
+  .section-title { max-width: 1100px; margin: 3.2rem 0 0.4rem; font-family: Georgia, serif; font-size: 1.1rem; font-weight: 700; color: var(--ink); border-bottom: 1px solid var(--line); padding-bottom: 0.6rem; }
+  .section-desc { color: var(--page-dim); font-size: 0.85rem; margin: 0 0 1.4rem; line-height: 1.55; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.8rem; }
+
+  .cell { display: flex; flex-direction: column; gap: 0.7rem; }
+  .cell .label { font-size: 0.85rem; font-weight: 700; padding: 0 0.1rem; }
+  .cell .note { font-size: 0.78rem; color: var(--page-dim); padding: 0 0.1rem; line-height: 1.5; }
+  .cell .note b { color: var(--accent); font-weight: 700; }
+
+  .phone { background: var(--bg); color: var(--ink); border: 1px solid var(--line); width: 100%; aspect-ratio: 9/18.5; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .scr { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 1.05rem 0.95rem 0.5rem; }
+  .scr.scroll { overflow-y: auto; }
+  .scr.scroll::-webkit-scrollbar { width: 3px; }
+  .scr.scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+  .fade-bottom { position: relative; }
+  .fade-bottom::after { content:""; position:absolute; left:0; right:0; bottom:0; height:26px; background:linear-gradient(transparent, var(--bg)); pointer-events:none; }
+
+  .dashes { display: flex; height: 5px; flex-shrink: 0; }
+  .dashes span { flex: 1; background: var(--accent); }
+  .dashes span:nth-child(odd) { background: transparent; }
+
+  .h-title { font-family: Georgia, serif; font-size: 1.2rem; font-weight: 800; }
+  .h-sub { font-size: 0.7rem; color: var(--ink-dim2); margin-top: 0.15rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .eyebrow-lbl { font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-dim2); font-weight: 700; }
+  .card { background: var(--bg-e); border: 1px solid var(--line); border-radius: var(--r); padding: 0.7rem 0.85rem; }
+  .card + .card { margin-top: 0.45rem; }
+  .row { display: flex; align-items: center; justify-content: space-between; }
+  .avatar { border-radius: 50%; flex-shrink: 0; border: 1.3px solid var(--ink-dim2); display:flex; align-items:center; justify-content:center; font-family: Georgia, serif; font-weight: 700; color: var(--ink-dim); }
+  .avatar.me { border-color: var(--accent); color: var(--accent); }
+  .avatar.sm { width: 24px; height: 24px; font-size: 0.55rem; }
+  .avatar.lg { width: 60px; height: 60px; font-size: 1.1rem; }
+  .btn { display: block; text-align: center; border: 1.3px solid var(--accent); color: var(--accent); font-weight: 700; font-size: 0.76rem; letter-spacing: 0.03em; text-transform: uppercase; padding: 0.65rem; border-radius: 999px; }
+  .btn.solid { background: var(--accent); color: #fff; }
+  .pill { display: inline-flex; align-items:center; gap:0.15rem; font-size: 0.66rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pill.up { color: var(--pos); }
+  .pill.down { color: var(--accent); }
+  .pill.flat { color: var(--ink-dim2); }
+  .tag { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.15rem 0.5rem; border: 1px solid var(--line); color: var(--ink-dim); white-space: nowrap; }
+  .drag { width: 14px; height: 14px; opacity: 0.5; background: repeating-linear-gradient(0deg, var(--ink-dim) 0 1.5px, transparent 1.5px 4px); }
+  .medal { width: 22px; height: 22px; border: 1.3px solid; display: flex; align-items: center; justify-content: center; font-family: Georgia, serif; font-size: 0.62rem; font-weight: 800; flex-shrink: 0; }
+  .medal.g { border-color: #e2c14d; color: #e2c14d; }
+  .medal.s { border-color: #cfd4da; color: #cfd4da; }
+  .medal.b { border-color: #c98a55; color: #c98a55; }
+  .pos-num { font-family: Georgia, serif; font-weight: 800; width: 18px; text-align: center; flex-shrink: 0; color: var(--ink-dim); }
+
+  .tabbar { display: flex; justify-content: space-around; padding: 0.55rem 0.2rem 0.35rem; border-top: 1px solid var(--line); flex-shrink: 0; background: var(--bg); }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font-size: 0.58rem; color: var(--ink-dim2); font-weight: 700; letter-spacing: 0.01em; text-transform: uppercase; flex: 1; }
+  .tab.active { color: var(--accent); }
+  .tab svg { width: 17px; height: 17px; }
+
+  .foot { max-width: 740px; margin: 4rem auto 0; text-align: center; color: var(--page-dim); font-size: 0.85rem; }
+</style>
+
+<div class="wrap">
+  <div class="intro">
+    <div class="eyebrow">KartMe · Cas limites de taille de course</div>
+    <h1>2 pilotes &amp; grande course</h1>
+    <p>Comment les écrans s'adaptent aux extrêmes : un duel (pas de podium à 3) et une course à 12 pilotes (listes longues, scroll). Chiffres Elo réels calculés, pas inventés.</p>
+  </div>
+
+  <div class="section-title">A · Course à 2 pilotes (duel)</div>
+  <p class="section-desc">Le podium à 3 marches n'a pas de sens : on bascule sur un format « face-à-face ». Exemple : Paul (1000) bat Théo (1200) — un exploit en 1 contre 1, donc gros gain à plein facteur K (+24 / −24).</p>
+  <div class="grid">
+
+    <div class="cell">
+      <div class="label">A1 · Saisie du classement (2 pilotes)</div>
+      <div class="phone">
+        <div class="scr">
+          <div class="h-title">Qui a gagné ?</div>
+          <div class="h-sub" style="margin-bottom:0.7rem;">Glisse ou tape pour ordonner</div>
+          <div class="card row" style="margin-bottom:0.45rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">1</span><div class="avatar sm me">PA</div><span style="font-size:0.78rem; font-weight:600;">Paul</span></div><div class="drag"></div></div>
+          <div class="card row"><div class="row" style="gap:0.5rem;"><span class="pos-num">2</span><div class="avatar sm">TH</div><span style="font-size:0.78rem; font-weight:600;">Théo</span></div><div class="drag"></div></div>
+          <div style="flex:1;"></div>
+          <div class="h-sub" style="text-align:center; margin-bottom:0.4rem; text-transform:none; letter-spacing:0;">Modifiable pendant 24h</div>
+          <div class="btn solid">Valider</div>
+        </div>
+        <div class="tabbar" data-active="courses"></div>
+      </div>
+      <div class="note">Libellé "Qui a gagné ?" plus naturel qu'un "classement" pour un duel.</div>
+    </div>
+
+    <div class="cell">
+      <div class="label">A2 · Résultat duel (pas de podium)</div>
+      <div class="phone">
+        <div class="scr" style="align-items:center; text-align:center;">
+          <div class="h-title" style="font-size:1.05rem; align-self:flex-start;">Karting Vaux-le-Pénil</div>
+          <div style="display:flex; align-items:center; gap:0.7rem; margin:1.4rem 0 1rem;">
+            <div style="text-align:center;">
+              <div class="avatar lg me" style="margin:0 auto; border-width:2px;">PA</div>
+              <div class="tag" style="margin:0.45rem auto 0; display:inline-block; border-color:var(--accent); color:var(--accent);">Vainqueur</div>
+              <div style="font-size:0.78rem; margin-top:0.3rem; font-weight:700;">Paul</div>
+              <span class="pill up">▲ +24</span>
+            </div>
+            <div style="font-family:Georgia,serif; font-weight:800; font-size:1.3rem; color:var(--ink-dim2);">VS</div>
+            <div style="text-align:center;">
+              <div class="avatar lg" style="margin:0 auto;">TH</div>
+              <div class="tag" style="margin:0.45rem auto 0; display:inline-block; visibility:hidden;">—</div>
+              <div style="font-size:0.78rem; margin-top:0.3rem; font-weight:700;">Théo</div>
+              <span class="pill down">▼ −24</span>
+            </div>
+          </div>
+          <div class="card" style="width:100%;">
+            <div class="row"><span style="font-size:0.72rem; color:var(--ink-dim);">Exploit — Théo était mieux noté</span><span class="tag" style="border-color:var(--accent); color:var(--accent);">+200 d'écart</span></div>
+          </div>
+          <div style="flex:1;"></div>
+          <div class="btn solid" style="width:100%;">Partager le résultat</div>
+        </div>
+        <div class="tabbar" data-active="courses"></div>
+      </div>
+      <div class="note"><b>Adapté :</b> face-à-face « VS » au lieu du podium à 3 marches.</div>
+    </div>
+
+    <div class="cell">
+      <div class="label">A3 · Carte de partage (duel)</div>
+      <div class="phone">
+        <div class="dashes"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="scr" style="align-items:center; text-align:center; padding-bottom:1.05rem;">
+          <div class="eyebrow-lbl" style="color:var(--accent);">KartMe · Duel</div>
+          <div class="h-title" style="font-size:1rem; margin-top:0.2rem;">Karting Vaux-le-Pénil</div>
+          <div style="display:flex; align-items:center; gap:0.8rem; margin:1.5rem 0;">
+            <div style="text-align:center;"><div class="avatar lg me" style="margin:0 auto; border-width:2px;">PA</div><div style="font-size:0.8rem; margin-top:0.4rem; font-weight:700;">Paul</div><span class="pill up">▲ +24</span></div>
+            <div style="font-family:Georgia,serif; font-weight:800; font-size:1.2rem; color:var(--ink-dim2);">VS</div>
+            <div style="text-align:center;"><div class="avatar lg" style="margin:0 auto;">TH</div><div style="font-size:0.8rem; margin-top:0.4rem;">Théo</div><span class="pill down">▼ −24</span></div>
+          </div>
+          <div class="h-sub" style="text-transform:none; letter-spacing:0;">L'outsider s'impose · voir sur KartMe</div>
+          <div style="flex:1;"></div>
+          <div class="btn solid" style="width:100%;">Partager</div>
+        </div>
+        <div class="dashes"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-title">B · Grande course (12 pilotes)</div>
+  <p class="section-desc">Les listes deviennent longues → défilement, avec le podium (top 3) toujours mis en avant. Exemple réel : Paul part à 1000 et finit 3<sup>e</sup> sur 12, mais gagne le PLUS d'Elo de toute la course (+13) car il a battu 9 pilotes, dont 5 mieux notés que lui — comportement Elo correct, et très gratifiant à montrer.</p>
+  <div class="grid">
+
+    <div class="cell">
+      <div class="label">B1 · Saisie du classement (scroll)</div>
+      <div class="phone">
+        <div class="scr scroll fade-bottom">
+          <div class="h-title">Classement final</div>
+          <div class="h-sub" style="margin-bottom:0.6rem;">12 pilotes · glisse pour réordonner</div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">1</span><div class="avatar sm">KA</div><span style="font-size:0.74rem; font-weight:600;">Karim</span></div><div class="drag"></div></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">2</span><div class="avatar sm">TH</div><span style="font-size:0.74rem; font-weight:600;">Théo</span></div><div class="drag"></div></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">3</span><div class="avatar sm me">PA</div><span style="font-size:0.74rem; font-weight:600;">Paul</span></div><div class="drag"></div></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">4</span><div class="avatar sm">LE</div><span style="font-size:0.74rem; font-weight:600;">Léa</span></div><div class="drag"></div></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">5</span><div class="avatar sm">SA</div><span style="font-size:0.74rem; font-weight:600;">Sami</span></div><div class="drag"></div></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">6</span><div class="avatar sm">LO</div><span style="font-size:0.74rem; font-weight:600;">Léo</span></div><div class="drag"></div></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">7</span><div class="avatar sm">NO</div><span style="font-size:0.74rem; font-weight:600;">Nora</span></div><div class="drag"></div></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">8</span><div class="avatar sm">RY</div><span style="font-size:0.74rem; font-weight:600;">Ryan</span></div><div class="drag"></div></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">9</span><div class="avatar sm">IN</div><span style="font-size:0.74rem; font-weight:600;">Inès</span></div><div class="drag"></div></div>
+          <div class="card row"><div class="row" style="gap:0.5rem;"><span class="pos-num">10</span><div class="avatar sm">MA</div><span style="font-size:0.74rem; font-weight:600;">Marine</span></div><div class="drag"></div></div>
+        </div>
+        <div style="padding:0.55rem 0.95rem 0.5rem; border-top:1px solid var(--line); flex-shrink:0;">
+          <div class="h-sub" style="text-align:center; margin-bottom:0.4rem; text-transform:none; letter-spacing:0;">Modifiable pendant 24h</div>
+          <div class="btn solid">Valider le classement</div>
+        </div>
+        <div class="tabbar" data-active="courses"></div>
+      </div>
+      <div class="note"><b>Adapté :</b> liste défilante (10 visibles + 2 en scroll), bouton Valider en pied fixe hors de la zone de défilement.</div>
+    </div>
+
+    <div class="cell">
+      <div class="label">B2 · Résultats complets (scroll, podium en tête)</div>
+      <div class="phone">
+        <div class="scr scroll fade-bottom">
+          <div class="h-title" style="font-size:1.05rem;">Classement complet</div>
+          <div class="h-sub" style="margin-bottom:0.55rem;">Vaux-le-Pénil · 12 pilotes</div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><div class="medal g">1</div><div class="avatar sm">KA</div><span style="font-size:0.74rem; font-weight:700;">Karim</span></div><span class="pill up">▲ +7</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><div class="medal s">2</div><div class="avatar sm">TH</div><span style="font-size:0.74rem; font-weight:700;">Théo</span></div><span class="pill up">▲ +7</span></div>
+          <div class="card row" style="margin-bottom:0.4rem; border-color:var(--accent);"><div class="row" style="gap:0.5rem;"><div class="medal b">3</div><div class="avatar sm me">PA</div><span style="font-size:0.74rem; font-weight:700;">Paul (toi)</span></div><span class="pill up">▲ +13</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">4</span><div class="avatar sm">LE</div><span style="font-size:0.74rem; font-weight:700;">Léa</span></div><span class="pill down">▼ −1</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">5</span><div class="avatar sm">SA</div><span style="font-size:0.74rem; font-weight:700;">Sami</span></div><span class="pill up">▲ +1</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">6</span><div class="avatar sm">LO</div><span style="font-size:0.74rem; font-weight:700;">Léo</span></div><span class="pill flat">0</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">7</span><div class="avatar sm">NO</div><span style="font-size:0.74rem; font-weight:700;">Nora</span></div><span class="pill down">▼ −1</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">8</span><div class="avatar sm">RY</div><span style="font-size:0.74rem; font-weight:700;">Ryan</span></div><span class="pill down">▼ −2</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><span class="pos-num">9</span><div class="avatar sm">IN</div><span style="font-size:0.74rem; font-weight:700;">Inès</span></div><span class="pill down">▼ −4</span></div>
+          <div class="card row"><div class="row" style="gap:0.5rem;"><span class="pos-num">10</span><div class="avatar sm">MA</div><span style="font-size:0.74rem; font-weight:700;">Marine</span></div><span class="pill down">▼ −5</span></div>
+        </div>
+        <div class="tabbar" data-active="courses"></div>
+      </div>
+      <div class="note"><b>Cas mis en valeur :</b> Paul 3e mais +13 (plus gros gain) — sa ligne est encadrée en rouge.</div>
+    </div>
+
+    <div class="cell">
+      <div class="label">B3 · Détail par paire de Paul (scroll, 11 duels)</div>
+      <div class="phone">
+        <div class="scr scroll fade-bottom">
+          <div class="row"><div class="row" style="gap:0.5rem;"><div class="avatar me" style="width:38px;height:38px;font-size:0.72rem;">PA</div><div><div style="font-weight:700; font-size:0.84rem;">Paul — 3e / 12</div><div class="h-sub" style="margin-top:0.1rem; text-transform:none; letter-spacing:0;">1000 → 1013 Elo</div></div></div></div>
+          <div class="card" style="margin:0.6rem 0; border-color:var(--accent); background:rgba(225,6,0,0.06);"><div class="row"><span style="font-weight:700; font-size:0.8rem;">Total</span><span style="font-family:Georgia,serif; font-weight:800; font-size:1.1rem; color:var(--pos);">▲ +13</span></div></div>
+          <div class="h-sub" style="margin-bottom:0.4rem; text-transform:none; letter-spacing:0;">Face à chaque adversaire</div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><div class="avatar sm">LE</div><span style="font-size:0.72rem;">Léa · battue (1284)</span></div><span class="pill up">+2</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><div class="avatar sm">SA</div><span style="font-size:0.72rem;">Sami · battu (1150)</span></div><span class="pill up">+2</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><div class="avatar sm">LO</div><span style="font-size:0.72rem;">Léo · battu (1100)</span></div><span class="pill up">+2</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><div class="avatar sm">NO</div><span style="font-size:0.72rem;">Nora · battue (1050)</span></div><span class="pill up">+2</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><div class="avatar sm">RY</div><span style="font-size:0.72rem;">Ryan · battu (1020)</span></div><span class="pill up">+2</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><div class="avatar sm">IN</div><span style="font-size:0.72rem;">Inès · battue (980)</span></div><span class="pill up">+1</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><div class="avatar sm">MA</div><span style="font-size:0.72rem;">Marine · battue (950)</span></div><span class="pill up">+1</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><div class="avatar sm">HU</div><span style="font-size:0.72rem;">Hugo · battu (900)</span></div><span class="pill up">+1</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><div class="avatar sm">ZO</div><span style="font-size:0.72rem;">Zoé · battue (870)</span></div><span class="pill up">+1</span></div>
+          <div class="card row" style="margin-bottom:0.4rem;"><div class="row" style="gap:0.5rem;"><div class="avatar sm">KA</div><span style="font-size:0.72rem;">Karim · devant (1300)</span></div><span class="pill flat">0</span></div>
+          <div class="card row"><div class="row" style="gap:0.5rem;"><div class="avatar sm">TH</div><span style="font-size:0.72rem;">Théo · devant (1200)</span></div><span class="pill down">−1</span></div>
+        </div>
+        <div class="tabbar" data-active="courses"></div>
+      </div>
+      <div class="note"><b>Mixte gains/pertes :</b> +1/+2 face aux 9 battus, 0 et −1 face aux 2 finis devant. Somme = +13.</div>
+    </div>
+
+    <div class="cell">
+      <div class="label">B4 · Carte de partage (12 pilotes)</div>
+      <div class="phone">
+        <div class="dashes"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="scr" style="align-items:center; text-align:center; padding-bottom:1.05rem;">
+          <div class="eyebrow-lbl" style="color:var(--accent);">KartMe</div>
+          <div class="h-title" style="font-size:1rem; margin-top:0.2rem;">Karting Vaux-le-Pénil</div>
+          <div style="display:flex; align-items:flex-end; gap:1rem; margin:1.3rem 0;">
+            <div style="text-align:center;"><div class="medal s" style="margin:0 auto;">2</div><div style="font-size:0.66rem; margin-top:0.3rem;">Théo</div><span class="pill up">▲ +7</span></div>
+            <div style="text-align:center;"><div class="medal g" style="margin:0 auto; width:28px; height:28px;">1</div><div style="font-size:0.7rem; margin-top:0.3rem; font-weight:700;">Karim</div><span class="pill up">▲ +7</span></div>
+            <div style="text-align:center;"><div class="medal b" style="margin:0 auto;">3</div><div style="font-size:0.66rem; margin-top:0.3rem;">Paul</div><span class="pill up">▲ +13</span></div>
+          </div>
+          <div class="h-sub" style="text-transform:none; letter-spacing:0;">+ 9 autres pilotes · voir sur KartMe</div>
+          <div style="flex:1;"></div>
+          <div class="btn solid" style="width:100%;">Partager</div>
+        </div>
+        <div class="dashes"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+      <div class="note">Podium (top 3) + « +9 autres pilotes » ; le détail complet reste dans l'app.</div>
+    </div>
+
+  </div>
+
+  <p class="foot">Ces variantes complètent les 17 écrans nominaux. Dis-moi si le format duel « VS » et le traitement des grandes courses te conviennent — puis on pourra figer l'ensemble dans le cahier des charges.</p>
+</div>
+
+<script>
+  const TABS = [
+    ['courses','Courses','<path d="M5 3v18M5 4h13l-2 3 2 3H5"/>'],
+    ['classements','Classements','<path d="M4 20V11M11 20V4M18 20v-7"/>'],
+    ['amis','Amis','<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M14.5 15a5 5 0 0 1 6 5"/>'],
+    ['profil','Profil','<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/>'],
+  ];
+  document.querySelectorAll('.tabbar[data-active]').forEach(bar => {
+    const active = bar.getAttribute('data-active');
+    bar.innerHTML = TABS.map(([id,label,path]) =>
+      `<div class="tab${id===active?' active':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${path}</svg>${label}</div>`
+    ).join('');
+  });
+</script>
