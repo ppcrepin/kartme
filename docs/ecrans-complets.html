@@ -57,6 +57,8 @@
   .tag.grn{border-color:var(--pos);color:var(--pos)}
   .field{border:1px solid var(--line);border-radius:var(--r);padding:.6rem .8rem;font-size:.76rem;color:var(--ink-dim);margin-bottom:.45rem}
   .drag{width:13px;height:13px;opacity:.5;background:repeating-linear-gradient(0deg,var(--ink-dim) 0 1.5px,transparent 1.5px 4px)}
+  .chk{width:18px;height:18px;border:1.4px solid var(--ink-dim2);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:.62rem;color:transparent;flex-shrink:0}
+  .chk.on{border-color:var(--pos);color:var(--pos)}
   .medal{width:20px;height:20px;border:1.3px solid;display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;font-size:.58rem;font-weight:800;flex-shrink:0}
   .medal.g{border-color:#e2c14d;color:#e2c14d}.medal.s{border-color:#cfd4da;color:#cfd4da}.medal.b{border-color:#c98a55;color:#c98a55}
   .pos{font-family:Georgia,serif;font-weight:800;width:16px;text-align:center;flex-shrink:0;color:var(--ink-dim)}
@@ -116,7 +118,7 @@
   <div class="intro">
     <div class="eyebrow">KartMe · Editorial Grand Prix — Rosso Corsa</div>
     <h1>Écrans complets, branche par branche</h1>
-    <p>39 écrans rendus couvrant l'intégralité de la carte de navigation (S4c et S4d partagent un gabarit commun de page légale). Chaque bouton visible correspond à une destination de la carte — zéro cul-de-sac. Rappel du style validé : angles nets partout, seuls les boutons d'action gardent la forme pilule (décision actée §9.2).</p>
+    <p>40 écrans rendus couvrant l'intégralité de la carte de navigation (S4c et S4d partagent un gabarit commun de page légale). Chaque bouton visible correspond à une destination de la carte — zéro cul-de-sac. Rappel du style validé : angles nets partout, seuls les boutons d'action gardent la forme pilule (décision actée §9.2).</p>
   </div>
   <div class="world"><b>Monde narratif unique</b> (chiffres Elo réellement calculés, somme nulle) — course « Karting Vaux-le-Pénil, sam. 18 juillet, 18h » : Paul 1000 → 1er <b style="color:var(--pos)">+18</b> (1018) · Théo 1200 → 2e <b>0</b> (1200) · Léa 1100 → 3e −3 (1097) · Marine 1000 → 4e −6 (994, redescend en Roue Libre) · Hugo 900 → 5e −9 (891). Classement amis après course : Théo, Léa, Paul, Marine, Hugo.</div>
 
@@ -277,7 +279,7 @@
         <div class="btn solid" style="margin-top:.35rem">Saisir le classement</div>
         <div class="btn txt" style="font-size:.64rem">Modifier · Annuler la course</div>
       </div><div class="tabbar" data-active="courses"></div></div>
-      <div class="note"><b style="color:var(--accent)">Corrigé :</b> grade + Elo à côté de chaque nom. Saisir → C7 · inviter → C5 · pilote → P.</div>
+      <div class="note"><b style="color:var(--accent)">Corrigé :</b> grade + Elo à côté de chaque nom. Saisir → <b>C6b</b> (confirmer les présents) · inviter → C5 · pilote → P.</div>
     </div>
 
     <div class="cell"><div class="label"><span class="code">C6′</span>Détail course — participant</div>
@@ -297,11 +299,29 @@
       <div class="note">Grille 5/5 avec grade + Elo · « Quitter la course » → C1 (si ajouté par erreur) · bascule auto → C8 quand l'admin lance la saisie · retour → C1. Pas de RSVP « je serai là » (décision A1).</div>
     </div>
 
+    <div class="cell"><div class="label"><span class="code">C6b</span>Qui était présent ? (admin)</div>
+      <div class="phone"><div class="scr">
+        <div class="back">‹ Retour</div>
+        <div class="h-title" style="font-size:1rem">Qui était présent ?</div>
+        <div class="h-sub" style="margin-bottom:.6rem">Décoche les absents · ajoute les imprévus</div>
+        <div class="card row"><div class="row g05"><span class="chk on">✓</span><div class="av me">PA</div><span style="font-size:.74rem">Paul</span></div></div>
+        <div class="card row"><div class="row g05"><span class="chk on">✓</span><div class="av">TH</div><span style="font-size:.74rem">Théo</span></div></div>
+        <div class="card row"><div class="row g05"><span class="chk on">✓</span><div class="av">LE</div><span style="font-size:.74rem">Léa</span></div></div>
+        <div class="card row"><div class="row g05"><span class="chk on">✓</span><div class="av">MA</div><span style="font-size:.74rem">Marine</span></div></div>
+        <div class="card row"><div class="row g05"><span class="chk on">✓</span><div class="av">HU</div><span style="font-size:.74rem">Hugo</span></div></div>
+        <div class="card row" style="border-style:dashed;color:var(--ink-dim)"><span style="font-size:.74rem">+ Ajouter un pilote de dernière minute</span><span>›</span></div>
+        <div style="flex:1"></div>
+        <div class="h-sub" style="text-align:center;text-transform:none;letter-spacing:0;margin-bottom:.35rem">5 pilotes confirmés</div>
+        <div class="btn solid">Continuer vers le classement</div>
+      </div><div class="tabbar" data-active="courses"></div></div>
+      <div class="note"><b style="color:var(--accent)">Nouveau :</b> étape intermédiaire entre l'ajout des participants et le classement. On décoche les absents, on ajoute les imprévus, puis on continue. Continuer → C7 · ajouter → C5 · retour → C6.</div>
+    </div>
+
     <div class="cell"><div class="label"><span class="code">C7</span>Saisie du classement (admin)</div>
       <div class="phone"><div class="scr">
-        <div class="back">‹ Annuler (sans recalcul)</div>
+        <div class="back">‹ Retour (présents)</div>
         <div class="h-title" style="font-size:1rem">Classement final</div>
-        <div class="h-sub" style="margin-bottom:.5rem">Glisse pour réordonner</div>
+        <div class="h-sub" style="margin-bottom:.5rem">Glisse pour réordonner les 5 présents</div>
         <div class="card row"><div class="row g05"><span class="pos">1</span><div class="av me">PA</div><span style="font-size:.74rem;font-weight:600">Paul</span></div><div class="drag"></div></div>
         <div class="card row"><div class="row g05"><span class="pos">2</span><div class="av">TH</div><span style="font-size:.74rem;font-weight:600">Théo</span></div><div class="drag"></div></div>
         <div class="card row"><div class="row g05"><span class="pos">3</span><div class="av">LE</div><span style="font-size:.74rem;font-weight:600">Léa</span></div><div class="drag"></div></div>
@@ -311,7 +331,7 @@
         <div class="h-sub" style="text-align:center;text-transform:none;letter-spacing:0;margin-bottom:.35rem">Modifiable pendant 24h</div>
         <div class="btn solid">Valider le classement</div>
       </div><div class="tabbar" data-active="courses"></div></div>
-      <div class="note">Valider → recalcul Elo → C9 · annuler → C6.</div>
+      <div class="note">Ne contient que les pilotes confirmés présents (C6b). Valider → recalcul Elo → C9 · retour → C6b.</div>
     </div>
 
     <div class="cell"><div class="label"><span class="code">C8</span>En attente (participant)</div>
@@ -717,7 +737,7 @@
     </div>
   </div>
 
-  <p class="foot">39 écrans couvrant l'intégralité de la carte de navigation. Chaque note sous un écran rappelle où mènent ses boutons. Audité avant présentation — dis-moi ce qu'il faut ajuster écran par écran.</p>
+  <p class="foot">40 écrans couvrant l'intégralité de la carte de navigation. Chaque note sous un écran rappelle où mènent ses boutons. Audité avant présentation — dis-moi ce qu'il faut ajuster écran par écran.</p>
 </div>
 
 <script>

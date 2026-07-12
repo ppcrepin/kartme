@@ -1,6 +1,6 @@
 # KartMe — Cahier des charges v0.6 (brouillon de travail)
 
-> Voir aussi : **carte de navigation** `docs/navigation-map.html` (chaque bouton → sa destination, zéro cul-de-sac) · **39 écrans rendus** `docs/ecrans-complets.html` · **cas limites** `docs/ecrans-cas-limites.html`.
+> Voir aussi : **carte de navigation** `docs/navigation-map.html` (chaque bouton → sa destination, zéro cul-de-sac) · **40 écrans rendus** `docs/ecrans-complets.html` · **cas limites** `docs/ecrans-cas-limites.html`.
 
 > **Statut : non définitif.** Ce document évolue en continu à mesure des échanges. Il reste au minimum deux chantiers avant une v1 figée : la validation des écrans détaillés dans le nouveau langage graphique retenu, et les nombreuses questions listées en fin de document (§16). Ne rien coder à partir de ce document tant qu'il n'a pas été explicitement validé point par point.
 
@@ -38,15 +38,16 @@ Démocratiser l'accès au karting amateur via un système "Elo" façon échecs :
 ## 4. Cycle de vie d'une course
 
 1. **Création** — n'importe quel utilisateur inscrit peut créer une course (écran à un seul niveau : circuit + date/heure), et en devient l'admin, seul à pouvoir saisir/modifier le classement (pas de délégation/co-admin au MVP).
-2. **Pré-liste des participants** — dès la création, l'admin ajoute les participants attendus (amis de l'app ou noms libres). Pas besoin de tout ressaisir à la fin : à la fin de la course, l'admin coche qui était effectivement présent (retire les absents, ajoute les imprévus).
+2. **Pré-liste des participants** — dès la création, l'admin ajoute les participants attendus (amis de l'app ou noms libres).
 3. **Invitation** — lien ou QR code unique partageable (SMS, WhatsApp...) ; ajout direct possible depuis la liste d'amis.
 4. **Participants sans compte** — un **profil fantôme** est créé avec son propre Elo qui évolue. Réclamation sécurisée : la personne clique sur un lien pointant vers son profil précis (envoyé par l'admin), crée son compte, et **l'admin de la course confirme** que c'est bien elle avant rattachement de l'historique.
-5. **Saisie du résultat** — l'admin réordonne les participants par **glisser-déposer** jusqu'à obtenir le classement réel ; les Elo de tous les participants sont recalculés immédiatement.
-6. **Modification avant saisie** — tant qu'aucun classement n'est saisi, l'admin peut **modifier le lieu et la date** de la course sans devoir l'annuler/recréer. *(décision A4)*
-7. **Fenêtre de correction** — après validation, l'admin peut corriger le classement pendant **24h**, l'Elo est recalculé automatiquement. Passé ce délai, la course est figée dans l'historique.
-8. **Annulation** — possible tant qu'aucun classement n'est saisi. Une fois validée, la course reste dans l'historique officiel et n'est plus supprimable, pour préserver l'intégrité de l'Elo de tous les participants.
-9. **Signalement de classement** — un participant peut **signaler un classement suspect** ; le signalement part en modération mais **n'annule pas** l'Elo automatiquement (l'admin fait toujours foi). *(décision A2)*
-10. **Partage** — carte visuelle automatique (podium + variation d'Elo de chacun, ex. `+18` / `-12`, toujours doublée d'un signe ▲/▼) ; version épurée pour l'externe, un clic ramène vers la page détaillée de la course dans l'app.
+5. **Confirmation des présents** *(écran intermédiaire dédié — C6b)* — quand l'admin lance la saisie, il passe d'abord par un écran **« Qui était présent ? »** : une checklist des participants attendus où il **décoche les absents et ajoute les imprévus** de dernière minute, avant de classer. Étape distincte entre l'ajout des participants et le classement.
+6. **Saisie du résultat** — l'admin réordonne les **pilotes confirmés présents** par **glisser-déposer** jusqu'à obtenir le classement réel ; les Elo sont recalculés immédiatement.
+7. **Modification avant saisie** — tant qu'aucun classement n'est saisi, l'admin peut **modifier le lieu et la date** de la course sans devoir l'annuler/recréer. *(décision A4)*
+8. **Fenêtre de correction** — après validation, l'admin peut corriger le classement pendant **24h**, l'Elo est recalculé automatiquement. Passé ce délai, la course est figée dans l'historique.
+9. **Annulation** — possible tant qu'aucun classement n'est saisi. Une fois validée, la course reste dans l'historique officiel et n'est plus supprimable, pour préserver l'intégrité de l'Elo de tous les participants.
+10. **Signalement de classement** — un participant peut **signaler un classement suspect** ; le signalement part en modération mais **n'annule pas** l'Elo automatiquement (l'admin fait toujours foi). *(décision A2)*
+11. **Partage** — carte visuelle automatique (podium + variation d'Elo de chacun, ex. `+18` / `-12`, toujours doublée d'un signe ▲/▼) ; version épurée pour l'externe, un clic ramène vers la page détaillée de la course dans l'app.
 
 ## 5. Système Elo
 
@@ -190,7 +191,7 @@ Une carte de navigation exhaustive a été produite : elle liste chaque écran e
 
 ### 9.5 Écrans détaillés — v1 rendue et auditée
 
-Les **39 écrans** de la carte de navigation ont été rendus dans le style Editorial Grand Prix (`docs/ecrans-complets.html` + PDF `docs/ecrans-complets.pdf`), organisés par branche (Authentification, Courses, Classements, Amis, Profil, Réglages), avec un **monde narratif unique aux chiffres Elo réellement calculés** (course exemple à somme nulle : +18 / 0 / −3 / −6 / −9). Rendu audité de façon adversariale avant présentation (chiffres, couverture de la carte, cohérence narrative) puis corrigé. Intègrent tous les points actés : feuille "Ajouter des pilotes" unifiée (amis / nom libre / lien-QR), grille de course avec **grade coloré + Elo par pilote**, bouton Partager sur les résultats, carte de partage avec date + tous les coureurs, **échelle des grades colorée (rampe terracotta → or)**, bouton Réglages explicite, sections demandes reçues **et** envoyées. Les **couleurs de grade** (cf. §5.4) et les **icônes de badges/grades** (`docs/badges-icones.html`, `docs/grades-icones.html`) sont appliquées. Les cas limites (duel 2 pilotes "VS", grande course 12+) sont dans `docs/ecrans-cas-limites.html`.
+Les **40 écrans** de la carte de navigation ont été rendus dans le style Editorial Grand Prix (`docs/ecrans-complets.html` + PDF `docs/ecrans-complets.pdf`), organisés par branche (Authentification, Courses, Classements, Amis, Profil, Réglages), avec un **monde narratif unique aux chiffres Elo réellement calculés** (course exemple à somme nulle : +18 / 0 / −3 / −6 / −9). Rendu audité de façon adversariale avant présentation (chiffres, couverture de la carte, cohérence narrative) puis corrigé. Intègrent tous les points actés : feuille "Ajouter des pilotes" unifiée (amis / nom libre / lien-QR), grille de course avec **grade coloré + Elo par pilote**, bouton Partager sur les résultats, carte de partage avec date + tous les coureurs, **échelle des grades colorée (rampe terracotta → or)**, bouton Réglages explicite, sections demandes reçues **et** envoyées. Les **couleurs de grade** (cf. §5.4) et les **icônes de badges/grades** (`docs/badges-icones.html`, `docs/grades-icones.html`) sont appliquées. Les cas limites (duel 2 pilotes "VS", grande course 12+) sont dans `docs/ecrans-cas-limites.html`.
 
 **Règles complémentaires confirmées** :
 - **Formes** : angles nets partout, seuls les boutons d'action gardent la forme pilule *(décision E5)*.
@@ -227,7 +228,7 @@ Gratuit, sans publicité ni paiement au démarrage — **monétisation étudiée
 | Composants de navigation (barre d'onglets, formes, avatars, densité) | ✅ Validé dans le nouveau style |
 | Grades Elo (6 paliers, noms + bornes) | ✅ Validé |
 | Carte de navigation complète (zéro cul-de-sac) | ✅ Validée (3 tours d'audit) |
-| Écrans détaillés rendus dans le style Rosso Corsa (39 écrans) | ✅ v1 rendue + auditée — validation client écran par écran à faire |
+| Écrans détaillés rendus dans le style Rosso Corsa (40 écrans) | ✅ v1 rendue + auditée — validation client écran par écran à faire |
 | Cas limites (duel 2 pilotes, grande course 12+) | ✅ Maquettés + audités |
 | Badges MVP (10, choisis) | ✅ Validés — voir `BADGES.md` |
 | Charte complète (logo définitif, icône d'app, typographie sous licence) | ⏳ Non commencé |
@@ -236,7 +237,7 @@ Gratuit, sans publicité ni paiement au démarrage — **monétisation étudiée
 
 ## 15. Ce qui est donc figé aujourd'hui (résumé rapide)
 
-Stack technique · formule et paramètres Elo (K=32, diviseur 400, plancher 100, range cible 100-2500) · 6 grades (noms + bornes + couleurs + icônes) · 10 badges (+ icônes) · cycle de vie complet d'une course (dont modif avant saisie, signalement non-bloquant, pas de RSVP ni temps au tour) · système d'amis et de profils fantômes (rétention, fusion, exclusion du classement Amis) · règles de pseudo · profil public par défaut + option privée · notifications (heures de silence, ton) · modération manuelle + filtre de mots · limite 10 courses/jour · principes RGPD/accessibilité · design (Editorial Grand Prix / Rosso Corsa, formes, couleurs de grade, 39 écrans rendus + audités) · périmètre du MVP · lancement en beta fermée.
+Stack technique · formule et paramètres Elo (K=32, diviseur 400, plancher 100, range cible 100-2500) · 6 grades (noms + bornes + couleurs + icônes) · 10 badges (+ icônes) · cycle de vie complet d'une course (dont modif avant saisie, signalement non-bloquant, pas de RSVP ni temps au tour) · système d'amis et de profils fantômes (rétention, fusion, exclusion du classement Amis) · règles de pseudo · profil public par défaut + option privée · notifications (heures de silence, ton) · modération manuelle + filtre de mots · limite 10 courses/jour · principes RGPD/accessibilité · design (Editorial Grand Prix / Rosso Corsa, formes, couleurs de grade, 40 écrans rendus + audités) · périmètre du MVP · lancement en beta fermée.
 
 ## 16. Ce qui reste ouvert
 

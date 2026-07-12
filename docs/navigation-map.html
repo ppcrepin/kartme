@@ -177,7 +177,7 @@
       <h3><span class="code">C6</span> Détail course — prête (admin) <span class="flag fix">à corriger</span></h3>
       <div class="desc">Grille avec, à côté de chaque nom, <b style="color:var(--accent)">le rang + l'Elo</b> (ton point).</div>
       <ul class="btns">
-        <li><span class="b">Saisir le classement</span><span class="arrow">→</span><span class="dest"><span class="to">C7 Saisie (admin)</span></span></li>
+        <li><span class="b">Saisir le classement</span><span class="arrow">→</span><span class="dest"><span class="tonew">C6b Qui était présent ?</span></span></li>
         <li><span class="b">Inviter d'autres pilotes</span><span class="arrow">→</span><span class="dest"><span class="tonew">C5 Ajouter des pilotes</span></span></li>
         <li><span class="b">Modifier la course</span><span class="arrow">→</span><span class="dest"><span class="to">C2</span> (mode édition)</span></li>
         <li><span class="b">Annuler la course (si pas de résultat)</span><span class="arrow">→</span><span class="dest"><span class="term">confirmation</span> → <span class="to">C1</span></span></li>
@@ -196,12 +196,22 @@
       </ul>
     </div>
 
+    <div class="screen new">
+      <h3><span class="code">C6b</span> Qui était présent ? (admin) <span class="flag new">à concevoir</span></h3>
+      <div class="desc"><b style="color:var(--new)">Écran intermédiaire</b> entre l'ajout des participants et le classement : on confirme qui a réellement couru (décoche les absents, ajoute les imprévus) avant de classer.</div>
+      <ul class="btns">
+        <li><span class="b">Cocher / décocher un pilote</span><span class="arrow">→</span><span class="dest"><span class="term">marque présent / absent</span></span></li>
+        <li><span class="b">+ Ajouter un pilote de dernière minute</span><span class="arrow">→</span><span class="dest"><span class="tonew">C5 Ajouter des pilotes</span></span></li>
+        <li><span class="b">Continuer vers le classement</span><span class="arrow">→</span><span class="dest"><span class="to">C7 Saisie</span> (uniquement les présents)</span></li>
+        <li><span class="b">Retour</span><span class="arrow">→</span><span class="dest"><span class="to">C6</span></span></li>
+      </ul>
+    </div>
     <div class="screen">
       <h3><span class="code">C7</span> Saisie du classement (admin) <span class="flag fix">à corriger</span></h3>
       <ul class="btns">
-        <li><span class="b">Glisser-déposer</span><span class="arrow">→</span><span class="dest"><span class="term">réordonne la liste</span></span></li>
+        <li><span class="b">Glisser-déposer</span><span class="arrow">→</span><span class="dest"><span class="term">réordonne les présents</span></span></li>
         <li><span class="b">Valider le classement</span><span class="arrow">→</span><span class="dest"><span class="term">confirmation + recalcul Elo</span> → <span class="to">C9 Résultats</span></span></li>
-        <li><span class="b">Annuler / Retour</span><span class="arrow">→</span><span class="dest"><span class="to">C6</span> (abandonne sans recalcul)</span></li>
+        <li><span class="b">Annuler / Retour</span><span class="arrow">→</span><span class="dest"><span class="to">C6b</span> (abandonne sans recalcul)</span></li>
       </ul>
     </div>
     <div class="screen">
