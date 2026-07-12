@@ -1,0 +1,263 @@
+<!doctype html>
+<title>KartMe — Roadmap produit</title>
+<style>
+  :root{--page-bg:#0a0706;--bg-e:#171110;--bg-e2:#1f1613;--line:#2c1f1c;--ink:#f2ede9;--ink-dim:#a08d87;--ink-dim2:#9c8880;--accent:#e10600;--gold:#e2c14d;--pos:#6fae82;
+    --p0:#8a7a6a;--p1:#e10600;--p2:#c77dff;--p3:#4ec9b0;--p4:#e2c14d}
+  *{box-sizing:border-box}
+  body{background:var(--page-bg);color:var(--ink);font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;margin:0;line-height:1.55}
+  .wrap{max-width:860px;margin:0 auto;padding:3rem 1.3rem 6rem}
+  .banner{display:flex;gap:4px;margin-bottom:2rem}
+  .banner span{flex:1;height:4px;background:var(--accent)}
+  .banner span:nth-child(odd){background:transparent}
+  .eyebrow{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-family:Georgia,"Times New Roman",serif;font-size:2rem;font-weight:800;margin:.4rem 0 .5rem}
+  .sub{color:var(--ink-dim);max-width:660px}
+
+  .legend{display:flex;flex-wrap:wrap;gap:.9rem;margin:1.4rem 0;font-size:.76rem;color:var(--ink-dim)}
+  .legend b{color:var(--ink)}
+
+  .overview{width:100%;border-collapse:collapse;margin:1rem 0 2rem;font-size:.82rem}
+  .overview td{padding:.5rem .6rem;border-bottom:1px solid var(--line);vertical-align:top}
+  .overview td:first-child{white-space:nowrap;font-weight:800;font-family:Georgia,serif}
+  .overview .pill{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:.4rem;vertical-align:middle}
+
+  .phase{margin-top:2.6rem;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+  .phase>.head{padding:.9rem 1.1rem;border-left:5px solid var(--pc)}
+  .phase>.head .ttl{font-family:Georgia,serif;font-size:1.25rem;font-weight:800}
+  .phase>.head .goal{font-size:.82rem;color:var(--ink-dim);margin-top:.1rem}
+  .phase>.body{padding:.4rem 1.1rem 1.1rem}
+
+  .lot{border-top:1px solid var(--line);padding:.9rem 0}
+  .lot:first-child{border-top:none}
+  .lot .lh{display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap}
+  .lot .code{font-family:ui-monospace,monospace;font-size:.72rem;color:var(--pc);font-weight:700;flex-shrink:0}
+  .lot .name{font-weight:800;font-size:.95rem}
+  .lot .flag{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:.1rem .45rem;border-radius:999px;border:1px solid var(--gold);color:var(--gold)}
+  .lot .flag.block{border-color:var(--accent);color:var(--accent)}
+  .task{font-size:.8rem;color:var(--ink-dim);margin:.35rem 0 0;padding-left:1.7rem;text-indent:-1.7rem}
+  .task .ag{font-weight:700;color:var(--ink)}
+  .ac{font-size:.78rem;color:var(--ink-dim2);margin-top:.4rem;background:var(--bg-e2);border-radius:4px;padding:.4rem .6rem}
+  .ac b{color:var(--pos)}
+  .dep{font-size:.72rem;color:var(--ink-dim2);margin-top:.3rem}
+
+  .milestone{background:linear-gradient(160deg,#241210,#0d0908);border:1px solid var(--accent);border-radius:4px;padding:.7rem 1rem;margin-top:1rem;font-size:.85rem}
+  .milestone b{color:var(--accent)}
+  .foot{margin-top:2.4rem;background:var(--bg-e2);border:1px solid var(--line);border-radius:4px;padding:1rem 1.2rem;font-size:.84rem;color:var(--ink-dim)}
+  .foot b{color:var(--ink)}
+</style>
+<div class="wrap">
+  <div class="banner"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="eyebrow">KartMe · Roadmap produit</div>
+  <h1>Du socle au lancement, phase par phase</h1>
+  <p class="sub">5 phases, découpées en lots livrables détaillés par agent, avec critères d'acceptation et dépendances. Rien n'est encore développé : c'est le plan de bataille, à valider avant démarrage.</p>
+
+  <div class="legend">
+    <span>🎨 Design/UX</span><span>⚙️ Backend</span><span>📱 Frontend</span><span>🔒 Sécurité/Infra</span><span>🧪 Test</span>
+    <span><b>◆</b> décision stratégique (validation PO)</span>
+  </div>
+
+  <table class="overview">
+    <tr><td><span class="pill" style="background:var(--p0)"></span>0 · Fondations</td><td>Socle technique prêt. <span style="color:var(--ink-dim2)">0.0 Prérequis · 0.1 Init &amp; CI · 0.2 Design system &amp; i18n · 0.3 Données &amp; sécurité</span></td></tr>
+    <tr><td><span class="pill" style="background:var(--p1)"></span>1 · MVP cœur</td><td>Compte → course → Elo → résultats → profil. <span style="color:var(--ink-dim2)">1.1 Auth · 1.2 Course · 1.3 Elo · 1.4 Déroulé · 1.5 Profil</span></td></tr>
+    <tr><td><span class="pill" style="background:var(--p2)"></span>2 · Social</td><td>La boucle virale. <span style="color:var(--ink-dim2)">2.1 Amis · 2.2 Classements · 2.3 Badges · 2.4 Notifs · 2.5 Réglages</span></td></tr>
+    <tr><td><span class="pill" style="background:var(--p3)"></span>3 · Beta fermée</td><td>Durcir, mesurer, tester. <span style="color:var(--ink-dim2)">3.1 Modération · 3.2 Analytics · 3.3 Légal · 3.4 Campagne</span></td></tr>
+    <tr><td><span class="pill" style="background:var(--p4)"></span>4 · Stores</td><td>iOS + Android publics. <span style="color:var(--ink-dim2)">4.1 Marque/ASO · 4.2 Build/soumission · 4.3 Lancement</span></td></tr>
+  </table>
+
+  <!-- PHASE 0 -->
+  <div class="phase" style="--pc:var(--p0)">
+    <div class="head"><div class="ttl">Phase 0 — Fondations</div><div class="goal">Le socle technique est prêt à accueillir les fonctionnalités.</div></div>
+    <div class="body">
+      <div class="lot" style="--pc:var(--p0)">
+        <div class="lh"><span class="code">0.0</span><span class="name">Prérequis &amp; vérifications</span><span class="flag block">bloquant</span></div>
+        <div class="task"><span class="ag">◆ PO :</span> vérifier la dispo du nom « KartMe » (domaine + stores) ; ouvrir les comptes développeur Apple/Google ; structure juridique de l'éditeur.</div>
+        <div class="ac"><b>OK si</b> rapport de dispo remis · go/no-go sur le nom · comptes développeur créés.</div>
+      </div>
+      <div class="lot" style="--pc:var(--p0)">
+        <div class="lh"><span class="code">0.1</span><span class="name">Initialisation &amp; CI</span></div>
+        <div class="task"><span class="ag">⚙️📱</span> monorepo Expo (RN + Web) TypeScript, shell 4 onglets vide, expo-router, lint/format.</div>
+        <div class="task"><span class="ag">⚙️</span> projet Supabase (local + cloud), secrets.</div>
+        <div class="task"><span class="ag">🔒</span> CI GitHub Actions (lint + typecheck + tests), protection de branche.</div>
+        <div class="task"><span class="ag">🧪</span> harnais Jest + RN Testing Library + Playwright.</div>
+        <div class="ac"><b>OK si</b> l'app démarre sur Web + mobile avec les 4 onglets · CI verte.</div>
+        <div class="dep">Dépend de : 0.0</div>
+      </div>
+      <div class="lot" style="--pc:var(--p0)">
+        <div class="lh"><span class="code">0.2</span><span class="name">Design system &amp; i18n</span><span class="flag">◆ police · palette</span></div>
+        <div class="task"><span class="ag">🎨</span> tokens Rosso Corsa + rampe de grades ; <b>police serif définitive</b> ; <b>palette d'états sémantiques</b>.</div>
+        <div class="task"><span class="ag">📱</span> design system en composants (pilule, carte, avatar-initiales, tabbar, jauge, médaillons, mini-icônes) + i18n FR.</div>
+        <div class="task"><span class="ag">🧪</span> galerie de composants conforme aux maquettes.</div>
+        <div class="ac"><b>OK si</b> tous les composants rendent conformes à <code>ecrans-complets.html</code> · i18n branché · contrastes/focus OK.</div>
+        <div class="dep">Dépend de : 0.1</div>
+      </div>
+      <div class="lot" style="--pc:var(--p0)">
+        <div class="lh"><span class="code">0.3</span><span class="name">Données &amp; sécurité</span><span class="flag">◆ modèle de données</span></div>
+        <div class="task"><span class="ag">⚙️</span> schéma Postgres + migrations (profils, fantômes, circuits, courses, participations, résultats, amitiés, badges, signalements, notifs, historique Elo) ; seed circuits FR.</div>
+        <div class="task"><span class="ag">🔒</span> RLS table par table ; rétention des fantômes ; anonymisation RGPD.</div>
+        <div class="task"><span class="ag">🧪</span> tests de schéma + RLS (accès autorisé/refusé).</div>
+        <div class="ac"><b>OK si</b> schéma déployé · RLS active et testée · circuits seedés.</div>
+        <div class="dep">Dépend de : 0.1</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 1 -->
+  <div class="phase" style="--pc:var(--p1)">
+    <div class="head"><div class="ttl">Phase 1 — MVP cœur</div><div class="goal">Compte → créer une course → Elo → résultats → profil.</div></div>
+    <div class="body">
+      <div class="lot" style="--pc:var(--p1)">
+        <div class="lh"><span class="code">1.1</span><span class="name">Authentification</span></div>
+        <div class="task"><span class="ag">🎨</span> S0 · S0b · S0c · S0d.</div>
+        <div class="task"><span class="ag">⚙️</span> Supabase Auth (email + Google + Apple), création de profil, règles de pseudo (3–20, non unique, filtré).</div>
+        <div class="task"><span class="ag">📱🔒🧪</span> écrans d'auth, session, onboarding pseudo, config OAuth, filtre de mots, tests des 3 voies.</div>
+        <div class="ac"><b>OK si</b> inscription/connexion par les 3 voies · nouveau compte social → S0d · pseudos filtrés/bornés · session persistée.</div>
+        <div class="dep">Dépend de : 0.2, 0.3</div>
+      </div>
+      <div class="lot" style="--pc:var(--p1)">
+        <div class="lh"><span class="code">1.2</span><span class="name">Création de course &amp; participants</span></div>
+        <div class="task"><span class="ag">🎨</span> C1 · C2 · C3/C3b · C4 · C5 (amis / nom libre / lien-QR).</div>
+        <div class="task"><span class="ag">⚙️</span> CRUD courses, circuits, profils fantômes, lien/QR, modif lieu/date avant saisie, limite ~10/jour.</div>
+        <div class="task"><span class="ag">📱🔒🧪</span> flux de création, feuille d'ajout, sélecteurs, liste d'accueil, rate-limit, tests.</div>
+        <div class="ac"><b>OK si</b> course créée avec participants mixtes · lien/QR fonctionnel · modif lieu/date avant résultats · blocage au-delà de 10/jour.</div>
+        <div class="dep">Dépend de : 1.1</div>
+      </div>
+      <div class="lot" style="--pc:var(--p1)">
+        <div class="lh"><span class="code">1.3</span><span class="name">Moteur Elo</span><span class="flag block">pièce maîtresse</span></div>
+        <div class="task"><span class="ag">⚙️</span> calcul par paires (K=32, div 400, plancher 100), mapping grades, application atomique, recalcul dans les 24h.</div>
+        <div class="task"><span class="ag">🔒</span> écriture réservée à l'admin, fenêtre 24h serveur, recalcul non falsifiable côté client.</div>
+        <div class="task"><span class="ag">🧪</span> tests unitaires : cas de référence (+18/0/−3/−6/−9, paires +6/+5/+4/+3), somme nulle, plancher, cas 2 &amp; 12 joueurs.</div>
+        <div class="ac"><b>OK si</b> résultats identiques aux calculs de référence · somme des Δ nulle · grades corrects.</div>
+        <div class="dep">Dépend de : 0.3</div>
+      </div>
+      <div class="lot" style="--pc:var(--p1)">
+        <div class="lh"><span class="code">1.4</span><span class="name">Déroulé de course &amp; résultats</span></div>
+        <div class="task"><span class="ag">🎨</span> C6 · C6′ · C6b · C7 · C8 · C9 · C10 · C11.</div>
+        <div class="task"><span class="ag">⚙️</span> confirmation des présents, soumission classement, signalement non-bloquant, carte de partage (image), état temps réel « en attente ».</div>
+        <div class="task"><span class="ag">📱</span> grille, présents, glisser-déposer (+ tap séquentiel accessible), attente (drapeau), résultats, détail par paire, partage natif.</div>
+        <div class="task"><span class="ag">🧪</span> e2e du flux complet créer→présents→saisir→attente→résultats→partage.</div>
+        <div class="ac"><b>OK si</b> flux de bout en bout · bascule attente→résultats en temps réel · carte avec date + tous les finishers · couleur+signe partout.</div>
+        <div class="dep">Dépend de : 1.2, 1.3</div>
+      </div>
+      <div class="lot" style="--pc:var(--p1)">
+        <div class="lh"><span class="code">1.5</span><span class="name">Profil, historique &amp; grades</span></div>
+        <div class="task"><span class="ag">🎨</span> R1 · R2 · R5.</div>
+        <div class="task"><span class="ag">⚙️📱🧪</span> agrégats de profil, courbe, historique ; profil (Elo+grade+courbe+stats+badges), échelle des grades colorée, historique cliquable.</div>
+        <div class="ac"><b>OK si</b> profil = bon Elo/grade/stats/courbe/historique · taper une course ouvre ses résultats.</div>
+        <div class="dep">Dépend de : 1.3, 1.4</div>
+      </div>
+      <div class="milestone"><b>Fin de Phase 1 = MVP jouable en interne</b> : créer une vraie course, saisir un classement, voir son Elo et son grade évoluer.</div>
+    </div>
+  </div>
+
+  <!-- PHASE 2 -->
+  <div class="phase" style="--pc:var(--p2)">
+    <div class="head"><div class="ttl">Phase 2 — Social &amp; gamification</div><div class="goal">La boucle virale complète.</div></div>
+    <div class="body">
+      <div class="lot" style="--pc:var(--p2)">
+        <div class="lh"><span class="code">2.1</span><span class="name">Amis</span></div>
+        <div class="task"><span class="ag">🎨</span> F1 · F2 · P (face-à-face) · M1.</div>
+        <div class="task"><span class="ag">⚙️📱🔒</span> amitiés (demande/accept/refus/annulation/retrait), recherche, blocage, signalement→modération, règle « si c'est moi → R1 ».</div>
+        <div class="task"><span class="ag">🧪</span> cycle d'amitié, face-à-face, blocage, signalement, redirection self.</div>
+        <div class="ac"><b>OK si</b> demandes reçues + envoyées gérables · face-à-face correct · blocage effectif · self→R1.</div>
+        <div class="dep">Dépend de : 1.5</div>
+      </div>
+      <div class="lot" style="--pc:var(--p2)">
+        <div class="lh"><span class="code">2.2</span><span class="name">Classements</span></div>
+        <div class="task"><span class="ag">🎨⚙️📱</span> L1 (Amis/Global) ; fantômes exclus du classement Amis, présents en Global ; confidentialité « amis uniquement » respectée.</div>
+        <div class="task"><span class="ag">🧪</span> exactitude, exclusion des fantômes en Amis, confidentialité.</div>
+        <div class="ac"><b>OK si</b> classements corrects (Elo post-course) · fantômes en Global seulement · profils privés respectés.</div>
+        <div class="dep">Dépend de : 1.5, 2.1</div>
+      </div>
+      <div class="lot" style="--pc:var(--p2)">
+        <div class="lh"><span class="code">2.3</span><span class="name">Badges &amp; gamification</span></div>
+        <div class="task"><span class="ag">🎨</span> R3 · R4 (icônes déjà dessinées).</div>
+        <div class="task"><span class="ag">⚙️📱</span> moteur de déblocage des 10 badges MVP, stockage, animation/toast de déblocage.</div>
+        <div class="task"><span class="ag">🧪</span> chaque badge se débloque sur son déclencheur exact.</div>
+        <div class="ac"><b>OK si</b> les 10 badges se débloquent et s'affichent · détail = condition + date.</div>
+        <div class="dep">Dépend de : 1.4, 1.5</div>
+      </div>
+      <div class="lot" style="--pc:var(--p2)">
+        <div class="lh"><span class="code">2.4</span><span class="name">Notifications push</span></div>
+        <div class="task"><span class="ag">🎨</span> S3.</div>
+        <div class="task"><span class="ag">⚙️📱🔒</span> Expo Push, 3 notifs essentielles, deep-links (C6′/C9/F1), heures de silence 22h–8h, ton avec jeu de mots.</div>
+        <div class="task"><span class="ag">🧪</span> déclenchement, deep-link, silence nocturne.</div>
+        <div class="ac"><b>OK si</b> les 3 notifs partent au bon moment · ouvrent le bon écran · jamais 22h–8h.</div>
+        <div class="dep">Dépend de : 1.4, 2.1</div>
+      </div>
+      <div class="lot" style="--pc:var(--p2)">
+        <div class="lh"><span class="code">2.5</span><span class="name">Réglages complets</span></div>
+        <div class="task"><span class="ag">🎨</span> S1 · S2 + S2a-e · S4 + S4a-d (« Langue » masquée).</div>
+        <div class="task"><span class="ag">⚙️🔒</span> modifs de compte, option « amis uniquement », suppression RGPD (anonymisation), contenu d'aide.</div>
+        <div class="task"><span class="ag">🧪</span> chaque réglage, suppression→anonymisation, confidentialité.</div>
+        <div class="ac"><b>OK si</b> tous les réglages marchent · suppression anonymise sans casser l'Elo des autres · pages légales présentes.</div>
+        <div class="dep">Dépend de : 1.1, 2.2</div>
+      </div>
+      <div class="milestone"><b>Fin de Phase 2 = boucle virale complète</b> : amis, classements, badges, notifications, partage.</div>
+    </div>
+  </div>
+
+  <!-- PHASE 3 -->
+  <div class="phase" style="--pc:var(--p3)">
+    <div class="head"><div class="ttl">Phase 3 — Beta fermée</div><div class="goal">Durcir, mesurer, tester en réel.</div></div>
+    <div class="body">
+      <div class="lot" style="--pc:var(--p3)">
+        <div class="lh"><span class="code">3.1</span><span class="name">Modération &amp; durcissement</span></div>
+        <div class="task"><span class="ag">🔒</span> filtre de mots généralisé, boîte de modération (catégories), rate-limits/anti-abus, fusion de fantômes à la réclamation.</div>
+        <div class="task"><span class="ag">🧪</span> régression e2e complète, tests de charge basiques.</div>
+        <div class="ac"><b>OK si</b> boîte de modération exploitable · filtres actifs · réclamation/fusion de fantômes OK.</div>
+        <div class="dep">Dépend de : Phase 2</div>
+      </div>
+      <div class="lot" style="--pc:var(--p3)">
+        <div class="lh"><span class="code">3.2</span><span class="name">Analytics &amp; observabilité</span></div>
+        <div class="task"><span class="ag">⚙️🔒</span> PostHog, événements clés + métriques activation/rétention/K-factor, monitoring d'erreurs.</div>
+        <div class="ac"><b>OK si</b> événements remontés · tableaux de bord · alerte d'erreurs.</div>
+        <div class="dep">Dépend de : Phase 2</div>
+      </div>
+      <div class="lot" style="--pc:var(--p3)">
+        <div class="lh"><span class="code">3.3</span><span class="name">Légal &amp; onboarding beta</span><span class="flag">◆ légal</span></div>
+        <div class="task"><span class="ag">◆ PO :</span> trame CGU + confidentialité (rédigée par nous, relue juridiquement), décision d'âge minimum.</div>
+        <div class="task"><span class="ag">🎨📱⚙️</span> pages CGU/confidentialité, age gate, mécanisme d'invitation beta.</div>
+        <div class="ac"><b>OK si</b> pages légales en ligne · testeurs beta intégrables.</div>
+        <div class="dep">Dépend de : 2.5</div>
+      </div>
+      <div class="lot" style="--pc:var(--p3)">
+        <div class="lh"><span class="code">3.4</span><span class="name">Campagne beta</span></div>
+        <div class="task"><span class="ag">📊</span> test réel avec le groupe d'amis/karteurs, boucle de feedback, triage des bugs, itérations.</div>
+        <div class="ac"><b>OK si</b> premier groupe de testeurs actifs · retours collectés/priorisés · bugs bloquants corrigés.</div>
+        <div class="dep">Dépend de : 3.1, 3.2, 3.3</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 4 -->
+  <div class="phase" style="--pc:var(--p4)">
+    <div class="head"><div class="ttl">Phase 4 — Publication stores</div><div class="goal">iOS + Android publics.</div></div>
+    <div class="body">
+      <div class="lot" style="--pc:var(--p4)">
+        <div class="lh"><span class="code">4.1</span><span class="name">Marque &amp; ASO</span><span class="flag">◆ logo · ASO</span></div>
+        <div class="task"><span class="ag">🎨</span> logo/wordmark définitif + icône d'app + captures de store + illustrations manquantes.</div>
+        <div class="task"><span class="ag">◆ ASO :</span> nom affiché, mots-clés, catégorie, description.</div>
+        <div class="ac"><b>OK si</b> fiches stores prêtes (visuels + textes) · logo/icône validés PO.</div>
+        <div class="dep">Dépend de : 0.0</div>
+      </div>
+      <div class="lot" style="--pc:var(--p4)">
+        <div class="lh"><span class="code">4.2</span><span class="name">Build &amp; soumission</span></div>
+        <div class="task"><span class="ag">🔒</span> EAS Build (iOS + Android), signature, déclarations de confidentialité, classification d'âge, soumission.</div>
+        <div class="task"><span class="ag">🧪</span> smoke tests sur builds de production (devices réels).</div>
+        <div class="ac"><b>OK si</b> apps acceptées par App Store et Play Store.</div>
+        <div class="dep">Dépend de : 3.4, 4.1</div>
+      </div>
+      <div class="lot" style="--pc:var(--p4)">
+        <div class="lh"><span class="code">4.3</span><span class="name">Lancement &amp; suivi</span></div>
+        <div class="task"><span class="ag">📊</span> monitoring post-lancement, hotfix prêt, suivi acquisition/rétention.</div>
+        <div class="ac"><b>OK si</b> lancement public effectif · tableau de bord de suivi · process de hotfix prêt.</div>
+        <div class="dep">Dépend de : 4.2</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <b>Reporté en v2+</b> — Elo par circuit · multi-manches · équipes · confirmation multi-joueurs · co-admin · notifications sociales · saisons · stats avancées · decay · temps au tour · compte circuit pro · parrainage formel · internationalisation.
+    <br><br><b>À valider :</b> la structure des phases et l'ordre des lots (stratégique). Ensuite on attaque la Phase 0, lot 0.0 (dispo du nom).
+  </div>
+</div>
