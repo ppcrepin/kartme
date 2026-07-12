@@ -107,20 +107,20 @@ Le grade est affiché sur le profil (à côté de l'Elo) et une **échelle des g
 
 **Gamification** :
 - Elo affiché en chiffre (référence précise) **+ un rang visuel** en complément (cf. §5.4).
-- Badges/trophées avec un ton fun et des jeux de mots. Catalogue de départ (~10 badges, brouillon dans `PUNS.md` à la racine du repo, à valider/enrichir) :
+- Badges/trophées avec un ton fun et des jeux de mots. **10 badges retenus pour le MVP** (catalogue complet + réserve enrichissable dans `BADGES.md` à la racine du repo) :
 
 | Badge | Déclencheur |
 |---|---|
-| Premier tour de piste | 1ère course jouée |
-| Champagne ! | 1ère victoire |
+| Kart d'identité | 1ère course jouée |
 | Habitué des stands | 10 courses jouées |
-| Pilier du paddock | 50 courses jouées |
-| Centurion du bitume | 100 courses jouées |
-| Triple champagne | 3 podiums d'affilée |
-| Remontada | Plus grosse remontée d'Elo en une course |
-| Chute libre | Plus grosse chute d'Elo en une course |
-| Premier coéquipier | Premier ami ajouté |
-| Effet boule de neige | Une de tes invitations a fait rejoindre un nouveau joueur à l'appli |
+| Champagne ! | 1ère victoire |
+| Sur les chapeaux de roues | 3 victoires d'affilée |
+| Kart-astrophe | Plus grosse chute d'Elo en une course |
+| Lanterne rouge | Finir dernier d'une course |
+| Tête-à-queue | Perdre un palier de grade entier |
+| Il est 2h moins le kart | Course validée après minuit |
+| Chef d'écurie | Organiser 10 courses |
+| David contre Goliath | Battre un pilote 300+ Elo au-dessus de soi |
 
 **Onboarding** — aucun écran pédagogique : l'utilisateur est mené directement à l'action, l'interface doit rester assez explicite d'elle-même.
 
@@ -217,7 +217,7 @@ Gratuit, sans publicité ni paiement au démarrage — monétisation étudiée p
 | Carte de navigation complète (zéro cul-de-sac) | ✅ Validée (3 tours d'audit) |
 | Écrans détaillés rendus dans le style Rosso Corsa (39 écrans) | ✅ v1 rendue + auditée — validation client écran par écran à faire |
 | Cas limites (duel 2 pilotes, grande course 12+) | ✅ Maquettés + audités |
-| Badges (revue un par un) | ⏳ À faire ensemble |
+| Badges MVP (10, choisis) | ✅ Validés — voir `BADGES.md` |
 | Charte complète (logo définitif, icône d'app, typographie sous licence) | ⏳ Non commencé |
 
 ---
@@ -237,10 +237,9 @@ Stack technique · formule et paramètres Elo (K=32, diviseur 400, plancher 100,
 - *(Résolus : style de navigation, langage de formes, avatars en initiales — cf. §9.2.)*
 
 ### 16.2 Elo & gamification
-- **Revue des badges un par un** (nom + condition + icône) — décidé, à faire ensemble ; le catalogue de ~10 dans `PUNS.md` sert de base.
-- Faut-il des badges liés aux **grades/seuils d'Elo** (ex. "atteindre Missile des Stands") en plus des badges liés au nombre de courses ?
-- Enrichissement continu de `PUNS.md` (jeux de mots) — à faire au fil de l'eau avec le client.
-- *(Résolus : bornes des 6 grades et noms — cf. §5.4.)*
+- **Icônes des 10 badges** (traits fins, style Rosso Corsa) — à dessiner.
+- Enrichissement du catalogue depuis la réserve de `BADGES.md` — au fil de l'eau avec le client.
+- *(Résolus : bornes + noms des 6 grades cf. §5.4 ; 10 badges MVP choisis cf. §6 et `BADGES.md`.)*
 
 ### 16.3 Modération & légal
 - Process concret derrière "boîte de réception simple" : qui la consulte, sous quel délai, quelles catégories de signalement (comportement, fausse invitation, classement contesté...) ?
