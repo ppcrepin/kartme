@@ -6,7 +6,11 @@
     --page-bg:#0a0706; --bg:#0d0908; --bg-e:#171110; --bg-e2:#1f1613; --line:#2c1f1c;
     --ink:#f2ede9; --ink-dim:#a08d87; --ink-dim2:#9c8880;
     --accent:#e10600; --pos:#6fae82; --r:3px;
+    --g-kart:#b06a5c;--g-roue:#c6503f;--g-rookie:#e10600;--g-missile:#f0561f;--g-fusee:#f39a24;--g-legende:#e2c14d;
   }
+  .gtag{font-weight:700}
+  .gtag::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;margin-right:3px;vertical-align:middle}
+  .gk{color:var(--g-kart)}.grl{color:var(--g-roue)}.grk{color:var(--g-rookie)}.gm{color:var(--g-missile)}.gf{color:var(--g-fusee)}.gl{color:var(--g-legende)}
   *{box-sizing:border-box}
   body{background:var(--page-bg);color:var(--ink);font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;margin:0}
   .wrap{max-width:1320px;margin:0 auto;padding:3rem 1.5rem 5rem}
@@ -73,9 +77,12 @@
   .flag{transform-origin:left center;animation:wave 2.2s ease-in-out infinite}
   @keyframes wave{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg) skewX(-6deg)}}
   @media (prefers-reduced-motion:reduce){.flag{animation:none}}
-  .grade-row{display:flex;align-items:center;justify-content:space-between;padding:.45rem .6rem;border:1px solid var(--line);border-radius:var(--r);margin-bottom:.4rem;font-size:.72rem}
-  .grade-row.on{border-color:var(--accent);background:rgba(225,6,0,.06)}
-  .grade-row b{font-family:Georgia,serif}
+  .grade-row{display:flex;align-items:center;gap:.5rem;padding:.38rem .55rem;border:1px solid var(--line);border-left:3px solid var(--c,var(--line));border-radius:var(--r);margin-bottom:.35rem;font-size:.7rem}
+  .grade-row.on{background:color-mix(in srgb,var(--c) 9%,transparent);border-color:var(--c);border-left-color:var(--c)}
+  .grade-row .gn{font-family:Georgia,serif;font-weight:800;color:var(--c);flex:1}
+  .grade-row .ge{color:var(--ink-dim2);font-variant-numeric:tabular-nums;font-size:.66rem}
+  .gmini{width:20px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .gmini svg{width:16px;height:16px;stroke:var(--c);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .spark{width:100%;height:38px}
   .bgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:.45rem}
   .bd{aspect-ratio:1;border:1.3px solid var(--line);display:flex;align-items:center;justify-content:center}
@@ -161,7 +168,7 @@
         <div class="h-title">Bienvenue, pilote</div>
         <div class="h-sub" style="margin-bottom:.7rem">Choisis ton nom de course</div>
         <div class="field" style="text-align:left">Pseudo</div>
-        <div class="card row"><span style="font-size:.72rem;color:var(--ink-dim)">Elo de départ</span><b style="font-family:Georgia,serif">1000 · Rookie</b></div>
+        <div class="card row"><span style="font-size:.72rem;color:var(--ink-dim)">Elo de départ</span><span><b style="font-family:Georgia,serif">1000</b> · <span class="gtag grk" style="font-size:.72rem">Rookie</span></span></div>
         <div style="flex:1"></div>
         <div class="btn solid">Valider mon pseudo</div>
         <div class="btn txt" style="font-size:.66rem">Annuler l'inscription (se déconnecter)</div>
@@ -260,11 +267,11 @@
         <div class="h-title" style="font-size:1rem">Karting Vaux-le-Pénil</div>
         <div class="h-sub">Sam. 18 juil. 18h · invitations ouvertes</div>
         <div class="h-sub" style="margin-top:.6rem">Sur la grille · 5 pilotes</div>
-        <div class="card row"><div class="row g05"><div class="av me">PA</div><span style="font-size:.74rem">Paul</span></div><span style="font-size:.66rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1000</b></span></div>
-        <div class="card row"><div class="row g05"><div class="av">TH</div><span style="font-size:.74rem">Théo</span></div><span style="font-size:.66rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1200</b></span></div>
-        <div class="card row"><div class="row g05"><div class="av">LE</div><span style="font-size:.74rem">Léa</span></div><span style="font-size:.66rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1100</b></span></div>
-        <div class="card row"><div class="row g05"><div class="av">MA</div><span style="font-size:.74rem">Marine</span></div><span style="font-size:.66rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1000</b></span></div>
-        <div class="card row"><div class="row g05"><div class="av">HU</div><span style="font-size:.74rem">Hugo</span></div><span style="font-size:.66rem;color:var(--ink-dim)">Roue Libre · <b style="font-family:Georgia,serif">900</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av me">PA</div><span style="font-size:.74rem">Paul</span></div><span style="font-size:.66rem"><span class="gtag grk">Rookie</span> · <b style="font-family:Georgia,serif;color:var(--ink)">1000</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av">TH</div><span style="font-size:.74rem">Théo</span></div><span style="font-size:.66rem"><span class="gtag grk">Rookie</span> · <b style="font-family:Georgia,serif;color:var(--ink)">1200</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av">LE</div><span style="font-size:.74rem">Léa</span></div><span style="font-size:.66rem"><span class="gtag grk">Rookie</span> · <b style="font-family:Georgia,serif;color:var(--ink)">1100</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av">MA</div><span style="font-size:.74rem">Marine</span></div><span style="font-size:.66rem"><span class="gtag grk">Rookie</span> · <b style="font-family:Georgia,serif;color:var(--ink)">1000</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av">HU</div><span style="font-size:.74rem">Hugo</span></div><span style="font-size:.66rem"><span class="gtag grl">Roue Libre</span> · <b style="font-family:Georgia,serif;color:var(--ink)">900</b></span></div>
         <div style="flex:1"></div>
         <div class="btn">Inviter d'autres pilotes</div>
         <div class="btn solid" style="margin-top:.35rem">Saisir le classement</div>
@@ -280,11 +287,11 @@
         <div class="h-sub">Sam. 18 juil. 18h · organisée par Paul</div>
         <div class="card row" style="margin-top:.55rem"><span style="font-size:.72rem">Ta présence</span><span><span class="tag grn">✓ Je serai là</span> <span class="tag">Me retirer</span></span></div>
         <div class="h-sub" style="margin-top:.5rem">Sur la grille · 5 pilotes</div>
-        <div class="card row"><div class="row g05"><div class="av">PA</div><span style="font-size:.72rem">Paul</span></div><span style="font-size:.64rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1000</b></span></div>
-        <div class="card row"><div class="row g05"><div class="av me">TH</div><span style="font-size:.72rem">Théo (toi)</span></div><span style="font-size:.64rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1200</b></span></div>
-        <div class="card row"><div class="row g05"><div class="av">LE</div><span style="font-size:.72rem">Léa</span></div><span style="font-size:.64rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1100</b></span></div>
-        <div class="card row"><div class="row g05"><div class="av">MA</div><span style="font-size:.72rem">Marine</span></div><span style="font-size:.64rem;color:var(--ink-dim)">Rookie · <b style="font-family:Georgia,serif">1000</b></span></div>
-        <div class="card row"><div class="row g05"><div class="av">HU</div><span style="font-size:.72rem">Hugo</span></div><span style="font-size:.64rem;color:var(--ink-dim)">Roue Libre · <b style="font-family:Georgia,serif">900</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av">PA</div><span style="font-size:.72rem">Paul</span></div><span style="font-size:.64rem"><span class="gtag grk">Rookie</span> · <b style="font-family:Georgia,serif;color:var(--ink)">1000</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av me">TH</div><span style="font-size:.72rem">Théo (toi)</span></div><span style="font-size:.64rem"><span class="gtag grk">Rookie</span> · <b style="font-family:Georgia,serif;color:var(--ink)">1200</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av">LE</div><span style="font-size:.72rem">Léa</span></div><span style="font-size:.64rem"><span class="gtag grk">Rookie</span> · <b style="font-family:Georgia,serif;color:var(--ink)">1100</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av">MA</div><span style="font-size:.72rem">Marine</span></div><span style="font-size:.64rem"><span class="gtag grk">Rookie</span> · <b style="font-family:Georgia,serif;color:var(--ink)">1000</b></span></div>
+        <div class="card row"><div class="row g05"><div class="av">HU</div><span style="font-size:.72rem">Hugo</span></div><span style="font-size:.64rem"><span class="gtag grl">Roue Libre</span> · <b style="font-family:Georgia,serif;color:var(--ink)">900</b></span></div>
         <div style="flex:1"></div>
       </div><div class="tabbar" data-active="courses"></div></div>
       <div class="note">RSVP actionnable (✓ Je serai là / Me retirer → C1) · grille complète 5/5 · bascule auto → C8 quand l'admin lance la saisie · retour → C1.</div>
@@ -426,7 +433,7 @@
     <div class="cell"><div class="label"><span class="code">P</span>Profil d'un pilote</div>
       <div class="phone"><div class="scr">
         <div class="back">‹ Retour</div>
-        <div class="row"><div class="row g05"><div class="av lg">TH</div><div><div style="font-weight:700;font-size:.85rem">Théo</div><div class="h-sub" style="text-transform:none;letter-spacing:0">Rookie · 1200</div></div></div><span style="color:var(--ink-dim2)">…</span></div>
+        <div class="row"><div class="row g05"><div class="av lg">TH</div><div><div style="font-weight:700;font-size:.85rem">Théo</div><div class="h-sub" style="text-transform:none;letter-spacing:0"><span class="gtag grk" style="font-size:.72rem">Rookie</span> · 1200</div></div></div><span style="color:var(--ink-dim2)">…</span></div>
         <div class="card" style="margin-top:.6rem;text-align:center"><div class="lbl">Face à face</div><div style="font-family:Georgia,serif;font-weight:800;margin-top:.15rem">Toi 2 — 1 Lui</div></div>
         <div class="h-sub" style="margin:.5rem 0 .25rem">Évolution Elo</div>
         <svg class="spark" viewBox="0 0 200 38" style="height:32px"><polyline points="0,26 40,22 80,28 120,14 160,18 200,10" fill="none" stroke="#e10600" stroke-width="2"/></svg>
@@ -468,9 +475,12 @@
 
     <div class="cell"><div class="label"><span class="code">R1</span>Mon profil</div>
       <div class="phone"><div class="scr">
-        <div class="row"><div class="row g05"><div class="av me lg">PA</div><div><div style="font-weight:700;font-size:.85rem">Paul</div><div class="h-sub" style="text-transform:none;letter-spacing:0">Rookie</div></div></div>
+        <div class="row"><div class="row g05"><div class="av me lg">PA</div><div><div style="font-weight:700;font-size:.85rem">Paul</div><div class="h-sub" style="text-transform:none;letter-spacing:0"><span class="gtag grk" style="font-size:.72rem">Rookie</span></div></div></div>
         <span style="border:1.3px solid var(--ink-dim);border-radius:999px;padding:.3rem .6rem;font-size:.62rem;color:var(--ink-dim);font-weight:700">⚙ RÉGLAGES</span></div>
-        <div style="font-family:Georgia,serif;font-size:2.1rem;font-weight:800;margin-top:.5rem">1018</div>
+        <div class="row" style="align-items:flex-end;gap:.5rem;margin-top:.5rem">
+          <div style="font-family:Georgia,serif;font-size:2.1rem;font-weight:800;line-height:1">1018</div>
+          <div class="gmini" style="--c:var(--g-rookie);width:26px;height:26px;margin-bottom:.15rem"><svg viewBox="0 0 48 48" style="width:22px;height:22px"><path d="M12 30v-2a12 12 0 0 1 24 0v2a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4z"/><path d="M14 25h19"/><path d="M18 34l-1.5-9"/><path d="M31 25l1 6.5"/></svg></div>
+        </div>
         <svg class="spark" viewBox="0 0 200 38"><polyline points="0,30 40,26 80,18 120,22 160,12 200,6" fill="none" stroke="#e10600" stroke-width="2"/></svg>
         <div class="row" style="margin-top:.6rem;gap:.45rem">
           <div class="card" style="flex:1;text-align:center"><b style="font-family:Georgia,serif">28</b><div class="h-sub">Courses</div></div>
@@ -493,12 +503,12 @@
         <div class="back">‹ Retour</div>
         <div class="h-title" style="font-size:1rem">Les grades</div>
         <div class="h-sub" style="margin-bottom:.6rem">Ton Elo trace ta carrière</div>
-        <div class="grade-row"><b>Légende du Bitume</b><span>2100 +</span></div>
-        <div class="grade-row"><b>Fusée du Paddock</b><span>1700 – 2099</span></div>
-        <div class="grade-row"><b>Missile des Stands</b><span>1300 – 1699</span></div>
-        <div class="grade-row on"><b>Rookie — toi (1018)</b><span>1000 – 1299</span></div>
-        <div class="grade-row"><b>Roue Libre</b><span>700 – 999</span></div>
-        <div class="grade-row"><b>Kartambolage</b><span>100 – 699</span></div>
+        <div class="grade-row" style="--c:var(--g-legende)"><div class="gmini"><svg viewBox="0 0 48 48"><path d="M18 40c-6-3-9-9-8.5-18"/><path d="M10 24.5c2 1.2 4 1 5.2-1M11 29c2 1.2 4 1 5.2-1M13.2 33c2 1.2 4 1 5.2-1"/><path d="M30 40c6-3 9-9 8.5-18"/><path d="M38 24.5c-2 1.2-4 1-5.2-1M37 29c-2 1.2-4 1-5.2-1M34.8 33c-2 1.2-4 1-5.2-1"/><path d="M24 11l2.3 5.6 6 .4-4.6 3.9 1.5 5.9-5.2-3.2-5.2 3.2 1.5-5.9-4.6-3.9 6-.4z"/></svg></div><span class="gn">Légende du Bitume</span><span class="ge">2100 +</span></div>
+        <div class="grade-row" style="--c:var(--g-fusee)"><div class="gmini"><svg viewBox="0 0 48 48"><path d="M24 5c5 5 7 12 7 18v5H17v-5c0-6 2-13 7-18z"/><path d="M17 24l-5.5 7 5.5-2M31 24l5.5 7-5.5-2"/><circle cx="24" cy="16" r="2.6"/><path d="M20 33c.8 4 1.8 6.5 4 6.5s3.2-2.5 4-6.5"/></svg></div><span class="gn">Fusée du Paddock</span><span class="ge">1700 – 2099</span></div>
+        <div class="grade-row" style="--c:var(--g-missile)"><div class="gmini"><svg viewBox="0 0 48 48"><path d="M24 5c3 4 4.5 9 4.5 14v7h-9v-7c0-5 1.5-10 4.5-14z"/><path d="M19.5 22l-3.5 5 3.5-1.2M28.5 22l3.5 5-3.5-1.2"/><line x1="24" y1="33" x2="24" y2="40"/><path d="M14 11l-3.5 2M14 17l-4.5 2M15 23l-3.5 2"/></svg></div><span class="gn">Missile des Stands</span><span class="ge">1300 – 1699</span></div>
+        <div class="grade-row on" style="--c:var(--g-rookie)"><div class="gmini"><svg viewBox="0 0 48 48"><path d="M12 30v-2a12 12 0 0 1 24 0v2a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4z"/><path d="M14 25h19"/><path d="M18 34l-1.5-9"/><path d="M31 25l1 6.5"/></svg></div><span class="gn">Rookie — toi (1018)</span><span class="ge">1000 – 1299</span></div>
+        <div class="grade-row" style="--c:var(--g-roue)"><div class="gmini"><svg viewBox="0 0 48 48"><circle cx="24" cy="27" r="10"/><circle cx="24" cy="27" r="3.2"/><path d="M24 17v3.5M24 33.5v3.5M14 27h3.5M30.5 27h3.5M18.5 21.5l2.5 2.5M27 30l2.5 2.5M18.5 32.5l2.5-2.5M27 24l2.5-2.5"/><path d="M12 13c6-4 18-4 24 0"/></svg></div><span class="gn">Roue Libre</span><span class="ge">700 – 999</span></div>
+        <div class="grade-row" style="--c:var(--g-kart)"><div class="gmini"><svg viewBox="0 0 48 48"><path d="M7 24h9"/><path d="M12 19l-5 5 5 5"/><path d="M41 24h-9"/><path d="M36 19l5 5-5 5"/><path d="M24 13v5M24 30v5M13 24h5M30 24h5M17 17l3 3M28 28l3 3M17 31l3-3M28 20l3-3"/></svg></div><span class="gn">Kartambolage</span><span class="ge">100 – 699</span></div>
         <div style="flex:1"></div>
       </div><div class="tabbar" data-active="profil"></div></div>
       <div class="note">Les 6 grades validés. Retour contextuel → R1 ou P.</div>
@@ -707,7 +717,7 @@
     </div>
   </div>
 
-  <p class="foot">40 écrans couvrant l'intégralité de la carte de navigation. Chaque note sous un écran rappelle où mènent ses boutons. Audité avant présentation — dis-moi ce qu'il faut ajuster écran par écran.</p>
+  <p class="foot">39 écrans couvrant l'intégralité de la carte de navigation. Chaque note sous un écran rappelle où mènent ses boutons. Audité avant présentation — dis-moi ce qu'il faut ajuster écran par écran.</p>
 </div>
 
 <script>
