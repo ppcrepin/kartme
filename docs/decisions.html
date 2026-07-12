@@ -1,0 +1,195 @@
+<!doctype html>
+<title>KartMe — Décisions à trancher</title>
+<style>
+  :root{--page-bg:#0a0706;--bg-e:#171110;--bg-e2:#1f1613;--line:#2c1f1c;--ink:#f2ede9;--ink-dim:#a08d87;--ink-dim2:#9c8880;--accent:#e10600;--you:#e2c14d;--propose:#5b9bd5;--confirm:#6fae82}
+  *{box-sizing:border-box}
+  body{background:var(--page-bg);color:var(--ink);font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;margin:0;line-height:1.55}
+  .wrap{max-width:780px;margin:0 auto;padding:3rem 1.4rem 6rem}
+  .banner{display:flex;gap:4px;margin-bottom:2rem}
+  .banner span{flex:1;height:4px;background:var(--accent)}
+  .banner span:nth-child(odd){background:transparent}
+  .eyebrow{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  h1{font-family:Georgia,"Times New Roman",serif;font-size:2rem;font-weight:800;margin:.4rem 0 .5rem}
+  .sub{color:var(--ink-dim);max-width:640px}
+  .legend{display:flex;flex-wrap:wrap;gap:.8rem;margin:1.5rem 0 .5rem;font-size:.76rem;color:var(--ink-dim)}
+  .legend span{display:inline-flex;align-items:center;gap:.4rem}
+  .chip{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:.12rem .5rem;border-radius:999px;border:1px solid;white-space:nowrap}
+  .c-you{color:var(--you);border-color:var(--you)}
+  .c-propose{color:var(--propose);border-color:var(--propose)}
+  .c-confirm{color:var(--confirm);border-color:var(--confirm)}
+
+  h2{font-family:Georgia,serif;font-size:1.25rem;font-weight:800;margin:2.6rem 0 .3rem;border-bottom:1px solid var(--line);padding-bottom:.5rem}
+  h2 .n{color:var(--accent);font-size:.8rem;font-family:ui-monospace,monospace;margin-right:.4rem}
+  .item{background:var(--bg-e);border:1px solid var(--line);border-radius:4px;padding:.85rem 1rem;margin-top:.7rem}
+  .item .q{font-weight:700;font-size:.92rem;display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap}
+  .item .q .id{font-family:ui-monospace,monospace;font-size:.72rem;color:var(--accent);flex-shrink:0}
+  .item .reco{font-size:.82rem;color:var(--ink-dim);margin-top:.35rem}
+  .item .reco b{color:var(--ink)}
+  .tags{display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap}
+
+  .foot{margin-top:3rem;background:var(--bg-e2);border:1px solid var(--line);border-radius:4px;padding:1rem 1.2rem;font-size:.85rem;color:var(--ink-dim);line-height:1.6}
+  .foot b{color:var(--ink)}
+</style>
+<div class="wrap">
+  <div class="banner"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="eyebrow">KartMe · Ce qu'il reste à décider</div>
+  <h1>Les décisions pour figer le cahier des charges</h1>
+  <p class="sub">Tout ce qui reste ouvert, trié par nature. Pour la plupart j'ai une recommandation — souvent tu pourras juste dire « go avec ta reco ».</p>
+
+  <div class="legend">
+    <span><span class="chip c-you">Ton appel</span> décision de produit / marque / légal — toi seul</span>
+    <span><span class="chip c-propose">Je propose</span> je rédige/recommande, tu valides</span>
+    <span><span class="chip c-confirm">À confirmer</span> déjà tranché en cours de design, à ratifier</span>
+  </div>
+
+  <h2><span class="n">A</span>Règles du jeu &amp; produit</h2>
+
+  <div class="item"><div class="q"><span class="id">A1</span>Le RSVP (« je serai là / je me retire ») fait-il partie du MVP ?</div>
+    <div class="reco">Apparu dans les écrans (C6′) mais absent du périmètre initial. <b>Reco : oui</b>, léger et utile pour fiabiliser la grille. Sinon on le retire.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">A2</span>« Signaler un classement erroné » au MVP ?</div>
+    <div class="reco">À réconcilier avec « l'admin fait foi, pas de contestation ». <b>Reco : oui mais non-bloquant</b> — un simple signalement qui part en modération, sans annuler l'Elo automatiquement.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">A3</span>Temps au tour (meilleur/moyen) : gardé au MVP ?</div>
+    <div class="reco">Saisie manuelle facultative par l'admin. <b>Reco : le couper du MVP</b> (source d'erreur, peu utilisé sans chrono réel) et le garder en réserve v2.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">A4</span>Modifier le lieu/la date d'une course avant saisie du classement ?</div>
+    <div class="reco"><b>Reco : oui</b>, tant qu'aucun résultat n'est saisi (sans devoir annuler/recréer).</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">A5</span>Limite de courses créées par utilisateur / jour ?</div>
+    <div class="reco">Anti-abus/coûts. <b>Reco : ~10/jour</b> (invisible pour un usage normal). À chiffrer.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">A6</span>Confidentialité du profil : « amis uniquement » dès le MVP ou plus tard ?</div>
+    <div class="reco">Public par défaut est acté. L'option « amis uniquement » (écran S2d) est-elle au MVP ? <b>Reco : oui</b>, simple à faire, rassure les prudents.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <h2><span class="n">B</span>Social, profils fantômes &amp; modération</h2>
+
+  <div class="item"><div class="q"><span class="id">B1</span>Les profils fantômes dans les classements ?</div>
+    <div class="reco">Pris en design : <b>exclus du classement « Amis », visibles en « Global »</b>. À ratifier. (Un fantôme n'est l'ami de personne tant qu'il n'a pas réclamé son profil.)</div>
+    <div class="tags"><span class="chip c-confirm">À confirmer</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">B2</span>Rétention des profils fantômes jamais réclamés ?</div>
+    <div class="reco"><b>Reco : conservés</b> tant qu'ils servent l'historique Elo des autres ; suppression seulement sur demande. À trancher côté RGPD.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">B3</span>Doublons de profils fantômes (même personne créée 2 fois par 2 admins) ?</div>
+    <div class="reco"><b>Reco : fusion possible au moment de la réclamation</b> (la personne rattache plusieurs fantômes). Mécanisme à définir.</div>
+    <div class="tags"><span class="chip c-propose">Je propose</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">B4</span>Règles des pseudos : unicité, longueur, caractères, homonymes ?</div>
+    <div class="reco"><b>Reco : pseudo non unique</b> (homonymes autorisés, on distingue par l'identifiant interne), 3–20 caractères, filtre anti-insultes.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">B5</span>Filtre de contenu auto sur les champs libres (pseudos, circuits, noms fantômes) ?</div>
+    <div class="reco"><b>Reco : oui</b>, une liste de mots interdits basique au MVP.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">B6</span>Process de modération concret ?</div>
+    <div class="reco">Qui traite la boîte de réception, sous quel délai, quelles catégories ? <b>Reco MVP : toi, traitement manuel</b>, catégories = comportement / fausse invitation / classement / usurpation.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <h2><span class="n">C</span>Légal &amp; conformité <span style="font-size:.7rem;color:var(--ink-dim2);font-family:-apple-system,sans-serif;font-weight:400">— à finaliser avant lancement public</span></h2>
+
+  <div class="item"><div class="q"><span class="id">C1</span>Âge minimum + consentement parental ?</div>
+    <div class="reco">Le karting attire les mineurs. <b>À trancher avec un avis juridique</b> (probable 13 ou 16 ans selon RGPD).</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">C2</span>CGU + politique de confidentialité ?</div>
+    <div class="reco">Actuellement « génériques ». <b>À faire rédiger</b> (modèle + relecture juridique). Je peux préparer une première trame.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span> <span class="chip c-propose">Je propose</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">C3</span>Mention de responsabilité sur le risque physique du karting ?</div>
+    <div class="reco">Acté : <b>CGU génériques suffisent au MVP</b> (l'app enregistre des résultats, n'organise pas l'activité). À ratifier.</div>
+    <div class="tags"><span class="chip c-confirm">À confirmer</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">C4</span>Structure juridique de l'éditeur ?</div>
+    <div class="reco">Hors périmètre produit, mais nécessaire pour publier sur les stores (compte développeur). À acter de ton côté.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <h2><span class="n">D</span>Marque &amp; contenu</h2>
+
+  <div class="item"><div class="q"><span class="id">D1</span>« KartMe » : disponibilité réelle du nom ?</div>
+    <div class="reco">Nom acté. Reste à <b>vérifier le domaine (kartme.app ?) et les identifiants App Store / Play Store</b> avant de graver la marque.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">D2</span>Ton éditorial global ?</div>
+    <div class="reco">Les jeux de mots sont actés pour badges/grades. Reste le registre des <b>CGU, emails transactionnels, messages d'erreur</b> (sérieux ou fun ?). <b>Reco : fun sur le ludique, sobre sur le sensible.</b></div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <h2><span class="n">E</span>Design &amp; identité visuelle</h2>
+
+  <div class="item"><div class="q"><span class="id">E1</span>Logo / wordmark définitif + icône d'application ?</div>
+    <div class="reco">Pas encore conçus. <b>Je te proposerai plusieurs pistes</b> (le « KartMe » actuel est du texte brut). Nécessaire pour les stores.</div>
+    <div class="tags"><span class="chip c-propose">Je propose</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">E2</span>Police serif définitive (sous licence) ?</div>
+    <div class="reco">Georgia est un placeholder de maquette. <b>Je proposerai 2–3 polices</b> sous licence commerciale (ou libre) dans le même esprit éditorial.</div>
+    <div class="tags"><span class="chip c-propose">Je propose</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">E3</span>Palette d'états sémantiques (succès / erreur / avertissement) ?</div>
+    <div class="reco">Le rouge sert déjà d'accent ET de « perte d'Elo ». Il faut une teinte d'erreur/avertissement qui ne se confonde pas. <b>Je proposerai une mini-palette.</b></div>
+    <div class="tags"><span class="chip c-propose">Je propose</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">E4</span>Contraste des pastilles de grade rouge/brique ?</div>
+    <div class="reco">Légèrement sous le seuil WCAG en petit texte. <b>Reco : garder le rouge de marque</b> (lisible en gras), ou l'éclaircir d'un cran pour la conformité stricte — ton choix.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">E5</span>Forme pilule des boutons ?</div>
+    <div class="reco">Acté en design (angles nets partout sauf boutons d'action en pilule). À ratifier.</div>
+    <div class="tags"><span class="chip c-confirm">À confirmer</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">E6</span>Style d'illustration global ?</div>
+    <div class="reco">Au-delà des icônes : illustrations des <b>écrans vides, erreurs, onboarding</b>. <b>Je proposerai</b> un style cohérent (line-art).</div>
+    <div class="tags"><span class="chip c-propose">Je propose</span></div></div>
+
+  <h2><span class="n">F</span>Technique <span style="font-size:.7rem;color:var(--ink-dim2);font-family:-apple-system,sans-serif;font-weight:400">— au moment du build, je recommande, tu valides</span></h2>
+
+  <div class="item"><div class="q"><span class="id">F1</span>Schéma de base de données + sécurité (RLS Supabase)</div>
+    <div class="reco">Tables (utilisateurs, courses, participations, fantômes, amitiés, badges, notifs) + règles d'accès. <b>Je le rédige</b> quand on lance le build.</div>
+    <div class="tags"><span class="chip c-propose">Je propose</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">F2</span>Service de notifications push (Expo / FCM / APNs)</div>
+    <div class="reco"><b>Reco : Expo Push</b> (gratuit, simple, cohérent avec la stack).</div>
+    <div class="tags"><span class="chip c-propose">Je propose</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">F3</span>Outil d'analytics + métriques suivies</div>
+    <div class="reco"><b>Reco : PostHog</b> (plan gratuit). Métriques : activation, rétention, coefficient de viralité (K-factor).</div>
+    <div class="tags"><span class="chip c-propose">Je propose</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">F4</span>Multi-session · sauvegarde/reprise · fuseau horaire · alternative au drag &amp; drop</div>
+    <div class="reco">Détails d'implémentation. <b>Je gère avec des défauts raisonnables</b> (Supabase gère le multi-session et les backups ; heures en UTC ; saisie du classement aussi possible par tap séquentiel pour l'accessibilité).</div>
+    <div class="tags"><span class="chip c-propose">Je propose</span></div></div>
+
+  <h2><span class="n">G</span>Croissance &amp; business</h2>
+
+  <div class="item"><div class="q"><span class="id">G1</span>Modèle économique à moyen terme ?</div>
+    <div class="reco">Gratuit sans pub au lancement est acté. Faut-il déjà esquisser une piste de monétisation future (premium, compte circuit) ou on verra à la traction ? <b>Reco : on verra.</b></div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">G2</span>Programme de parrainage formel ?</div>
+    <div class="reco">Au-delà du badge « Effet boule de neige ». <b>Reco : pas au MVP</b>, on mesure d'abord la viralité naturelle.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">G3</span>Stratégie ASO (nom affiché, mots-clés, visuels de store) ?</div>
+    <div class="reco">À préparer avant publication. <b>Je proposerai</b> un premier jet.</div>
+    <div class="tags"><span class="chip c-propose">Je propose</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">G4</span>Notifications : heures de silence + formulation des messages ?</div>
+    <div class="reco"><b>Reco : pas de push 22h–8h</b>, messages courts avec un jeu de mots. À valider.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <div class="item"><div class="q"><span class="id">G5</span>Compte « circuit / organisateur pro » (v2) : tarifs, vérification, fonctions ?</div>
+    <div class="reco">Hors MVP, mais le modèle de données le prévoit. Détails à définir plus tard.</div>
+    <div class="tags"><span class="chip c-you">Ton appel</span></div></div>
+
+  <div class="foot">
+    <b>En résumé</b> — pour figer le cahier des charges « produit », les vraies décisions qui n'attendent que toi sont surtout <b>A1–A6, B2/B4–B6, D1–D2, E4, G1–G2/G4</b>. Les blocs <b>C</b> (légal) et <b>F</b> (technique) ne bloquent pas la rédaction : le légal se finalise avant le lancement public, le technique au moment du build (je propose, tu valides). Les items <b>« À confirmer »</b> (B1, C3, E5) sont juste des ratifications rapides.
+    <br><br>Dis-moi si tu veux qu'on les enchaîne en questions cliquables (comme d'habitude), une section à la fois.
+  </div>
+</div>

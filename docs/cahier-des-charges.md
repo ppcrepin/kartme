@@ -1,4 +1,4 @@
-# KartMe — Cahier des charges v0.5 (brouillon de travail)
+# KartMe — Cahier des charges v0.6 (brouillon de travail)
 
 > Voir aussi : **carte de navigation** `docs/navigation-map.html` (chaque bouton → sa destination, zéro cul-de-sac) · **39 écrans rendus** `docs/ecrans-complets.html` · **cas limites** `docs/ecrans-cas-limites.html`.
 
@@ -29,10 +29,11 @@ Démocratiser l'accès au karting amateur via un système "Elo" façon échecs :
 - Une **course = une seule manche/session** (pas de courses multi-manches agrégées au MVP).
 - **Individuel uniquement** — pas de courses par équipes au MVP.
 - **Pas de catégorisation** par type de karting (indoor/outdoor/électrique...) au MVP — toute course compte pareil.
-- **Données saisies par l'admin** : classement final (obligatoire) + temps au tour meilleur/moyen (facultatif, saisie manuelle). Pas de photo de course au MVP.
+- **Données saisies par l'admin** : classement final uniquement. **Pas de temps au tour ni de photo au MVP** (temps au tour écarté — saisie source d'erreur sans chrono réel ; gardé en réserve v2). *(décision A3)*
 - **Taille d'une course** : minimum 2 participants, pas de maximum imposé.
 - **Égalités interdites** : l'admin doit départager en cas d'ex-aequo réel — pas de gestion de match nul dans le calcul Elo.
-- **Lieu** : sélectionné dans une liste de circuits préremplie (les circuits de karting français les plus connus, constituée en amont), avec ajout libre si le circuit est absent — la liste s'enrichit ensuite avec l'usage réel. *(Ouvert : qui modère les doublons/fautes de frappe dans cette liste à mesure qu'elle grandit — voir §16.4.)*
+- **Lieu** : sélectionné dans une liste de circuits préremplie (les circuits de karting français les plus connus, constituée en amont), avec ajout libre si le circuit est absent — la liste s'enrichit ensuite avec l'usage réel. Un **filtre de mots interdits** s'applique aux noms saisis (cf. §8). *(Ouvert : dédoublonnage de la liste à mesure qu'elle grandit — voir §16.)*
+- **Pas de RSVP au MVP** : l'admin gère seul la liste des participants ; pas de confirmation de présence par les invités. *(décision A1)*
 
 ## 4. Cycle de vie d'une course
 
@@ -41,9 +42,11 @@ Démocratiser l'accès au karting amateur via un système "Elo" façon échecs :
 3. **Invitation** — lien ou QR code unique partageable (SMS, WhatsApp...) ; ajout direct possible depuis la liste d'amis.
 4. **Participants sans compte** — un **profil fantôme** est créé avec son propre Elo qui évolue. Réclamation sécurisée : la personne clique sur un lien pointant vers son profil précis (envoyé par l'admin), crée son compte, et **l'admin de la course confirme** que c'est bien elle avant rattachement de l'historique.
 5. **Saisie du résultat** — l'admin réordonne les participants par **glisser-déposer** jusqu'à obtenir le classement réel ; les Elo de tous les participants sont recalculés immédiatement.
-6. **Fenêtre de correction** — l'admin peut corriger pendant **24h**, l'Elo est recalculé automatiquement. Passé ce délai, la course est figée dans l'historique.
-7. **Annulation** — possible tant qu'aucun classement n'est saisi. Une fois validée, la course reste dans l'historique officiel et n'est plus supprimable, pour préserver l'intégrité de l'Elo de tous les participants. *(Ouvert : peut-on encore modifier le lieu/la date d'une course avant saisie du classement, sans l'annuler complètement ? — voir §16.4.)*
-8. **Partage** — carte visuelle automatique (podium + variation d'Elo de chacun, ex. `+18` / `-12`, toujours doublée d'un signe ▲/▼) ; version épurée pour l'externe, un clic ramène vers la page détaillée de la course dans l'app.
+6. **Modification avant saisie** — tant qu'aucun classement n'est saisi, l'admin peut **modifier le lieu et la date** de la course sans devoir l'annuler/recréer. *(décision A4)*
+7. **Fenêtre de correction** — après validation, l'admin peut corriger le classement pendant **24h**, l'Elo est recalculé automatiquement. Passé ce délai, la course est figée dans l'historique.
+8. **Annulation** — possible tant qu'aucun classement n'est saisi. Une fois validée, la course reste dans l'historique officiel et n'est plus supprimable, pour préserver l'intégrité de l'Elo de tous les participants.
+9. **Signalement de classement** — un participant peut **signaler un classement suspect** ; le signalement part en modération mais **n'annule pas** l'Elo automatiquement (l'admin fait toujours foi). *(décision A2)*
+10. **Partage** — carte visuelle automatique (podium + variation d'Elo de chacun, ex. `+18` / `-12`, toujours doublée d'un signe ▲/▼) ; version épurée pour l'externe, un clic ramène vers la page détaillée de la course dans l'app.
 
 ## 5. Système Elo
 
@@ -101,9 +104,13 @@ Le grade est affiché sur le profil (à côté de l'Elo) et une **échelle des g
 
 **Face-à-face** — le profil d'un ami affiche en tête un résumé direct des confrontations ("Toi 2 — 1 Lui") plutôt qu'un simple historique brut.
 
-**Visibilité des profils** — Elo, historique et badges sont **visibles par tous les utilisateurs inscrits** de l'app (pas seulement les amis), pour favoriser la découverte et la comparaison — mais jamais indexés publiquement sur le web.
+**Visibilité des profils** — Elo, historique et badges sont **publics par défaut** (visibles par tous les utilisateurs inscrits, jamais indexés sur le web), pour favoriser la découverte. **Option "amis uniquement" dès le MVP** (réglage S2d) pour qui veut un profil privé. *(décision A6)*
 
-**Blocage / signalement** — dès le MVP : bloquer un utilisateur (empêche invitation/ajout en ami), signaler un comportement. Modération : boîte de réception simple, traitée manuellement au départ (pas de back-office dédié au MVP).
+**Profils fantômes** — n'apparaissent **pas dans le classement "Amis"** (visibles en "Global" uniquement) : un fantôme n'est l'ami de personne tant qu'il n'a pas réclamé son profil *(décision B1)*. **Conservés** tant qu'ils servent l'historique Elo des autres, suppression seulement sur demande (RGPD) *(B2)*. À la réclamation, la personne peut **fusionner plusieurs fantômes** la représentant en un seul historique *(B3)*.
+
+**Pseudos** — non uniques (homonymes autorisés, distingués par l'identifiant interne + avatar), 3 à 20 caractères, soumis au filtre de mots interdits *(décision B4)*.
+
+**Blocage / signalement** — dès le MVP : bloquer un utilisateur (empêche invitation/ajout en ami), signaler un comportement ou un classement. Modération : **boîte de réception simple traitée manuellement** par l'éditeur (catégories : comportement / fausse invitation / classement / usurpation) ; pas de back-office dédié au MVP *(décision B6)*.
 
 **Gamification** :
 - Elo affiché en chiffre (référence précise) **+ un rang visuel** en complément (cf. §5.4).
@@ -128,15 +135,18 @@ Le grade est affiché sur le profil (à côté de l'Elo) et une **échelle des g
 
 Notifications push essentielles uniquement au MVP : invitation à une course, résultat d'une course saisi, demande d'ami reçue/acceptée. Pas de notifications "sociales" (ex. dépassement au classement) dans un premier temps, pour éviter la fatigue de notification.
 
-*⚠️ Ouvert : service technique retenu (Expo Push / FCM / APNs), heures de silence ("quiet hours"), formulation exacte des messages — voir §16.4.*
+**Heures de silence** : pas de push entre **22h et 8h**. **Ton** : messages courts avec un jeu de mots (ex. « Il est 2h moins le kart, ta course approche »). *(décision G4)* Chaque notification ouvre l'écran concerné (deep-link). Service technique retenu : **Expo Push** (voir §16 technique).
 
 ## 8. Confidentialité, sécurité et légal
 
 - **Suppression de compte (RGPD)** : le compte et les données personnelles sont supprimés ; l'historique des courses passées reste dans la base mais **anonymisé** ("Joueur supprimé"), pour préserver l'intégrité de l'Elo des autres participants.
-- **Âge minimum** : non bloqué pour le MVP en interne, mais **prérequis légal à traiter avant tout lancement public** (probable seuil 13-16 ans selon RGPD, à trancher avec un avis juridique).
+- **Filtre de contenu** : liste de mots interdits basique appliquée aux champs libres (pseudos, noms de circuits, noms de profils fantômes) dès le MVP *(décision B5)*.
+- **Âge minimum** : **à trancher avec un avis juridique avant le lancement public** (probable seuil 13 ou 16 ans selon RGPD). Non bloquant pour la construction du produit. *(décision C1)*
+- **CGU + politique de confidentialité** : une **première trame sera rédigée** (adaptée à l'app), puis soumise à relecture juridique par l'éditeur avant lancement *(décision C2)*.
+- **Responsabilité** : pas de mention spécifique sur le risque physique du karting — **CGU génériques suffisantes au MVP** (l'app enregistre des résultats librement saisis, elle n'organise pas l'activité) *(décision C3, confirmée)*.
 - **Accessibilité couleurs** : toute information portée par une couleur (victoire/défaite/progression Elo) est **systématiquement doublée d'un icône/signe** (`+`/`−`, `▲`/`▼`) pour rester lisible aux daltoniens (~8% des hommes).
-- **Anti-triche MVP** : seul l'admin créateur de la course peut saisir/modifier le classement, dans la fenêtre de correction de 24h. Pas de validation multi-joueurs pour l'instant — réserve en cas d'abus constatés.
-- **Responsabilité** : pas de mention légale spécifique sur le risque physique du karting au MVP — CGU génériques suffisantes pour l'instant, à réévaluer avant lancement public.
+- **Anti-triche MVP** : seul l'admin créateur de la course peut saisir/modifier le classement, dans la fenêtre de correction de 24h. Pas de validation multi-joueurs ; signalement de classement non-bloquant possible (cf. §4.9). Réserve en cas d'abus constatés.
+- **Structure juridique de l'éditeur** : nécessaire pour publier sur les stores (compte développeur) — à acter par le porteur de projet *(C4, hors périmètre produit)*.
 
 ## 9. Identité visuelle — Design system
 
@@ -180,17 +190,19 @@ Une carte de navigation exhaustive a été produite : elle liste chaque écran e
 
 ### 9.5 Écrans détaillés — v1 rendue et auditée
 
-Les **39 écrans** de la carte de navigation ont été rendus dans le style Editorial Grand Prix (`docs/ecrans-complets.html`), organisés par branche (Authentification, Courses, Classements, Amis, Profil, Réglages), avec un **monde narratif unique aux chiffres Elo réellement calculés** (course exemple à somme nulle : +18 / 0 / −3 / −6 / −9). Rendu audité de façon adversariale avant présentation (chiffres, couverture de la carte, cohérence narrative) puis corrigé. Intègrent tous les points actés : feuille "Ajouter des pilotes" unifiée (amis / nom libre / lien-QR), grille de course avec grade + Elo par pilote, RSVP actionnable côté participant, bouton Partager sur les résultats, carte de partage avec date + tous les coureurs, échelle des grades, bouton Réglages explicite, sections demandes reçues **et** envoyées. Les cas limites (duel 2 pilotes "VS", grande course 12+) sont dans `docs/ecrans-cas-limites.html`.
+Les **39 écrans** de la carte de navigation ont été rendus dans le style Editorial Grand Prix (`docs/ecrans-complets.html` + PDF `docs/ecrans-complets.pdf`), organisés par branche (Authentification, Courses, Classements, Amis, Profil, Réglages), avec un **monde narratif unique aux chiffres Elo réellement calculés** (course exemple à somme nulle : +18 / 0 / −3 / −6 / −9). Rendu audité de façon adversariale avant présentation (chiffres, couverture de la carte, cohérence narrative) puis corrigé. Intègrent tous les points actés : feuille "Ajouter des pilotes" unifiée (amis / nom libre / lien-QR), grille de course avec **grade coloré + Elo par pilote**, bouton Partager sur les résultats, carte de partage avec date + tous les coureurs, **échelle des grades colorée (rampe terracotta → or)**, bouton Réglages explicite, sections demandes reçues **et** envoyées. Les **couleurs de grade** (cf. §5.4) et les **icônes de badges/grades** (`docs/badges-icones.html`, `docs/grades-icones.html`) sont appliquées. Les cas limites (duel 2 pilotes "VS", grande course 12+) sont dans `docs/ecrans-cas-limites.html`.
 
-**Règles complémentaires issues de l'audit (retenues, à confirmer par le client)** :
-- Les **profils fantômes n'apparaissent pas dans le classement "Amis"** (visibles dans "Global" uniquement) — un fantôme n'est l'ami de personne tant qu'il n'a pas réclamé son profil.
-- Le libellé de fin de préparation est **"Clôturer les invitations"** ; l'état suivant s'affiche "invitations ouvertes" → "prête" → "en attente du classement".
+**Règles complémentaires confirmées** :
+- **Formes** : angles nets partout, seuls les boutons d'action gardent la forme pilule *(décision E5)*.
+- **Contraste** : le rouge de marque exact est conservé pour les grades, y compris en petit texte *(décision E4, choix assumé vs WCAG strict)*.
+- **Retrait du RSVP** des écrans (cf. §3, décision A1) — synchronisé dans les maquettes.
+- Le libellé de fin de préparation est **"Clôturer les invitations"** ; états successifs : "invitations ouvertes" → "prête" → "en attente du classement".
 
-**Reste à faire** : validation écran par écran par le client, puis revue des badges un par un (§16.2).
+**Reste à faire (design)** : logo/wordmark + icône d'application, police serif définitive, palette d'états sémantiques, style d'illustration (états vides/erreurs) — tous en mode "je propose, le client valide" *(cf. §16)*. Puis validation fine écran par écran.
 
 ## 10. Modèle économique et maîtrise des coûts
 
-Gratuit, sans publicité ni paiement au démarrage — monétisation étudiée plus tard une fois la traction prouvée. Limites anti-abus/coûts : nombre de courses créées par utilisateur/jour plafonné (valeur exacte non fixée, voir §16.5), compression automatique des photos (image de partage). Pas de coût SMS (auth email/Google/Apple uniquement), pas de coût lié aux contacts téléphone (non utilisés).
+Gratuit, sans publicité ni paiement au démarrage — **monétisation étudiée plus tard selon la traction** (aucune piste figée maintenant ; le modèle de données garde la porte ouverte au compte circuit) *(décision G1)*. **Pas de programme de parrainage formel au MVP** : on mesure d'abord la viralité naturelle (badge "Effet boule de neige" + partage) *(G2)*. Limites anti-abus/coûts : **~10 courses créées par utilisateur/jour** *(décision A5)*, compression automatique de l'image de partage. Pas de coût SMS (auth email/Google/Apple), pas de coût lié aux contacts téléphone (non utilisés).
 
 ## 11. Stratégie de lancement
 
@@ -224,53 +236,37 @@ Gratuit, sans publicité ni paiement au démarrage — monétisation étudiée p
 
 ## 15. Ce qui est donc figé aujourd'hui (résumé rapide)
 
-Stack technique · formule et paramètres Elo (K=32, diviseur 400, plancher 100, range cible 100-2500) · cycle de vie complet d'une course · système d'amis et de profils fantômes · principes de modération/RGPD/accessibilité · style graphique général (Editorial Grand Prix, Rosso Corsa) · périmètre du MVP · stratégie de lancement en beta fermée.
+Stack technique · formule et paramètres Elo (K=32, diviseur 400, plancher 100, range cible 100-2500) · 6 grades (noms + bornes + couleurs + icônes) · 10 badges (+ icônes) · cycle de vie complet d'une course (dont modif avant saisie, signalement non-bloquant, pas de RSVP ni temps au tour) · système d'amis et de profils fantômes (rétention, fusion, exclusion du classement Amis) · règles de pseudo · profil public par défaut + option privée · notifications (heures de silence, ton) · modération manuelle + filtre de mots · limite 10 courses/jour · principes RGPD/accessibilité · design (Editorial Grand Prix / Rosso Corsa, formes, couleurs de grade, 39 écrans rendus + audités) · périmètre du MVP · lancement en beta fermée.
 
-## 16. Questions ouvertes (exhaustif)
+## 16. Ce qui reste ouvert
 
-### 16.1 Design & écrans détaillés
-- **Rendre visuellement** tous les écrans de la carte de navigation dans le style Editorial Grand Prix, branche par branche, puis les valider un par un.
-- Choix d'une police serif définitive sous licence commerciale (Georgia est un placeholder de mockup).
-- Conception du logo/wordmark définitif et de l'icône d'application (App Store / Play Store).
-- Style d'illustration complet au-delà de l'icône "montre" (ex. illustrations pour les badges, les états vides, les écrans d'erreur).
-- Palette complémentaire pour les états sémantiques (succès/avertissement) — le rouge Ferrari est déjà utilisé comme accent ET comme "perte d'Elo" (choix assumé, doublé du signe ▼/−) ; reste à définir une teinte pour l'erreur/avertissement qui ne se confonde pas.
-- *(Résolus : style de navigation, langage de formes, avatars en initiales — cf. §9.2.)*
+La grande majorité des décisions produit a été tranchée (cf. §15). Voici l'état, par nature. La revue complète des décisions et leur libellé sont dans `docs/decisions.html`.
 
-### 16.2 Elo & gamification
-- **Icônes des 10 badges** (traits fins, style Rosso Corsa) — à dessiner.
-- Enrichissement du catalogue depuis la réserve de `BADGES.md` — au fil de l'eau avec le client.
-- *(Résolus : bornes + noms des 6 grades cf. §5.4 ; 10 badges MVP choisis cf. §6 et `BADGES.md`.)*
+### 16.1 Décisions produit encore ouvertes
+Quasiment aucune ne bloque plus la rédaction du cahier. Restent surtout des sujets **légaux à finaliser avant le lancement public** (ne bloquent pas la construction) :
+- **Âge minimum définitif** + éventuel consentement parental — à trancher avec un avis juridique *(C1)*.
+- **CGU + politique de confidentialité** — première trame à rédiger (par nous), puis relecture juridique par l'éditeur *(C2)*.
+- **Structure juridique de l'éditeur** — à acter pour ouvrir les comptes développeur stores *(C4)*.
 
-### 16.3 Modération & légal
-- Process concret derrière "boîte de réception simple" : qui la consulte, sous quel délai, quelles catégories de signalement (comportement, fausse invitation, classement contesté...) ?
-- Âge minimum définitif et conformité RGPD/mineurs — à trancher avec un avis juridique avant tout lancement public.
-- Rédaction effective des CGU et de la politique de confidentialité (actuellement juste évoquées comme "génériques").
-- Faut-il un filtre de contenu (modération automatique) sur les champs libres (noms de circuits, pseudos, noms de profils fantômes) ?
-- Règles d'unicité/format des pseudos utilisateurs.
-- Politique de conservation des données pour les profils fantômes jamais réclamés (suppression au bout d'un certain temps ? conservés indéfiniment ?).
-- Un profil fantôme non réclamé est-il visible publiquement dans les classements au même titre qu'un compte réel ?
+### 16.2 À produire — "je propose, le client valide"
+- **Logo / wordmark définitif** + icône d'application (stores) *(E1)*.
+- **Police serif définitive** sous licence (Georgia = placeholder) *(E2)*.
+- **Palette d'états sémantiques** (succès/erreur/avertissement) distincte du rouge de marque *(E3)*.
+- **Style d'illustration** complet (états vides, erreurs, onboarding visuel) *(E6)*.
+- **Trame CGU/confidentialité** (cf. C2).
+- **Stratégie ASO** (nom affiché, mots-clés, catégorie, captures de store) *(G3)*.
 
-### 16.4 Données & architecture technique
-- Schéma de base de données précis (tables : utilisateurs, courses, participations, profils fantômes, amitiés, badges, notifications...).
-- Politique de sécurité Supabase (Row Level Security) à définir table par table.
-- Choix du service de notifications push (Expo Push Notification service, ou direct FCM/APNs).
-- Choix de l'outil d'analytics produit (ex. PostHog, Amplitude, ou tables Supabase custom) et liste des métriques suivies (activation, rétention, coefficient de viralité...).
-- Modération des doublons/fautes de frappe dans la liste de circuits qui s'enrichit avec l'usage.
-- Peut-on modifier le lieu/la date d'une course après création mais avant saisie du classement, sans l'annuler complètement ?
-- Gestion des doublons de profils fantômes (deux admins créent-ils indépendamment un profil fantôme pour la même personne réelle ?).
-- Gestion multi-session (utilisateur connecté simultanément sur mobile et web).
-- Politique de sauvegarde/reprise après incident des données Supabase.
-- Fuseau horaire : comment gérer l'heure d'une course si les utilisateurs changent de fuseau (moins critique vu le marché France-only, mais à trancher).
-- Alternative au glisser-déposer pour la saisie du classement (accessibilité motrice) ?
+### 16.3 À produire — technique, au moment du build (défauts recommandés validés)
+- **Schéma de base de données** + **politique RLS Supabase** *(F1)*.
+- **Notifications push : Expo Push** *(F2)*.
+- **Analytics : PostHog** (métriques activation, rétention, coefficient de viralité) *(F3)*.
+- Multi-session (géré par Supabase), sauvegarde/reprise (backups Supabase), heures en **UTC**, **alternative au glisser-déposer = tap séquentiel** pour l'accessibilité motrice *(F4)*.
+- Dédoublonnage de la liste de circuits à mesure qu'elle s'enrichit.
 
-### 16.5 Croissance & business
-- Valeur exacte de la limite "nombre de courses créées par utilisateur/jour" (mentionnée en principe, jamais chiffrée).
-- Programme de parrainage/récompense au-delà du badge "Effet boule de neige" — faut-il un mécanisme plus formel ?
-- Stratégie ASO (App Store Optimization) : nom affiché, mots-clés, catégorie, captures d'écran de store.
-- Heures de silence ("quiet hours") pour les notifications push, formulation exacte des messages.
-- Détail du futur compte "circuit/organisateur professionnel" évoqué en v2 (modèle tarifaire, processus de vérification, fonctionnalités).
+### 16.4 Actions ponctuelles
+- **Vérifier la disponibilité de "KartMe"** : domaine (kartme.app / .com / .fr) + identifiants App Store / Play Store — rapport à produire avant de graver la marque *(D1)*.
+- Enrichissement continu de `BADGES.md` et `PUNS.md` (au fil de l'eau).
 
-### 16.6 Contenu & marque
-- "KartMe" confirmé comme nom de marque — vérifier la disponibilité réelle du nom de domaine et des identifiants sur les stores avant de s'engager définitivement.
-- Ton éditorial complet au-delà des jeux de mots badges/écrans vides (ex. ton des CGU, des emails transactionnels, des messages d'erreur).
-- Constitution/structure juridique de l'éditeur de l'application (non traité dans ce document, hors périmètre produit).
+### 16.5 Reporté en v2 (hors MVP, déjà cadré)
+- Compte **"circuit / organisateur professionnel"** (tarifs, vérification, fonctions) *(G5)*.
+- Temps au tour, courses multi-manches, courses par équipes, saisons Elo, notifications sociales, statistiques avancées, decay d'inactivité, programme de parrainage formel.
