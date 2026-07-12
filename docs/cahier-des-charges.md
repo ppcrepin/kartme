@@ -1,4 +1,4 @@
-# KartMe — Cahier des charges v0.6 (brouillon de travail)
+# KartSquad — Cahier des charges v0.6 (brouillon de travail)
 
 > Voir aussi : **carte de navigation** `docs/navigation-map.html` (chaque bouton → sa destination, zéro cul-de-sac) · **40 écrans rendus** `docs/ecrans-complets.html` · **cas limites** `docs/ecrans-cas-limites.html`.
 
@@ -265,7 +265,7 @@ Quasiment aucune ne bloque plus la rédaction du cahier. Restent surtout des suj
 - Dédoublonnage de la liste de circuits à mesure qu'elle s'enrichit.
 
 ### 16.4 Actions ponctuelles
-- **Vérifier la disponibilité de "KartMe"** : domaine (kartme.app / .com / .fr) + identifiants App Store / Play Store — rapport à produire avant de graver la marque *(D1)*.
+- **Nom retenu : « KartSquad »** *(D1, rebrand depuis « KartMe »)*. « KartMe » écarté (collision : app de bookmarking + Wikipédia + une app « Kart me » sur le Play Store). Vérifié pour « KartSquad » : aucune collision d'app/société/produit (seul un compte X @KartSquad de fans Mario Kart) ; domaines kartsquad.com/.app/.fr **libres en DNS**. **Reste à confirmer par le PO sur navigateur** : achat du domaine + recherche de marque INPI/USPTO (non interrogeables depuis l'environnement de dev). Le slug du repo GitHub reste `kartme` pour l'instant (renommage = décision PO).
 - Enrichissement continu de `BADGES.md` et `PUNS.md` (au fil de l'eau).
 
 ### 16.5 Reporté en v2 (hors MVP, déjà cadré)

@@ -1,10 +1,10 @@
-# AGENTS.md — Architecture d'exécution de KartMe
+# AGENTS.md — Architecture d'exécution de KartSquad
 
-> **À lire en premier au démarrage de chaque session.** Ce document décrit *comment* on travaille sur KartMe : les rôles, le pipeline, ce qui doit être validé par le Product Owner, et comment garder une exécution cohérente d'une session à l'autre. La source de vérité *produit* reste `docs/cahier-des-charges.md`.
+> **À lire en premier au démarrage de chaque session.** Ce document décrit *comment* on travaille sur KartSquad : les rôles, le pipeline, ce qui doit être validé par le Product Owner, et comment garder une exécution cohérente d'une session à l'autre. La source de vérité *produit* reste `docs/cahier-des-charges.md`.
 
 ## Contexte projet
 
-KartMe — application de karting amateur avec système Elo, courses entre amis, gamification.
+KartSquad — application de karting amateur avec système Elo, courses entre amis, gamification.
 Stack : **React Native + Web via Expo** (frontend) · **Supabase** (Postgres, auth, API, realtime, stockage) · notifications **Expo Push** · analytics **PostHog**. Français au lancement, i18n prête.
 
 ## 1. Rôles & hiérarchie

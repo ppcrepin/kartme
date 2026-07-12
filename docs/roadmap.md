@@ -1,4 +1,4 @@
-# KartMe — Roadmap produit (détaillée)
+# KartSquad — Roadmap produit (détaillée)
 
 > Roadmap par **phases jusqu'au lancement**, découpées en **lots livrables**, chaque lot détaillé par agent (Design/UX · Backend · Frontend · Sécurité/Infra · Test) avec ses **critères d'acceptation** et ses **dépendances**. Source de vérité produit : `docs/cahier-des-charges.md`. Méthode de travail : `AGENTS.md`.
 >
@@ -23,9 +23,9 @@ Légende agents : 🎨 Design/UX · ⚙️ Backend · 📱 Frontend · 🔒 Séc
 ## Phase 0 — Fondations
 
 ### Lot 0.0 — Prérequis & vérifications *(bloquant, avant tout code de marque)*
-- **Action PO/orchestrateur** : vérifier la **disponibilité du nom « KartMe »** — domaine (kartme.app / .com / .fr) et identifiants App Store / Play Store *(décision D1)*.
+- **Action PO/orchestrateur** : vérifier la **disponibilité du nom « KartSquad »** — domaine (kartsquad.app / .com / .fr) et identifiants App Store / Play Store *(décision D1)*.
 - **Action PO** : ouvrir les **comptes développeur** Apple (99 $/an) et Google Play (25 $ une fois) ; définir la **structure juridique** de l'éditeur *(C4)*.
-- **Critères d'acceptation** : rapport de disponibilité du nom remis ; go/no-go sur « KartMe » ; comptes développeur créés.
+- **Critères d'acceptation** : rapport de disponibilité du nom remis ; go/no-go sur « KartSquad » ; comptes développeur créés.
 - **Dépend de** : rien.
 
 ### Lot 0.1 — Initialisation du projet & CI

@@ -1,4 +1,4 @@
-# PUNS.md — Banque de jeux de mots KartMe
+# PUNS.md — Banque de jeux de mots KartSquad
 
 Liste vivante des jeux de mots et clins d'œil karting/course à réutiliser dans l'app (badges, notifications, écrans vides, messages de partage...). On complète au fil de l'eau.
 

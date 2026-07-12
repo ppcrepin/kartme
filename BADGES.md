@@ -1,4 +1,4 @@
-# BADGES.md — Catalogue des badges KartMe
+# BADGES.md — Catalogue des badges KartSquad
 
 Fichier vivant qui recense **tous** les badges. Trois statuts :
 - `MVP` — retenu pour le lancement
