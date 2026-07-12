@@ -2,9 +2,33 @@
 
 > Roadmap par **phases jusqu'au lancement**, découpées en **lots livrables**, chaque lot détaillé par agent (Design/UX · Backend · Frontend · Sécurité/Infra · Test) avec ses **critères d'acceptation** et ses **dépendances**. Source de vérité produit : `docs/cahier-des-charges.md`. Méthode de travail : `AGENTS.md`.
 >
-> **Statut global : planification — rien n'est encore développé.** Chaque lot est `☐ à faire` jusqu'à ce que sa Definition of Done (cf. AGENTS.md §5) soit remplie.
+> **Statut global : Phase 0 en cours — le socle technique est posé, l'app tourne en ligne.** Chaque lot est `☐ à faire` jusqu'à ce que sa Definition of Done (cf. AGENTS.md §5) soit remplie.
 >
 > ⚠️ La structure et les priorités ci-dessous sont **stratégiques** → à valider par le Product Owner avant démarrage.
+
+---
+
+## 🏁 État d'avancement & reprise
+
+> **À la reprise du projet :** relire d'abord `AGENTS.md` (architecture d'exécution — l'équipe des 6 agents et le pipeline restent le mode de travail), puis `docs/cahier-des-charges.md`, puis cette section.
+
+**Dernière session : 2026-07-12.**
+
+| Lot | État |
+|---|---|
+| 0.0 Prérequis | 🟡 en cours — *action Product Owner* : acheter `kartsquad.app`, recherche d'antériorité de marque (INPI/EUIPO), ouvrir comptes Apple/Google (non urgents) |
+| **0.1 Init & CI** | ✅ **livré** — app Expo (4 onglets), TypeScript strict, ESLint, Jest (vert), Playwright câblé, CI GitHub Actions |
+| 0.2 Design system & i18n | ⏭️ **prochain lot** |
+| 0.3 Données & sécurité | ☐ à faire |
+| Phases 1 → 4 | ☐ à faire |
+
+**Déploiement (aperçu web) :** ✅ en ligne et **automatique à chaque push**.
+- **URL publique : https://ppcrepin.github.io/kartme/** (GitHub Pages)
+- Chaîne : push → `.github/workflows/deploy-web.yml` → export web (base `/kartme`) → publication Pages.
+- CI qualité : `.github/workflows/ci.yml` (typecheck · lint · tests unitaires).
+- Doc d'architecture IT : `docs/architecture-it.html`.
+
+**Prochaine étape :** démarrer le **lot 0.2 (design system + logo/wordmark)**.
 
 ## Vue d'ensemble
 
@@ -28,13 +52,14 @@ Légende agents : 🎨 Design/UX · ⚙️ Backend · 📱 Frontend · 🔒 Séc
 - **Critères d'acceptation** : rapport de disponibilité du nom remis ; go/no-go sur « KartSquad » ; comptes développeur créés.
 - **Dépend de** : rien.
 
-### Lot 0.1 — Initialisation du projet & CI
-- ⚙️📱 Init **monorepo Expo** (React Native + Web) en TypeScript ; navigation (expo-router) avec le **shell à 4 onglets** (Courses/Classements/Amis/Profil) vide ; ESLint + Prettier.
-- ⚙️ Init **projet Supabase** (local via Supabase CLI + projet cloud) ; gestion des variables d'environnement/secrets.
-- 🔒 **CI GitHub Actions** : lint + typecheck + tests sur chaque push ; protection de branche.
-- 🧪 Harnais de test : **Jest + React Native Testing Library** (unit/intégration) + **Playwright** (e2e web).
-- **Critères d'acceptation** : l'app démarre sur Web et mobile avec les 4 onglets vides et la barre de navigation ; `npm test` et la CI passent au vert.
+### Lot 0.1 — Initialisation du projet & CI ✅ *(livré le 2026-07-12)*
+- ✅ ⚙️📱 **App Expo** (React Native + Web) en TypeScript ; navigation (expo-router) avec le **shell à 4 onglets** (Courses/Classements/Amis/Profil) ; ESLint (config Expo). *(Prettier : couvert par la config Expo ; à formaliser au 0.2 si besoin.)*
+- ✅ ⚙️ **Supabase local** amorcé (`supabase/config.toml`, `migrations/`, `seed.sql`). *(Projet cloud + secrets : à faire au lot 0.3, quand le schéma métier arrive.)*
+- ✅ 🔒 **CI GitHub Actions** (`ci.yml`) : typecheck + lint + tests unitaires sur chaque push/PR. **+ déploiement web auto** (`deploy-web.yml`) sur GitHub Pages. *(Protection de branche : à activer côté PO quand on ouvrira les PR.)*
+- ✅ 🧪 Harnais de test : **Jest (jest-expo)** — tests Elo→grade au vert ; **Playwright** (e2e web) câblé (`e2e/smoke.spec.ts`, hors CI pour l'instant).
+- **Critères d'acceptation** : ✅ l'app démarre sur Web (export vérifié, 4 onglets) ; ✅ `npm test` et la CI passent au vert ; ✅ **bonus : aperçu web public en ligne** → https://ppcrepin.github.io/kartme/
 - **Dépend de** : 0.0.
+- **Reste à traiter plus tard** (non bloquant) : Prettier explicite, projet Supabase cloud + secrets (→ 0.3), e2e Playwright dans la CI (→ après 0.2), protection de branche.
 
 ### Lot 0.2 — Design system & i18n (socle)
 - 🎨 **Tokens Rosso Corsa** figés (fond carbone, rouge #e10600, rampe de grades terracotta→or, blanc cassé, typo serif+sans, espacements, rayons — angles nets + boutons pilule) ; **choix de la police serif définitive** sous licence *(E2, stratégique)*.
