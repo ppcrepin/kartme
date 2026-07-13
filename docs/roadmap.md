@@ -20,7 +20,7 @@
 | **0.1 Init & CI** | ✅ **livré** — app Expo (4 onglets), TypeScript strict, ESLint, Jest (vert), Playwright câblé, CI GitHub Actions |
 | **0.2 Design system & i18n** | ✅ **livré** — police Fraunces (OFL), tokens figés (rampe grades pierre→rouge, palette d'états), 9 composants de base, socle i18n (fr), galerie en ligne |
 | **0.3 Données & sécurité** | ✅ **livré** — 7 tables cœur, RLS anti-triche, seed circuits FR, tests RLS verts. Base Supabase cloud **déployée** ✅ |
-| **1.1 Authentification** | ✅ **email en ligne & fonctionnel** — inscription/connexion/pseudo testés en prod, profil créé dans Supabase. *Reste : brancher Google (config à faire), Apple plus tard (compte dev).* |
+| **1.1 Authentification** | ✅ **en ligne & fonctionnel** — email **et Google** testés en prod (OAuth configuré : Google Cloud + Supabase), pseudo + profil + déconnexion. *Apple plus tard (compte dev à 99 $/an).* |
 | Phase 1 (suite) → 4 | ⏭️ **prochain : lot 1.2 (créer une course)** |
 
 **Déploiement (aperçu web) :** ✅ en ligne et **automatique à chaque push**.
