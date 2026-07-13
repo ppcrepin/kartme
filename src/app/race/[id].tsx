@@ -272,8 +272,6 @@ export default function RaceDetailScreen() {
                               <View key={duel.opponent} style={styles.pairRow}>
                                 <Muted style={styles.flex}>
                                   {duel.beat ? t.races.pairBeat : t.races.pairLost} {duel.opponent}
-                                  {'  ·  '}
-                                  {Math.round(duel.expected * 100)}%
                                 </Muted>
                                 <Body style={[styles.pairPts, { color: deltaColor(duel.points) }]}>
                                   {duel.points >= 0 ? '+' : ''}

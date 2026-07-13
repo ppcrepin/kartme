@@ -3,11 +3,20 @@ import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EloCurve } from '@/components/elo-curve';
 import { Avatar, Button, Card, GradeMedal, Tag } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
+import { formatRaceDate } from '@/lib/datetime';
+import {
+  getEloCurve,
+  getRaceHistory,
+  statsFromHistory,
+  type EloPoint,
+  type HistoryEntry,
+} from '@/lib/profile';
 import {
   acceptFriendRequest,
   blockPilot,
@@ -40,6 +49,8 @@ export default function PilotScreen() {
   const [pilot, setPilot] = useState<Pilot | null>(null);
   const [friendship, setFriendship] = useState<FriendshipState>({ status: 'none', friendshipId: null });
   const [duel, setDuel] = useState<FaceToFace | null>(null);
+  const [curve, setCurve] = useState<EloPoint[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [reporting, setReporting] = useState(false);
   const [reported, setReported] = useState(false);
   const [blocked, setBlocked] = useState(false);
@@ -51,6 +62,16 @@ export default function PilotScreen() {
     setPilot(p);
     setFriendship(f);
     setDuel(d);
+    // Stats/courbe/historique : seulement si le profil est pleinement visible
+    // (public ou ami) — sinon la confidentialité prime.
+    if (p?.eloExact) {
+      const [c, h] = await Promise.all([getEloCurve(id), getRaceHistory(id)]);
+      setCurve(c);
+      setHistory(h);
+    } else {
+      setCurve([]);
+      setHistory([]);
+    }
   }, [id]);
 
   useFocusEffect(
@@ -194,6 +215,58 @@ export default function PilotScreen() {
               )}
             </Card>
 
+            {/* Stats, courbe & historique (profil public ou ami) */}
+            {pilot.eloExact ? (
+              <>
+                {(() => {
+                  const stats = statsFromHistory(history);
+                  return (
+                    <View style={styles.statsRow}>
+                      <StatTile label={t.profile.races} value={stats.races} />
+                      <StatTile label={t.profile.wins} value={stats.wins} />
+                      <StatTile label={t.profile.podiums} value={stats.podiums} />
+                    </View>
+                  );
+                })()}
+
+                {curve.length > 0 ? (
+                  <Card>
+                    <Label>{t.profile.curve}</Label>
+                    <EloCurve points={curve} />
+                  </Card>
+                ) : null}
+
+                {history.length > 0 ? (
+                  <View style={styles.historySection}>
+                    <Label>{t.profile.history}</Label>
+                    {history.map((h, i) => (
+                      <Pressable
+                        key={`${h.raceId}-${i}`}
+                        onPress={() => h.raceId && router.push(`/race/${h.raceId}`)}
+                        accessibilityRole="button">
+                        <Card>
+                          <View style={styles.historyRow}>
+                            <Body style={styles.historyPos}>{h.position}</Body>
+                            <View style={styles.flex}>
+                              <Body>{h.circuitName ?? t.races.noCircuit}</Body>
+                              {h.scheduledAt ? <Muted>{formatRaceDate(h.scheduledAt)}</Muted> : null}
+                            </View>
+                            <Body
+                              style={[
+                                styles.historyDelta,
+                                { color: h.eloDelta > 0 ? colors.pos : h.eloDelta < 0 ? colors.accent : colors.inkDim },
+                              ]}>
+                              {h.eloDelta > 0 ? `▲ +${h.eloDelta}` : h.eloDelta < 0 ? `▼ ${h.eloDelta}` : '—'}
+                            </Body>
+                          </View>
+                        </Card>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
+              </>
+            ) : null}
+
             {/* Signalement / blocage */}
             {reported ? (
               <Muted style={styles.center}>{t.friends.reportSent}</Muted>
@@ -223,6 +296,15 @@ export default function PilotScreen() {
   );
 }
 
+function StatTile({ label, value }: { label: string; value: number }) {
+  return (
+    <Card style={styles.stat}>
+      <Body style={styles.statValue}>{value}</Body>
+      <Muted style={styles.statLabel}>{label}</Muted>
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl * 2 },
@@ -239,6 +321,14 @@ const styles = StyleSheet.create({
   duelScore: { fontFamily: fonts.serifBlack, fontSize: 36, color: colors.ink },
   duelDash: { fontFamily: fonts.serifBlack, fontSize: 24, color: colors.inkDim2 },
   duelEmpty: { marginTop: spacing.sm },
+  statsRow: { flexDirection: 'row', gap: spacing.sm },
+  stat: { flex: 1, alignItems: 'center', paddingVertical: spacing.md },
+  statValue: { fontFamily: fonts.serifBlack, fontSize: 24, color: colors.ink },
+  statLabel: { fontSize: 11 },
+  historySection: { gap: spacing.sm },
+  historyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  historyPos: { fontFamily: fonts.serifBlack, fontSize: 18, width: 22, textAlign: 'center', color: colors.ink },
+  historyDelta: { fontWeight: '800' },
   reportRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   footRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xl },
   footBtn: { paddingVertical: spacing.sm },

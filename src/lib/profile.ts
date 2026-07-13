@@ -43,15 +43,18 @@ export async function getMyProfile(): Promise<MyProfile | null> {
   return data;
 }
 
-/** Courbe d'évolution : Elo de départ (1000) + valeur après chaque course. */
-export async function getEloCurve(): Promise<EloPoint[]> {
-  const { data: auth } = await supabase.auth.getUser();
-  const userId = auth.user?.id;
-  if (!userId) return [];
+/**
+ * Courbe d'évolution : Elo de départ (1000) + valeur après chaque course.
+ * Par défaut la mienne ; sinon celle du pilote donné (la RLS masque les
+ * profils privés non-amis).
+ */
+export async function getEloCurve(profileId?: string): Promise<EloPoint[]> {
+  const id = profileId ?? (await supabase.auth.getUser()).data.user?.id;
+  if (!id) return [];
   const { data, error } = await supabase
     .from('elo_history')
     .select('elo, created_at')
-    .eq('profile_id', userId)
+    .eq('profile_id', id)
     .order('created_at');
   if (error) throw new Error(error.message);
   return (data ?? []).map((r) => ({ elo: r.elo, at: r.created_at }));
@@ -65,17 +68,19 @@ type RawHistory = {
   participation: { profile_id: string | null } | null;
 };
 
-/** Mes courses passées (position, ±Elo), les plus récentes d'abord. */
-export async function getRaceHistory(): Promise<HistoryEntry[]> {
-  const { data: auth } = await supabase.auth.getUser();
-  const userId = auth.user?.id;
-  if (!userId) return [];
+/**
+ * Courses passées d'un pilote (position, ±Elo), les plus récentes d'abord.
+ * Par défaut les miennes.
+ */
+export async function getRaceHistory(profileId?: string): Promise<HistoryEntry[]> {
+  const id = profileId ?? (await supabase.auth.getUser()).data.user?.id;
+  if (!id) return [];
   const { data, error } = await supabase
     .from('results')
     .select(
       'position, elo_delta, elo_after, race:races(id, scheduled_at, circuit:circuits(name)), participation:participations!inner(profile_id)',
     )
-    .eq('participation.profile_id', userId)
+    .eq('participation.profile_id', id)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return ((data ?? []) as unknown as RawHistory[]).map((r) => ({
