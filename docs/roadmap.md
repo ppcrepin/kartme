@@ -19,8 +19,8 @@
 | 0.0 Prérequis | 🟡 en cours — *action Product Owner* : acheter `kartsquad.app`, recherche d'antériorité de marque (INPI/EUIPO), ouvrir comptes Apple/Google (non urgents) |
 | **0.1 Init & CI** | ✅ **livré** — app Expo (4 onglets), TypeScript strict, ESLint, Jest (vert), Playwright câblé, CI GitHub Actions |
 | **0.2 Design system & i18n** | ✅ **livré** — police Fraunces (OFL), tokens figés (rampe grades pierre→rouge, palette d'états), 9 composants de base, socle i18n (fr), galerie en ligne |
-| 0.3 Données & sécurité | ⏭️ **prochain lot** |
-| Phases 1 → 4 | ☐ à faire |
+| **0.3 Données & sécurité** | ✅ **livré** — 7 tables cœur, RLS anti-triche, seed circuits FR, tests RLS verts (local + CI). *Reste ta part : créer le projet Supabase pour déployer.* |
+| Phase 1 (MVP) → 4 | ⏭️ **prochain : lot 1.1 (Auth)** |
 
 **Déploiement (aperçu web) :** ✅ en ligne et **automatique à chaque push**.
 - **URL publique : https://ppcrepin.github.io/kartme/** (GitHub Pages)
@@ -28,7 +28,7 @@
 - CI qualité : `.github/workflows/ci.yml` (typecheck · lint · tests unitaires).
 - Doc d'architecture IT : `docs/architecture-it.html`.
 
-**Prochaine étape :** démarrer le **lot 0.3 (schéma de données & sécurité — socle Supabase)**. *(Le logo/wordmark + icône d'app restent à planifier dans un lot d'identité dédié.)*
+**Prochaine étape :** démarrer la **Phase 1 — lot 1.1 (Authentification)**. *(Avant de déployer la base : créer le projet Supabase — je guiderai. Le logo/wordmark reste à planifier dans un lot d'identité dédié.)*
 
 ## Vue d'ensemble
 
@@ -71,13 +71,14 @@ Légende agents : 🎨 Design/UX · ⚙️ Backend · 📱 Frontend · 🔒 Séc
 - **Dépend de** : 0.1. **Validé par le PO** : police Fraunces, palette d'erreur, rampe de grades.
 - **Reporté** (non bloquant) : détection auto de la langue de l'appareil (à rebrancher au 2e langage) ; icônes de grade définitives (déjà dessinées) en remplacement des monogrammes ; logo/wordmark (lot d'identité dédié).
 
-### Lot 0.3 — Schéma de données & sécurité (socle)
-- ⚙️ **Schéma Postgres** + migrations : `profiles` (comptes), `ghost_profiles`, `circuits`, `races`, `participations`, `results`, `friendships`, `badges` + `user_badges`, `reports`, `notifications`, `elo_history`.
-- ⚙️ **Seed** : liste des principaux **circuits de karting français**.
-- 🔒 **RLS (Row Level Security)** table par table (ex. seul l'admin d'une course écrit ses résultats ; un profil privé n'est lu que par ses amis) ; politique de **rétention des fantômes** ; anonymisation RGPD à la suppression.
-- 🧪 Tests de schéma + tests RLS (accès autorisé/refusé).
-- **Critères d'acceptation** : schéma déployé, RLS active et testée, circuits seedés, migration reproductible.
-- **Dépend de** : 0.1. **Validation PO** : modèle de données (impacte règles produit).
+### Lot 0.3 — Schéma de données & sécurité (socle) ✅ *(livré le 2026-07-13)*
+- ✅ ⚙️ **Schéma Postgres cœur** + migrations (`supabase/migrations/`) : `profiles`, `ghost_profiles`, `circuits`, `races`, `participations`, `results`, `elo_history`. *(Les tables sociales/modération — friendships, badges, reports, notifications — arriveront avec leur lot, cf. décision « cœur d'abord ».)*
+- ✅ ⚙️ **Seed** : 24 circuits de karting français (`supabase/seed.sql`), enrichi librement ensuite (ajout partagé immédiatement, dédoublonnage au fil de l'eau).
+- ✅ 🔒 **RLS** table par table : lecture large (profils publics, courses, circuits, fantômes en Global) ; écriture verrouillée (**seul l'admin d'une course écrit participants + classement**) ; **Elo non modifiable à la main** (trigger de garde) ; profil privé lu par lui-même (visibilité amis étendue au lot 2.1). Champ `account_type` prévu pour le futur compte « circuit pro ».
+- ✅ 🧪 **Tests RLS** (`supabase/tests/`) autorisé/refusé, exécutés sur un vrai Postgres — en local (`npm run db:test`) **et en CI** (job « Schéma · RLS » avec service Postgres 16).
+- **Critères d'acceptation** : ✅ migrations reproductibles (rejouées de zéro à chaque test) ; ✅ RLS active et testée ; ✅ circuits seedés. *(Déploiement sur le projet Supabase cloud : au moment où le PO crée le compte — cf. `supabase/README.md`.)*
+- **Dépend de** : 0.1. **Validé par le PO** : périmètre cœur, circuits partagés immédiatement, conception avant création du compte.
+- **Reporté** (non bloquant) : déploiement cloud (attend le compte Supabase) ; RGPD/anonymisation & rétention fine des fantômes (avec le lot Réglages 2.5) ; visibilité « amis uniquement » complète (avec friendships, 2.1).
 
 ---
 

@@ -11,7 +11,8 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "db:test": "bash supabase/tests/run.sh"
   },
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",
