@@ -8,21 +8,24 @@ import { DateTimeField } from '@/components/date-time-field';
 import { ShareCard } from '@/components/share-card';
 import { Avatar, Button, Card, Field } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
-import { colors, spacing } from '@/constants/theme';
+import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
 import { formatRaceDate } from '@/lib/datetime';
+import { gradeForElo } from '@/lib/grade';
 import {
   addGhostParticipant,
   addSelfParticipant,
   deleteRace,
   getRace,
   listParticipants,
+  listResults,
   removeParticipant,
   updateRace,
   type Circuit,
   type Participant,
   type Race,
+  type RaceResult,
 } from '@/lib/races';
 import { appBaseUrl } from '@/lib/url';
 import { validateGhostName } from '@/lib/username';
@@ -35,6 +38,7 @@ export default function RaceDetailScreen() {
 
   const [race, setRace] = useState<Race | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [results, setResults] = useState<RaceResult[]>([]);
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -45,9 +49,14 @@ export default function RaceDetailScreen() {
 
   const refresh = useCallback(async () => {
     if (!id) return;
-    const [r, p] = await Promise.all([getRace(id), listParticipants(id, selfId)]);
+    const [r, p, res] = await Promise.all([
+      getRace(id),
+      listParticipants(id, selfId),
+      listResults(id, selfId),
+    ]);
     setRace(r);
     setParticipants(p);
+    setResults(res);
   }, [id, selfId]);
 
   useFocusEffect(
@@ -56,6 +65,7 @@ export default function RaceDetailScreen() {
     }, [refresh]),
   );
 
+  const completed = race?.status === 'completed';
   const selfParticipating = participants.some((p) => p.isSelf);
 
   async function onAddPilot() {
@@ -132,47 +142,86 @@ export default function RaceDetailScreen() {
                 <Title>{race.circuit?.name ?? t.races.noCircuit}</Title>
                 <Muted>{formatRaceDate(race.scheduled_at)}</Muted>
               </View>
-              <Pressable onPress={startEdit} accessibilityRole="button">
-                <Muted style={styles.editLink}>{t.races.edit}</Muted>
-              </Pressable>
-            </View>
-
-            {/* Participants */}
-            <View style={styles.section}>
-              <Label>{t.races.participants} · {participants.length}</Label>
-              {participants.map((p) => (
-                <Card key={p.id}>
-                  <View style={styles.pilotRow}>
-                    <Avatar name={p.name} size={36} />
-                    <Body style={styles.flex}>
-                      {p.name}
-                      {p.isSelf ? <Muted> ({t.races.you})</Muted> : null}
-                    </Body>
-                    <Pressable onPress={() => onRemove(p.id)} accessibilityRole="button">
-                      <Muted style={styles.remove}>{t.races.remove}</Muted>
-                    </Pressable>
-                  </View>
-                </Card>
-              ))}
-
-              <View style={styles.addRow}>
-                <View style={styles.flex}>
-                  <Field label={t.races.pilotName} value={name} onChangeText={setName} error={nameError} autoCapitalize="words" />
-                </View>
-              </View>
-              <Button label={t.races.add} onPress={onAddPilot} disabled={busy} />
-              {!selfParticipating ? (
-                <Button label={t.races.rejoin} variant="ghost" onPress={onToggleSelf} />
+              {!completed ? (
+                <Pressable onPress={startEdit} accessibilityRole="button">
+                  <Muted style={styles.editLink}>{t.races.edit}</Muted>
+                </Pressable>
               ) : null}
             </View>
 
-            {/* Partage */}
-            <ShareCard url={shareUrl} />
+            {completed ? (
+              /* ── Résultats ── */
+              <View style={styles.section}>
+                <Label>{t.races.results}</Label>
+                {results.map((r) => {
+                  const grade = gradeForElo(r.eloAfter);
+                  const up = r.eloDelta > 0;
+                  const flat = r.eloDelta === 0;
+                  return (
+                    <Card key={r.position}>
+                      <View style={styles.resultRow}>
+                        <Body style={styles.posNum}>{r.position}</Body>
+                        <Avatar name={r.name} size={34} />
+                        <View style={styles.flex}>
+                          <Body>
+                            {r.name}
+                            {r.isSelf ? <Muted> ({t.races.you})</Muted> : null}
+                          </Body>
+                          <Muted style={{ color: grade.color }}>{grade.name} · {r.eloAfter}</Muted>
+                        </View>
+                        <Body style={[styles.delta, { color: flat ? colors.inkDim : up ? colors.pos : colors.accent }]}>
+                          {flat ? '—' : `${up ? '▲ +' : '▼ '}${r.eloDelta}`}
+                        </Body>
+                      </View>
+                    </Card>
+                  );
+                })}
+                <ShareCard url={shareUrl} />
+              </View>
+            ) : (
+              /* ── Course à venir : participants + saisie ── */
+              <>
+                <View style={styles.section}>
+                  <Label>{t.races.participants} · {participants.length}</Label>
+                  {participants.map((p) => (
+                    <Card key={p.id}>
+                      <View style={styles.pilotRow}>
+                        <Avatar name={p.name} size={36} />
+                        <Body style={styles.flex}>
+                          {p.name}
+                          {p.isSelf ? <Muted> ({t.races.you})</Muted> : null}
+                        </Body>
+                        <Pressable onPress={() => onRemove(p.id)} accessibilityRole="button">
+                          <Muted style={styles.remove}>{t.races.remove}</Muted>
+                        </Pressable>
+                      </View>
+                    </Card>
+                  ))}
 
-            {/* Suppression */}
-            <Pressable onPress={onDelete} accessibilityRole="button" style={styles.deleteBtn}>
-              <Body style={styles.deleteTxt}>{t.races.delete}</Body>
-            </Pressable>
+                  <View style={styles.addRow}>
+                    <View style={styles.flex}>
+                      <Field label={t.races.pilotName} value={name} onChangeText={setName} error={nameError} autoCapitalize="words" />
+                    </View>
+                  </View>
+                  <Button label={t.races.add} onPress={onAddPilot} disabled={busy} />
+                  {!selfParticipating ? (
+                    <Button label={t.races.rejoin} variant="ghost" onPress={onToggleSelf} />
+                  ) : null}
+                </View>
+
+                {participants.length >= 2 ? (
+                  <Button label={t.races.enterRanking} onPress={() => router.push(`/rank/${id}`)} />
+                ) : (
+                  <Muted>{t.races.needTwoPilots}</Muted>
+                )}
+
+                <ShareCard url={shareUrl} />
+
+                <Pressable onPress={onDelete} accessibilityRole="button" style={styles.deleteBtn}>
+                  <Body style={styles.deleteTxt}>{t.races.delete}</Body>
+                </Pressable>
+              </>
+            )}
           </>
         )}
       </ScrollView>
@@ -191,8 +240,9 @@ const styles = StyleSheet.create({
   pilotRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   remove: { color: colors.inkDim2 },
   addRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
-  dateRow: { flexDirection: 'row', gap: spacing.md },
-  time: { width: 110 },
+  resultRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  posNum: { fontFamily: fonts.serifBlack, fontSize: 18, width: 22, textAlign: 'center', color: colors.ink },
+  delta: { fontWeight: '800' },
   deleteBtn: { alignItems: 'center', paddingVertical: spacing.md },
   deleteTxt: { color: colors.inkDim2 },
 });

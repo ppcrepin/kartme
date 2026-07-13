@@ -28,7 +28,9 @@ done
 echo "→ seed"
 "${PSQL[@]}" -f supabase/seed.sql
 
-echo "→ tests RLS"
-"${PSQL[@]}" -f supabase/tests/10_rls_test.sql
+for tst in supabase/tests/*_test.sql; do
+  echo "→ tests $(basename "$tst")"
+  "${PSQL[@]}" -f "$tst"
+done
 
-echo "✔ schéma + RLS + seed : OK"
+echo "✔ schéma + RLS + Elo + seed : OK"

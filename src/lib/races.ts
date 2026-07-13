@@ -174,3 +174,48 @@ export async function removeParticipant(participationId: string): Promise<void> 
   const { error } = await supabase.from('participations').delete().eq('id', participationId);
   if (error) throw new Error(error.message);
 }
+
+// ── Classement & résultats ───────────────────────────────────────────────
+export interface RaceResult {
+  position: number;
+  name: string;
+  isSelf: boolean;
+  eloAfter: number;
+  eloDelta: number;
+}
+
+/** Soumet l'ordre d'arrivée (ids de participation) → calcul Elo serveur. */
+export async function submitRaceResults(raceId: string, orderedParticipationIds: string[]): Promise<void> {
+  const { error } = await supabase.rpc('submit_race_results', {
+    p_race_id: raceId,
+    p_order: orderedParticipationIds,
+  });
+  if (error) throw new Error(error.message);
+}
+
+type RawResult = {
+  position: number;
+  elo_after: number;
+  elo_delta: number;
+  participation: {
+    profile_id: string | null;
+    profile: { username: string } | null;
+    ghost: { display_name: string } | null;
+  } | null;
+};
+
+export async function listResults(raceId: string, selfId?: string): Promise<RaceResult[]> {
+  const { data, error } = await supabase
+    .from('results')
+    .select('position, elo_after, elo_delta, participation:participations(profile_id, profile:profiles(username), ghost:ghost_profiles(display_name))')
+    .eq('race_id', raceId)
+    .order('position');
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown as RawResult[]).map((r) => ({
+    position: r.position,
+    name: r.participation?.profile?.username ?? r.participation?.ghost?.display_name ?? '—',
+    isSelf: !!selfId && r.participation?.profile_id === selfId,
+    eloAfter: r.elo_after,
+    eloDelta: r.elo_delta,
+  }));
+}
