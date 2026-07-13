@@ -75,7 +75,7 @@ La division par `(n − 1)` normalise l'impact d'une course à *n* participants 
 
 ### 5.3 Amplitude réelle de l'échelle (validée par simulation, pas choisie arbitrairement)
 
-Une simulation (60-300 joueurs, plusieurs milliers de courses, tailles de groupe 4-8) montre que l'amplitude de l'Elo n'est pas un paramètre qu'on fixe directement — c'est une **conséquence émergente** du diviseur (400), du nombre de courses cumulées dans la communauté, et de l'hétérogénéité réelle des niveaux :
+Une simulation (60-300 joueurs, plusieurs milliers de courses, tailles de groupe 4-8) montre que l'amplitude de l'Elo n'est pas un paramètre qu'on fixe directement — c'est une **conséquence émergente** du diviseur (800), du nombre de courses cumulées dans la communauté, et de l'hétérogénéité réelle des niveaux :
 
 - **En tout début de vie de l'app** (petit groupe d'amis, peu de courses cumulées) : amplitude naturelle resserrée, environ **350 à 1700**.
 - **À plus grande échelle** (communauté large, historique de plusieurs milliers de courses cumulées, écart de niveau réellement marqué entre un très bon et un très faible joueur) : un joueur exceptionnel converge naturellement vers **~2300-2550**, le plancher à 100 capte les cas extrêmes en bas.
@@ -106,7 +106,7 @@ Le grade est affiché sur le profil (à côté de l'Elo) et une **échelle des g
 
 **Visibilité des profils** — Elo, historique et badges sont **publics par défaut** (visibles par tous les utilisateurs inscrits, jamais indexés sur le web), pour favoriser la découverte. **Option "amis uniquement" dès le MVP** (réglage S2d) pour qui veut un profil privé. *(décision A6)*
 
-**Profils fantômes** — n'apparaissent **pas dans le classement "Amis"** (visibles en "Global" uniquement) : un fantôme n'est l'ami de personne tant qu'il n'a pas réclamé son profil *(décision B1)*. **Conservés** tant qu'ils servent l'historique Elo des autres, suppression seulement sur demande (RGPD) *(B2)*. À la réclamation, la personne peut **fusionner plusieurs fantômes** la représentant en un seul historique *(B3)*.
+**Profils fantômes** — depuis l'anti-triche « Elo entre inscrits » (2026-07-13), ils **n'apparaissent dans aucun classement** (ni Amis, ni Global) : leur Elo est **figé** et ne s'échange plus (un fantôme n'est l'ami de personne tant qu'il n'a pas réclamé son profil, *décision B1*). Ils restent visibles dans **les courses et l'historique** qu'ils ont disputés. **Conservés** tant qu'ils servent l'historique des autres, suppression seulement sur demande (RGPD) *(B2)*. À la réclamation, la personne peut **fusionner plusieurs fantômes** la représentant en un seul historique *(B3)*.
 
 **Pseudos** — non uniques (homonymes autorisés, distingués par l'identifiant interne + avatar), 3 à 20 caractères, soumis au filtre de mots interdits *(décision B4)*.
 
@@ -122,12 +122,14 @@ Le grade est affiché sur le profil (à côté de l'Elo) et une **échelle des g
 | Habitué des stands | 10 courses jouées |
 | Champagne ! | 1ère victoire |
 | Sur les chapeaux de roues | 3 victoires d'affilée |
-| Kart-astrophe | Plus grosse chute d'Elo en une course |
-| Lanterne rouge | Finir dernier d'une course |
+| Kart-astrophe | Perdre au moins 45 points d'Elo en une course |
+| Voiture balai | Finir dernier d'une course (3 pilotes ou plus) |
 | Tête-à-queue | Perdre un palier de grade entier |
-| Il est 2h moins le kart | Course validée après minuit |
-| Chef d'écurie | Organiser 10 courses |
-| David contre Goliath | Battre un pilote 300+ Elo au-dessus de soi |
+| Midi moins le kart | Participer à une course le matin (6h – midi) |
+| Chef d'écurie | Organiser 10 courses qui comptent (2 inscrits ou plus) |
+| DRS | Battre un pilote inscrit parti 300+ Elo au-dessus de soi |
+| Safety car | Finir devant tous les pilotes inscrits mieux classés que soi |
+| Push | Gagner au moins 45 points d'Elo en une course |
 
 **Onboarding** — aucun écran pédagogique : l'utilisateur est mené directement à l'action, l'interface doit rester assez explicite d'elle-même.
 
@@ -145,7 +147,7 @@ Notifications push essentielles uniquement au MVP : invitation à une course, r�
 - **CGU + politique de confidentialité** : une **première trame sera rédigée** (adaptée à l'app), puis soumise à relecture juridique par l'éditeur avant lancement *(décision C2)*.
 - **Responsabilité** : pas de mention spécifique sur le risque physique du karting — **CGU génériques suffisantes au MVP** (l'app enregistre des résultats librement saisis, elle n'organise pas l'activité) *(décision C3, confirmée)*.
 - **Accessibilité couleurs** : toute information portée par une couleur (victoire/défaite/progression Elo) est **systématiquement doublée d'un icône/signe** (`+`/`−`, `▲`/`▼`) pour rester lisible aux daltoniens (~8% des hommes).
-- **Anti-triche MVP** : seul l'admin créateur de la course peut saisir/modifier le classement, dans la fenêtre de correction de 24h. Pas de validation multi-joueurs ; signalement de classement non-bloquant possible (cf. §4.9). Réserve en cas d'abus constatés.
+- **Anti-triche MVP** : seul l'admin créateur de la course peut saisir/modifier le classement, dans la fenêtre de correction de 24h. **L'Elo ne s'échange qu'entre comptes inscrits** (décision 2026-07-13) : les profils fantômes participent et gardent leur historique mais leur Elo est figé et ils sortent du classement Global → **fabriquer de faux joueurs pour se gonfler ne rapporte plus rien** (cf. `docs/integrite-elo.md`). Pas encore de validation multi-joueurs (réserve v2, contre l'admin qui mentirait sur l'ordre) ; signalement de classement non-bloquant possible (cf. §4.9).
 - **Structure juridique de l'éditeur** : nécessaire pour publier sur les stores (compte développeur) — à acter par le porteur de projet *(C4, hors périmètre produit)*.
 
 ## 9. Identité visuelle — Design system
@@ -229,14 +231,14 @@ Gratuit, sans publicité ni paiement au démarrage — **monétisation étudiée
 | Carte de navigation complète (zéro cul-de-sac) | ✅ Validée (3 tours d'audit) |
 | Écrans détaillés rendus dans le style Rosso Corsa (40 écrans) | ✅ v1 rendue + auditée — validation client écran par écran à faire |
 | Cas limites (duel 2 pilotes, grande course 12+) | ✅ Maquettés + audités |
-| Badges MVP (10, choisis) | ✅ Validés — voir `BADGES.md` |
+| Badges MVP (12, choisis) | ✅ Validés (revue PO 2026-07-13) — voir `BADGES.md` |
 | Charte complète (logo définitif, icône d'app, typographie sous licence) | ⏳ Non commencé |
 
 ---
 
 ## 15. Ce qui est donc figé aujourd'hui (résumé rapide)
 
-Stack technique · formule et paramètres Elo (K=64, diviseur 800 depuis le 2026-07-13, plancher 100, range cible 100-2500) · 6 grades (noms + bornes + couleurs + icônes) · 10 badges (+ icônes) · cycle de vie complet d'une course (dont modif avant saisie, signalement non-bloquant, pas de RSVP ni temps au tour) · système d'amis et de profils fantômes (rétention, fusion, exclusion du classement Amis) · règles de pseudo · profil public par défaut + option privée · notifications (heures de silence, ton) · modération manuelle + filtre de mots · limite 10 courses/jour · principes RGPD/accessibilité · design (Editorial Grand Prix / Rosso Corsa, formes, couleurs de grade, 40 écrans rendus + audités) · périmètre du MVP · lancement en beta fermée.
+Stack technique · formule et paramètres Elo (K=64, diviseur 800 depuis le 2026-07-13, plancher 100, range cible 100-2500) · 6 grades (noms + bornes + couleurs + icônes) · 12 badges (+ icônes) · anti-triche « Elo entre inscrits » · cycle de vie complet d'une course (dont modif avant saisie, signalement non-bloquant, pas de RSVP ni temps au tour) · système d'amis et de profils fantômes (rétention, fusion, Elo figé + exclusion des classements) · règles de pseudo · profil public par défaut + option privée · notifications (heures de silence, ton) · modération manuelle + filtre de mots · limite 10 courses/jour · principes RGPD/accessibilité · design (Editorial Grand Prix / Rosso Corsa, formes, couleurs de grade, 40 écrans rendus + audités) · périmètre du MVP · lancement en beta fermée.
 
 ## 16. Ce qui reste ouvert
 

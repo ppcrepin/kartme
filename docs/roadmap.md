@@ -2,7 +2,7 @@
 
 > Roadmap par **phases jusqu'au lancement**, découpées en **lots livrables**, chaque lot détaillé par agent (Design/UX · Backend · Frontend · Sécurité/Infra · Test) avec ses **critères d'acceptation** et ses **dépendances**. Source de vérité produit : `docs/cahier-des-charges.md`. Méthode de travail : `AGENTS.md`.
 >
-> **Statut global : Phase 0 en cours — le socle technique est posé, l'app tourne en ligne.** Chaque lot est `☐ à faire` jusqu'à ce que sa Definition of Done (cf. AGENTS.md §5) soit remplie.
+> **Statut global (2026-07-13) : Phase 1 (MVP jouable) TERMINÉE, Phase 2 (social & gamification) quasi bouclée.** Amis, Classements, Badges (12) et l'anti-triche « Elo entre inscrits » sont **en ligne et testés en prod**. Notifications push : déployées, **côté appareil validé** (notif de test OK), envoi serveur à confirmer. Reste en Phase 2 : lot 2.5 Réglages.
 >
 > ⚠️ La structure et les priorités ci-dessous sont **stratégiques** → à valider par le Product Owner avant démarrage.
 
@@ -27,10 +27,10 @@
 | **1.5 Profil, historique & grades** | ✅ **en ligne & validé** — profil complet (Elo en grand, médaillon + jauge, stats, **courbe d'Elo**, teaser badges), échelle des grades (R2), historique cliquable (R5). |
 | **🏁 PHASE 1 (MVP jouable)** | ✅ **TERMINÉE** — compte → course → classement → Elo → profil, la boucle complète tourne en prod. |
 | **2.1 Amis** | ✅ **en ligne, testé & audité** — recherche (privés : grade seul), demandes, fiche pilote + face-à-face **+ stats/courbe/historique de l'ami**, blocage (demandes ET courses), signalement M1, amis sélectionnables dans une course. *Passage Reviewer adversarial effectué (10 correctifs). Déblocage UI → lot 2.5.* |
-| **2.2 Classements** | 🟡 **code prêt, à activer** — écran L1 (bascule Amis/Global, ma ligne surlignée, rang épinglé si hors page, pagination), RPC `get_leaderboard`/`get_my_rank` (amis sans fantômes B1, privés non-amis exclus du Global A6, bloqués masqués, classé = ≥1 course), 4 scénarios de tests DB. *Reste : coller `leaderboard.sql` sur Supabase + test PO.* |
-| **2.3 Badges** | 🟡 **revu (12 badges) + anti-triche, à activer** — moteur de déblocage serveur, catalogue R3 + détail R4 (SVG natif), section badges profil + fiche pilote, bandeau « badge débloqué », tests DB. **Revue PO 2026-07-13** : 12 badges (Voiture balai, Midi moins le kart, DRS, Safety car, Push ; seuils ±45 ; « course qui compte »). Reste : coller `elo_integrity_badges.sql` sur Supabase + test PO. |
-| **🔒 Intégrité Elo** | 🟡 **anti-triche « Elo entre inscrits seulement », à activer** — l'Elo ne s'échange qu'entre comptes inscrits ; fantômes figés + hors classement Global → le farming par faux joueurs ne rapporte plus rien (voir `docs/integrite-elo.md`). Livré dans la même migration que les 12 badges. |
-| **2.4 Notifications** | 🟡 **code prêt, à activer** — **Web Push** complet : réglages S3 (3 interrupteurs + silence 22h–8h, notif de test locale), service worker + abonnement VAPID, tables préférences/abonnements (RLS), Edge Function d'envoi (respecte prefs + silence, purge des abonnés morts), déclencheurs invitation/résultat/demande d'ami. Passage Reviewer (2 bloquants + 2 majeurs corrigés : verify_jwt, fuite d'abonnement sur appareil partagé, durcissement des droits, paire VAPID). 8 scénarios de tests DB. *Reste : coller 2 SQL + déployer la fonction + 4 secrets (guide fourni). iOS = app installée en PWA.* |
+| **2.2 Classements** | ✅ **en ligne & testé** — écran L1 (bascule Amis/Global, ma ligne surlignée, rang épinglé si hors page, pagination), RPC `get_leaderboard`/`get_my_rank` (amis sans fantômes B1, privés non-amis exclus du Global A6, bloqués masqués, classé = ≥1 course), tests DB. *Passage Reviewer adversarial effectué. SQL collé sur Supabase (« success » PO).* |
+| **2.3 Badges** | ✅ **en ligne (12 badges) & testé** — moteur de déblocage serveur, catalogue R3 + détail R4 (SVG natif, 5 icônes neuves), section badges profil + fiche pilote, bandeau « badge débloqué », 12 scénarios de tests DB. **Revue PO 2026-07-13** : 12 badges (Voiture balai, Midi moins le kart, DRS, Safety car, Push ; seuils ±45 ; « course qui compte »). *Reviewer adversarial (bug bloquant de migration attrapé). `elo_integrity_badges.sql` collé (« success » PO).* |
+| **🔒 Intégrité Elo** | ✅ **en ligne** — anti-triche « **Elo entre inscrits seulement** » : l'Elo ne s'échange qu'entre comptes inscrits ; fantômes figés + hors classement Global → le farming par faux joueurs ne rapporte plus rien (voir `docs/integrite-elo.md`). Livrée dans la même migration que les 12 badges. *N'affecte que les courses futures ; Elo existants conservés.* |
+| **2.4 Notifications** | 🟢 **déployée — côté appareil validé, envoi serveur à confirmer** — **Web Push** complet : réglages S3 (3 interrupteurs + silence 22h–8h, notif de test locale), service worker + abonnement VAPID, tables préférences/abonnements (RLS), Edge Function d'envoi (respecte prefs + silence, purge des abonnés morts), déclencheurs invitation/résultat/demande d'ami. Reviewer (bloquants corrigés : fuite d'abonnement sur appareil partagé, durcissement des droits). 12 scénarios de tests DB (préférences + livraison). **Déployé par le PO** (2 SQL + fonction `push` + 4 secrets + config) ; **notif de test locale OK sur iPhone (PWA)**. *Reste : valider l'envoi serveur (test `enqueue_push` de jour, hors 22h–8h).* |
 | Phase 2 (suite) | ⏭️ ensuite : lot 2.5 (Réglages : compte, confidentialité, RGPD) |
 
 **Déploiement (aperçu web) :** ✅ en ligne et **automatique à chaque push**.
@@ -85,7 +85,7 @@ Légende agents : 🎨 Design/UX · ⚙️ Backend · 📱 Frontend · 🔒 Séc
 ### Lot 0.3 — Schéma de données & sécurité (socle) ✅ *(livré le 2026-07-13)*
 - ✅ ⚙️ **Schéma Postgres cœur** + migrations (`supabase/migrations/`) : `profiles`, `ghost_profiles`, `circuits`, `races`, `participations`, `results`, `elo_history`. *(Les tables sociales/modération — friendships, badges, reports, notifications — arriveront avec leur lot, cf. décision « cœur d'abord ».)*
 - ✅ ⚙️ **Seed** : 24 circuits de karting français (`supabase/seed.sql`), enrichi librement ensuite (ajout partagé immédiatement, dédoublonnage au fil de l'eau).
-- ✅ 🔒 **RLS** table par table : lecture large (profils publics, courses, circuits, fantômes en Global) ; écriture verrouillée (**seul l'admin d'une course écrit participants + classement**) ; **Elo non modifiable à la main** (trigger de garde) ; profil privé lu par lui-même (visibilité amis étendue au lot 2.1). Champ `account_type` prévu pour le futur compte « circuit pro ».
+- ✅ 🔒 **RLS** table par table : lecture large (profils publics, courses, circuits, fantômes — lisibles pour l'historique, mais Elo figé et hors classement depuis l'anti-triche) ; écriture verrouillée (**seul l'admin d'une course écrit participants + classement**) ; **Elo non modifiable à la main** (trigger de garde) ; profil privé lu par lui-même (visibilité amis étendue au lot 2.1). Champ `account_type` prévu pour le futur compte « circuit pro ».
 - ✅ 🧪 **Tests RLS** (`supabase/tests/`) autorisé/refusé, exécutés sur un vrai Postgres — en local (`npm run db:test`) **et en CI** (job « Schéma · RLS » avec service Postgres 16).
 - **Critères d'acceptation** : ✅ migrations reproductibles (rejouées de zéro à chaque test) ; ✅ RLS active et testée ; ✅ circuits seedés. *(Déploiement sur le projet Supabase cloud : au moment où le PO crée le compte — cf. `supabase/README.md`.)*
 - **Dépend de** : 0.1. **Validé par le PO** : périmètre cœur, circuits partagés immédiatement, conception avant création du compte.
@@ -162,18 +162,18 @@ Légende agents : 🎨 Design/UX · ⚙️ Backend · 📱 Frontend · 🔒 Séc
 
 ### Lot 2.2 — Classements
 - 🎨 Écran **L1** (bascule Amis / Global).
-- ⚙️ Requêtes de classement (amis / global) ; **fantômes exclus du classement Amis** *(B1)*, présents en Global ; respect de la **confidentialité « amis uniquement »** *(A6)*.
+- ⚙️ Requêtes de classement (amis / global) ; **fantômes exclus des DEUX classements** (Elo figé depuis l'anti-triche 2026-07-13 ; à l'origine, décision B1 = exclus d'Amis seulement) ; respect de la **confidentialité « amis uniquement »** *(A6)*.
 - 📱 Leaderboard avec bascule, mise en avant de sa propre ligne.
-- 🧪 Tests : exactitude des classements, exclusion des fantômes en Amis, confidentialité respectée.
-- **Critères d'acceptation** : classements corrects et cohérents avec les Elo post-course ; fantômes seulement en Global ; profils privés respectés.
+- 🧪 Tests : exactitude des classements, exclusion des fantômes, confidentialité respectée.
+- **Critères d'acceptation** : classements corrects et cohérents avec les Elo post-course ; fantômes hors classement ; profils privés respectés.
 - **Dépend de** : 1.5, 2.1.
 
 ### Lot 2.3 — Badges & gamification
 - 🎨 Écrans **R3** (catalogue de badges), **R4** (détail d'un badge) — **icônes déjà dessinées** (`docs/badges-icones.html`).
-- ⚙️ **Moteur de déblocage** des **10 badges MVP** (déclencheurs de `BADGES.md`) ; stockage `user_badges` ; horodatage.
+- ⚙️ **Moteur de déblocage** des **12 badges MVP** (revue PO 2026-07-13 ; déclencheurs de `BADGES.md`) ; stockage `user_badges` ; horodatage. *Badges de perf conditionnés à une « course qui compte » (≥ 2 inscrits).*
 - 📱 Catalogue (débloqués/à débloquer), détail, **animation/toast de déblocage** (respecte reduce-motion).
-- 🧪 Tests : chaque badge se débloque sur son déclencheur exact (dont « Il est 2h moins le kart », « David contre Goliath »).
-- **Critères d'acceptation** : les 10 badges se débloquent correctement et s'affichent avec leur icône ; le détail montre condition + date.
+- 🧪 Tests : chaque badge se débloque sur son déclencheur exact (dont « Midi moins le kart », « DRS », « Safety car », « Push »).
+- **Critères d'acceptation** : les 12 badges se débloquent correctement et s'affichent avec leur icône ; le détail montre condition + date.
 - **Dépend de** : 1.4, 1.5.
 
 ### Lot 2.4 — Notifications push

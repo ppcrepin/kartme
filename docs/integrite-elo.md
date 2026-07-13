@@ -56,7 +56,11 @@ même).
 
 ## Statut
 
-⏳ **À trancher avec le PO.** Impact technique de A : modifier
-`submit_race_results` (ne sommer que les duels inscrit↔inscrit) + décider de
-l'affichage de l'Elo des fantômes (figé / masqué / « invité ») + ajuster le
-classement Global.
+✅ **Décidé et déployé le 2026-07-13 — parade A retenue.** `submit_race_results`
+ne somme que les duels inscrit↔inscrit ; l'Elo des fantômes est **figé** et ils
+sont **retirés du classement Global**. Livré dans la migration
+`20260713190000_elo_integrity_badges.sql`, testé (Elo scénarios 5–6, badges
+scénario 12) et collé en prod par le PO. N'affecte que les courses futures.
+
+- **Reste (v2, non bloquant)** : parade C (confirmation du classement par les
+  participants, contre la faille 2) et parade D (détection/modération, lot 3.1).

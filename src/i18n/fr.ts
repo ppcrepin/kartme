@@ -213,7 +213,7 @@ export const fr = {
       midi_moins_le_kart: { name: 'Midi moins le kart', condition: 'Participer à une course en matinée (6 h – midi).' },
       chef_ecurie: { name: 'Chef d’écurie', condition: 'Organiser 10 courses classées (2 inscrits ou plus).' },
       drs: { name: 'DRS', condition: 'Battre un pilote inscrit parti 300 Elo (ou plus) au-dessus de soi.' },
-      safety_car: { name: 'Safety car', condition: 'Finir devant tous les pilotes mieux classés que toi.' },
+      safety_car: { name: 'Safety car', condition: 'Finir devant tous les pilotes inscrits mieux classés que toi.' },
       push: { name: 'Push', condition: 'Gagner au moins 45 points d’Elo en une course.' },
     },
   },
