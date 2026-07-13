@@ -122,6 +122,18 @@ export async function deleteRace(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * « Prendre les mêmes et on recommence » : nouvelle course avec le même
+ * circuit et les mêmes pilotes, en une transaction serveur atomique (fonction
+ * rematch — gère la limite quotidienne, le blocage et l'autorisation).
+ * Renvoie l'id de la nouvelle course.
+ */
+export async function rematch(sourceRaceId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('rematch', { p_source: sourceRaceId });
+  if (error) throw new Error(error.message);
+  return data as string;
+}
+
 // ── Participants ───────────────────────────────────────────────────────────
 type RawParticipation = {
   id: string;

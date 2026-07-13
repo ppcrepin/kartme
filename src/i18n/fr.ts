@@ -118,6 +118,8 @@ export const fr = {
     results: 'Résultats',
     completed: 'Course terminée',
     grade: 'Grade',
+    rematch: 'Prendre les mêmes et on recommence',
+    rematchError: 'Impossible de relancer la course.',
     waitingTitle: 'En attente du drapeau',
     waitingHint: 'L’admin saisira le classement après la course. Cet écran basculera tout seul sur les résultats.',
     pairTitle: 'D’où viennent tes points ?',

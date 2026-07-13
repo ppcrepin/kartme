@@ -33,6 +33,7 @@ import {
   listParticipants,
   listResults,
   onRaceUpdate,
+  rematch,
   removeParticipant,
   updateRace,
   type Circuit,
@@ -91,6 +92,7 @@ export default function RaceDetailScreen() {
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [rematchError, setRematchError] = useState<string | null>(null);
 
   const [editing, setEditing] = useState(false);
   const [editCircuit, setEditCircuit] = useState<Circuit | null>(null);
@@ -181,6 +183,18 @@ export default function RaceDetailScreen() {
   async function onDelete() {
     await deleteRace(id!);
     router.replace('/(tabs)');
+  }
+
+  async function onRematch() {
+    setBusy(true);
+    setRematchError(null);
+    try {
+      const newId = await rematch(id!);
+      router.replace(`/race/${newId}`);
+    } catch {
+      setRematchError(t.races.rematchError);
+      setBusy(false);
+    }
   }
 
   const shareUrl = `${appBaseUrl()}race/${id}`;
@@ -291,6 +305,14 @@ export default function RaceDetailScreen() {
                 })}
 
                 <ShareCard url={shareUrl} title={t.races.shareResults} message={resultsMessage} />
+
+                {/* Revanche : reprendre le même circuit + les mêmes pilotes */}
+                {isAdmin || results.some((r) => r.isSelf) ? (
+                  <>
+                    <Button label={t.races.rematch} onPress={onRematch} disabled={busy} />
+                    {rematchError ? <Muted style={styles.rematchErr}>{rematchError}</Muted> : null}
+                  </>
+                ) : null}
               </View>
             ) : (
               /* ── Course à venir ── */
@@ -449,4 +471,5 @@ const styles = StyleSheet.create({
   waitingHint: { textAlign: 'center', maxWidth: 280 },
   deleteBtn: { alignItems: 'center', paddingVertical: spacing.md },
   deleteTxt: { color: colors.inkDim2 },
+  rematchErr: { color: colors.accent, textAlign: 'center' },
 });
