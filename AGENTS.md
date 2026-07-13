@@ -29,7 +29,7 @@ Stack : **React Native + Web via Expo** (frontend) · **Supabase** (Postgres, au
 1. **Cadrage** — l'orchestrateur extrait du cahier les critères d'acceptation, découpe en tâches (design → backend/frontend), et soumet les points stratégiques au Product Owner.
 2. **Design/UX** (si l'UI est concernée) — maquette + décisions visuelles validées avant le code.
 3. **Build** — Backend et Frontend travaillent (en parallèle quand indépendants) sur une **branche dédiée au lot**.
-4. **Revue** — le Reviewer audite le diff ; corrections en boucle jusqu'au vert.
+4. **Revue** — le Reviewer audite le diff ; corrections en boucle jusqu'au vert. **Règle ferme (demandée par le PO le 2026-07-13) : un passage Reviewer adversarial est OBLIGATOIRE sur tout diff qui touche l'UI ou du texte visible, AVANT le push.** Il cherche en priorité les fautes de contexte des libellés (ex. « Mes courses » sur le profil d'un autre), les fuites de confidentialité, l'état non rafraîchi et les actions destructives. Ne jamais s'en remettre aux seules gardes automatiques (types/lint/tests) pour ces défauts.
 5. **Test** — le Testeur écrit/exécute les tests et **exerce réellement les flux** (pas juste « ça compile ») ; vérifie les chiffres Elo.
 6. **Assemblage & rapport** — l'orchestrateur vérifie la cohérence globale, reporte au Product Owner, et pousse une fois tout vert (PR seulement sur demande).
 

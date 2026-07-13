@@ -26,7 +26,7 @@
 | **1.4 Déroulé & résultats** | ✅ **en ligne & testé** — « Qui était présent ? » (C6b), **glisser-déposer** validé en prod (+ tap en repli, F4), attente animée + **temps réel activé** (C8), podium (C9), détail par paire (C10), partage résultats (C11 v1). *Signalement (A2) → lot modération. Image PNG → polish pré-beta.* |
 | **1.5 Profil, historique & grades** | ✅ **en ligne & validé** — profil complet (Elo en grand, médaillon + jauge, stats, **courbe d'Elo**, teaser badges), échelle des grades (R2), historique cliquable (R5). |
 | **🏁 PHASE 1 (MVP jouable)** | ✅ **TERMINÉE** — compte → course → classement → Elo → profil, la boucle complète tourne en prod. |
-| **2.1 Amis** | ✅ **en ligne & testé** — recherche (privés : grade seul), demandes, fiche pilote + face-à-face **+ stats/courbe/historique de l'ami**, blocage (demandes ET courses), signalement M1, amis sélectionnables dans une course. *(Déblocage UI → lot 2.5.)* |
+| **2.1 Amis** | ✅ **en ligne, testé & audité** — recherche (privés : grade seul), demandes, fiche pilote + face-à-face **+ stats/courbe/historique de l'ami**, blocage (demandes ET courses), signalement M1, amis sélectionnables dans une course. *Passage Reviewer adversarial effectué (10 correctifs). Déblocage UI → lot 2.5.* |
 | Phase 2 (suite) | ⏭️ prochain : lot 2.2 (Classements) |
 
 **Déploiement (aperçu web) :** ✅ en ligne et **automatique à chaque push**.
