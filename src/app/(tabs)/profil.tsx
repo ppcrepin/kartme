@@ -174,6 +174,7 @@ export default function ProfilScreen() {
 
         {/* Pied de page */}
         <View style={styles.foot}>
+          <Button label={t.settings.title} variant="ghost" onPress={() => router.push('/settings')} />
           <Button label={t.gallery.open} variant="ghost" onPress={() => router.push('/design-system')} />
           <Button label={t.auth.signOut} variant="ghost" onPress={signOut} />
         </View>

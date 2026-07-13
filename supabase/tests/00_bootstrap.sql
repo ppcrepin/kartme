@@ -30,3 +30,27 @@ create or replace function auth.role() returns text language sql stable as $$
 $$;
 
 grant usage on schema auth to anon, authenticated, service_role;
+
+-- Émulation de pg_net (Supabase le fournit). En local on capture les appels
+-- http_post dans une table pour pouvoir tester la logique des déclencheurs de
+-- notification sans réseau. La signature reproduit celle de pg_net.
+create schema if not exists net;
+grant usage on schema net to anon, authenticated, service_role;
+
+create table if not exists net._calls (
+  id       bigserial primary key,
+  url      text,
+  headers  jsonb,
+  body     jsonb,
+  created_at timestamptz not null default now()
+);
+
+create or replace function net.http_post(
+  url text,
+  body jsonb default '{}'::jsonb,
+  params jsonb default '{}'::jsonb,
+  headers jsonb default '{}'::jsonb,
+  timeout_milliseconds int default 5000
+) returns bigint language sql as $$
+  insert into net._calls (url, headers, body) values (url, headers, body) returning id;
+$$;

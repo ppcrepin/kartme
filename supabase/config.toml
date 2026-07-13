@@ -35,3 +35,9 @@ enabled = true
 [storage]
 enabled = true
 file_size_limit = "5MiB"
+
+# Edge Function d'envoi des notifications (lot 2.4). Pas de JWT : elle est
+# appelée par les déclencheurs de la base (pg_net) et protégée par un secret
+# partagé (en-tête x-hook-secret == PUSH_HOOK_SECRET).
+[functions.push]
+verify_jwt = false

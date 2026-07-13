@@ -4,6 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 
+import { disablePush } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 import { appBaseUrl } from '@/lib/url';
 
@@ -120,6 +121,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    // Libère l'abonnement push de CET appareil avant de quitter la session :
+    // sinon, sur un navigateur partagé, le compte suivant hériterait des
+    // notifications de celui-ci (cf. confidentialité). No-op hors web.
+    await disablePush().catch(() => {});
     await supabase.auth.signOut();
     setHasProfile(null);
   }
