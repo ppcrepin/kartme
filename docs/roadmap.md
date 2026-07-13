@@ -24,8 +24,9 @@
 | **1.2 Créer une course** | ✅ **en ligne & testé** — accueil, création (circuit + calendrier), participants (fantômes), partage lien + QR, édition/suppression. |
 | **1.3 Moteur Elo** | ✅ **en ligne & testé** — calcul serveur anti-triche déployé sur Supabase, tests DB (canonique +16/+8/0/−8/−16, somme nulle, plancher, 12 joueurs) ; saisie du classement au **tap** + résultats (Δ, grade). *Elo qui monte/descend vérifié en prod.* |
 | **1.4 Déroulé & résultats** | ✅ **en ligne & testé** — « Qui était présent ? » (C6b), **glisser-déposer** validé en prod (+ tap en repli, F4), attente animée + **temps réel activé** (C8), podium (C9), détail par paire (C10), partage résultats (C11 v1). *Signalement (A2) → lot modération. Image PNG → polish pré-beta.* |
-| **1.5 Profil, historique & grades** | 🟡 **code livré** — profil complet (Elo en grand, médaillon + jauge de grade, stats, **courbe d'Elo** SVG, teaser badges), **échelle des grades** (R2), **historique cliquable** (R5). *À tester en ligne — dernier lot du MVP.* |
-| Phase 2 → 4 | ☐ à faire |
+| **1.5 Profil, historique & grades** | ✅ **en ligne & validé** — profil complet (Elo en grand, médaillon + jauge, stats, **courbe d'Elo**, teaser badges), échelle des grades (R2), historique cliquable (R5). |
+| **🏁 PHASE 1 (MVP jouable)** | ✅ **TERMINÉE** — compte → course → classement → Elo → profil, la boucle complète tourne en prod. |
+| Phase 2 (Social & gamification) | ⏭️ **prochain : lot 2.1 (Amis)** |
 
 **Déploiement (aperçu web) :** ✅ en ligne et **automatique à chaque push**.
 - **URL publique : https://ppcrepin.github.io/kartme/** (GitHub Pages)
