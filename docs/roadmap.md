@@ -21,7 +21,8 @@
 | **0.2 Design system & i18n** | ✅ **livré** — police Fraunces (OFL), tokens figés (rampe grades pierre→rouge, palette d'états), 9 composants de base, socle i18n (fr), galerie en ligne |
 | **0.3 Données & sécurité** | ✅ **livré** — 7 tables cœur, RLS anti-triche, seed circuits FR, tests RLS verts. Base Supabase cloud **déployée** ✅ |
 | **1.1 Authentification** | ✅ **en ligne & fonctionnel** — email **et Google** testés en prod (OAuth configuré : Google Cloud + Supabase), pseudo + profil + déconnexion. *Apple plus tard (compte dev à 99 $/an).* |
-| Phase 1 (suite) → 4 | ⏭️ **prochain : lot 1.2 (créer une course)** |
+| **1.2 Créer une course** | 🟡 **code livré** — accueil Courses, création (circuit + date), participants (noms libres → fantômes + créateur), partage lien + **QR**, édition/suppression. *À tester en ligne.* |
+| Phase 1 (suite) → 4 | ⏭️ **prochain : lot 1.3 (moteur Elo)** |
 
 **Déploiement (aperçu web) :** ✅ en ligne et **automatique à chaque push**.
 - **URL publique : https://ppcrepin.github.io/kartme/** (GitHub Pages)
@@ -94,7 +95,15 @@ Légende agents : 🎨 Design/UX · ⚙️ Backend · 📱 Frontend · 🔒 Séc
 - **Critères d'acceptation** : un utilisateur s'inscrit/se connecte par les 3 voies ; un nouveau compte social passe par S0d ; pseudos filtrés et bornés ; session persistée.
 - **Dépend de** : 0.2, 0.3.
 
-### Lot 1.2 — Création de course & participants
+### Lot 1.2 — Création de course & participants 🟡 *(code livré le 2026-07-13)*
+- ✅ 🎨/📱 Écrans **C1** (accueil À venir/Passées), **création** (circuit + date/heure), **détail course** avec feuille d'ajout de pilotes.
+- ✅ ⚙️ Création de course, sélection/ajout de circuit (autocomplétion sur les 24 seedés + ajout libre), **profils fantômes** (noms libres), **créateur ajouté d'office** (retirable), édition circuit/date, suppression, limite ~10/jour.
+- ✅ 📱 Partage : **lien + QR code** (`react-native-qrcode-svg`).
+- ⏳ **Amis** dans la feuille d'ajout : reporté au **lot 2.1** (le système d'amis n'existe pas encore) — décision PO.
+- **À tester en ligne** avant de cocher « livré ». **Dépend de** : 1.1.
+- *Détail original ci-dessous conservé pour mémoire.*
+
+### Lot 1.2 — Création de course & participants *(spécification d'origine)*
 - 🎨 Écrans **C1** (accueil courses), **C2** (créer), **C3/C3b** (circuit), **C4** (date/heure), **C5** (feuille « Ajouter des pilotes » : amis / nom libre / lien-QR).
 - ⚙️ CRUD courses ; recherche/ajout de circuit ; création de **profils fantômes** ; génération du **lien/QR d'invitation** (token) ; **modification lieu/date avant saisie** *(A4)* ; **limite ~10 courses/jour** *(A5)*.
 - 📱 Flux de création, feuille d'ajout unifiée, sélecteur de circuit avec autocomplétion, sélecteur date/heure, liste d'accueil (À venir / Passées).

@@ -28,6 +28,17 @@ function normalize(input: string): string {
     .replace(/[^a-z0-9]/g, ''); // retire espaces/ponctuation
 }
 
+/** Valide un nom d'invité (profil fantôme) : 1–40 caractères + filtre de mots. */
+export function validateGhostName(raw: string): UsernameCheck {
+  const value = raw.trim();
+  if (value.length === 0) return { ok: false, value, error: 'empty' };
+  if (value.length > 40) return { ok: false, value, error: 'too_long' };
+  if (BANNED.some((word) => normalize(value).includes(word))) {
+    return { ok: false, value, error: 'banned' };
+  }
+  return { ok: true, value };
+}
+
 /** Valide un pseudo. Ne vérifie PAS l'unicité (les pseudos ne sont pas uniques). */
 export function validateUsername(raw: string): UsernameCheck {
   const value = raw.trim();

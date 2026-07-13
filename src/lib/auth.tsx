@@ -5,24 +5,12 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { Platform } from 'react-native';
 
 import { supabase } from '@/lib/supabase';
+import { appBaseUrl } from '@/lib/url';
 
 // Ferme la fenêtre d'auth après une redirection OAuth (web/natif) — mais
 // jamais au rendu statique côté serveur (pas de window).
 if (typeof window !== 'undefined') {
   WebBrowser.maybeCompleteAuthSession();
-}
-
-/**
- * URL de retour après OAuth / reset. Sur le web, on reconstruit explicitement
- * l'adresse de l'app en incluant le sous-chemin de déploiement (EXPO_BASE_URL,
- * ex. « /kartme »), car le calcul automatique l'oublie sous GitHub Pages.
- */
-function appRedirectUrl(): string {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    const base = process.env.EXPO_BASE_URL ?? '';
-    return `${window.location.origin}${base}/`.replace(/\/+$/, '/');
-  }
-  return Linking.createURL('/');
 }
 
 type AuthResult = { error: string | null };
@@ -102,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signInWithGoogle(): Promise<AuthResult> {
-    const redirectTo = appRedirectUrl();
+    const redirectTo = appBaseUrl();
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo, skipBrowserRedirect: Platform.OS !== 'web' },
@@ -126,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function resetPassword(email: string): Promise<AuthResult> {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: appRedirectUrl(),
+      redirectTo: appBaseUrl(),
     });
     return { error: error?.message ?? null };
   }
