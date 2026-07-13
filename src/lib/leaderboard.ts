@@ -10,10 +10,8 @@ export type LeaderboardScope = 'friends' | 'global';
 
 export interface LeaderboardRow {
   rank: number;
-  /** Id du profil inscrit, ou null pour un fantôme. */
+  /** Id du profil inscrit (les fantômes ne sont plus classés, cf. anti-triche). */
   pilotId: string | null;
-  /** Id du profil fantôme, ou null pour un inscrit. */
-  ghostId: string | null;
   username: string;
   elo: number;
   races: number;
@@ -32,7 +30,6 @@ export const LEADERBOARD_PAGE = 50;
 type RawRow = {
   rank: number;
   profile_id: string | null;
-  ghost_id: string | null;
   username: string;
   elo: number;
   races: number;
@@ -53,7 +50,6 @@ export async function getLeaderboard(
   return ((data ?? []) as RawRow[]).map((r) => ({
     rank: r.rank,
     pilotId: r.profile_id,
-    ghostId: r.ghost_id,
     username: r.username,
     elo: r.elo,
     races: r.races,

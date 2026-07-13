@@ -114,7 +114,7 @@ Le grade est affiché sur le profil (à côté de l'Elo) et une **échelle des g
 
 **Gamification** :
 - Elo affiché en chiffre (référence précise) **+ un rang visuel** en complément (cf. §5.4).
-- Badges/trophées avec un ton fun et des jeux de mots. **10 badges retenus pour le MVP** (catalogue complet + réserve enrichissable dans `BADGES.md` à la racine du repo) :
+- Badges/trophées avec un ton fun et des jeux de mots. **12 badges retenus pour le MVP** (revue PO du 2026-07-13 ; catalogue complet + réserve enrichissable dans `BADGES.md` à la racine du repo) :
 
 | Badge | Déclencheur |
 |---|---|

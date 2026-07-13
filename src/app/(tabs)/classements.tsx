@@ -25,7 +25,7 @@ type Loaded = {
 };
 
 /** Clé stable d'une ligne (pilote inscrit ou fantôme). */
-const rowKey = (r: LeaderboardRow) => r.pilotId ?? r.ghostId ?? '';
+const rowKey = (r: LeaderboardRow) => r.pilotId ?? '';
 
 /** Ordinal français court : 1ᵉʳ, 2ᵉ, 3ᵉ… */
 const ordinal = (n: number) => (n === 1 ? '1ᵉʳ' : `${n}ᵉ`);

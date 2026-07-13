@@ -69,11 +69,12 @@ begin
   perform tests.eq(tests.has_badge(A, 'drs'), 1, 'A a battu B (+350) : DRS');
   perform tests.eq(tests.has_badge(C, 'drs'), 0, 'C (derrière B) : pas de DRS');
   perform tests.eq(tests.has_badge(C, 'tete_a_queue'), 1, 'C (1000 → ~975) : Tête-à-queue');
-  perform tests.eq(tests.has_badge(A, 'push'), 1, 'A (+~39) : Push');
-  perform tests.eq(tests.has_badge(C, 'push'), 0, 'C (perd) : pas de Push');
-  -- 3×identité + champagne + voiture_balai + drs + tête-à-queue + push = 8.
+  perform tests.eq(tests.has_badge(A, 'safety_car'), 1, 'A (devant B, mieux classé) : Safety car');
+  perform tests.eq(tests.has_badge(B, 'safety_car'), 0, 'B (personne au-dessus) : pas de Safety car');
+  perform tests.eq(tests.has_badge(A, 'push'), 0, 'A (+~39 < 45) : pas de Push');
+  -- 3×identité + champagne + voiture_balai + drs + tête-à-queue + safety_car = 8.
   perform tests.eq((select count(*) from user_badges where race_id = r), 8, '8 badges sur cette course');
-  raise notice 'Scénario 1 (1ère course : Champagne, Voiture balai, DRS, Push) ✔';
+  raise notice 'Scénario 1 (1ère course : Champagne, Voiture balai, DRS, Safety car) ✔';
 end $$;
 
 -- ═══ Scénario 2 : un duel à 2 ne donne PAS Voiture balai ; unicité ═══
@@ -96,10 +97,10 @@ begin
   raise notice 'Scénario 2 (duel sans voiture balai, unicité) ✔';
 end $$;
 
--- ═══ Scénario 3 : Kart-astrophe (perdre > 30) + Push (gagner > 30) + Tête-à-queue ═══
+-- ═══ Scénario 3 : Kart-astrophe (≤ −45) + Push (≥ +45) + Tête-à-queue + Safety car ═══
 do $$
 declare
-  W uuid := 'b0000000-0000-0000-0000-000000000010'; -- 610, gagne (+~49 → Push)
+  W uuid := 'b0000000-0000-0000-0000-000000000010'; -- 610, gagne (+~49 → Push, Safety car)
   L uuid := 'b0000000-0000-0000-0000-000000000011'; -- 1010, battu (−~49 → Kart-astrophe)
   r uuid := '22220000-0000-0000-0000-000000000003';
   pw uuid := 'bc000000-0000-0000-0000-000000000001';
@@ -110,13 +111,15 @@ begin
   insert into participations (id, race_id, profile_id) values (pw, r, W), (pl, r, L);
   perform tests.call_submit(W, r, array[pw, pl]);
 
-  perform tests.eq(tests.has_badge(L, 'kart_astrophe'), 1, 'L (Δ ≈ −49) : Kart-astrophe (> 30 perdus)');
+  perform tests.eq(tests.has_badge(L, 'kart_astrophe'), 1, 'L (Δ ≈ −49) : Kart-astrophe (≥ 45 perdus)');
   perform tests.eq(tests.has_badge(L, 'tete_a_queue'), 1, 'L (1010 → sous 1000) : Tête-à-queue');
-  perform tests.eq(tests.has_badge(W, 'push'), 1, 'W (Δ ≈ +49) : Push (> 30 gagnés)');
+  perform tests.eq(tests.has_badge(W, 'push'), 1, 'W (Δ ≈ +49) : Push (≥ 45 gagnés)');
   perform tests.eq(tests.has_badge(W, 'kart_astrophe'), 0, 'W (gagnant) : pas de Kart-astrophe');
   perform tests.eq(tests.has_badge(L, 'push'), 0, 'L (perd) : pas de Push');
   perform tests.eq(tests.has_badge(W, 'drs'), 1, 'W a battu L (+400) : DRS');
-  raise notice 'Scénario 3 (Kart-astrophe, Push, Tête-à-queue) ✔';
+  perform tests.eq(tests.has_badge(W, 'safety_car'), 1, 'W (610, devant L mieux classé) : Safety car');
+  perform tests.eq(tests.has_badge(L, 'safety_car'), 0, 'L (personne au-dessus) : pas de Safety car');
+  raise notice 'Scénario 3 (Kart-astrophe, Push, Tête-à-queue, Safety car) ✔';
 end $$;
 
 -- ═══ Scénario 4 : Midi moins le kart — course du MATIN (heure prévue) ═══
@@ -273,29 +276,39 @@ begin
   raise notice 'Scénario 9 (chapeaux : ordre de validation) ✔';
 end $$;
 
--- ═══ Scénario 10 : Safety car — 10 courses qui comptent SANS jamais finir dernier ═══
+-- ═══ Scénario 10 : Safety car — finir devant TOUS les inscrits mieux classés ═══
 do $$
 declare
-  Y uuid := 'b0000000-0000-0000-0000-000000000060'; -- toujours 1er
-  Z uuid := 'b0000000-0000-0000-0000-000000000061'; -- toujours 2e (jamais dernier)
-  L uuid := 'b0000000-0000-0000-0000-000000000062'; -- toujours dernier
-  g int; r uuid; py uuid; pz uuid; pl uuid;
+  H uuid := 'b0000000-0000-0000-0000-000000000060';  -- 1200 (le mieux classé)
+  M uuid := 'b0000000-0000-0000-0000-000000000061';  -- 1000
+  Lo uuid := 'b0000000-0000-0000-0000-000000000062'; -- 800 (l'outsider)
+  r uuid := '22226000-0000-0000-0000-000000000001';
+  ph uuid := 'cb100000-0000-0000-0000-000000000001';
+  pm uuid := 'cb200000-0000-0000-0000-000000000001';
+  plo uuid := 'cb300000-0000-0000-0000-000000000001';
+  -- 2e course : le favori gagne → l'outsider n'a PAS le badge
+  H2 uuid := 'b0000000-0000-0000-0000-000000000063'; -- 1200
+  Lo2 uuid := 'b0000000-0000-0000-0000-000000000064'; -- 800
+  r2 uuid := '22226000-0000-0000-0000-000000000002';
+  ph2 uuid := 'cb100000-0000-0000-0000-000000000002';
+  plo2 uuid := 'cb300000-0000-0000-0000-000000000002';
 begin
-  perform tests.mk_user(Y, 1000); perform tests.mk_user(Z, 1000); perform tests.mk_user(L, 1000);
-  for g in 1..10 loop
-    r  := ('22226000-0000-0000-0000-0000000000' || lpad(g::text, 2, '0'))::uuid;
-    py := ('cb100000-0000-0000-0000-0000000000' || lpad(g::text, 2, '0'))::uuid;
-    pz := ('cb200000-0000-0000-0000-0000000000' || lpad(g::text, 2, '0'))::uuid;
-    pl := ('cb300000-0000-0000-0000-0000000000' || lpad(g::text, 2, '0'))::uuid;
-    insert into races (id, admin_id, scheduled_at) values (r, Y, '2026-06-15 15:00:00+02'::timestamptz + (g || ' minute')::interval);
-    insert into participations (id, race_id, profile_id) values (py, r, Y), (pz, r, Z), (pl, r, L);
-    perform tests.call_submit(Y, r, array[py, pz, pl]); -- Y 1er, Z 2e, L dernier
-  end loop;
+  perform tests.mk_user(H, 1200); perform tests.mk_user(M, 1000); perform tests.mk_user(Lo, 800);
+  insert into races (id, admin_id, scheduled_at) values (r, H, '2026-06-15 15:00:00+02');
+  insert into participations (id, race_id, profile_id) values (ph, r, H), (pm, r, M), (plo, r, Lo);
+  perform tests.call_submit(H, r, array[plo, pm, ph]); -- Lo 1er, M 2e, H (favori) dernier
 
-  perform tests.eq(tests.has_badge(Y, 'safety_car'), 1, 'Y : Safety car (10 courses, jamais dernier)');
-  perform tests.eq(tests.has_badge(Z, 'safety_car'), 1, 'Z : Safety car (toujours 2e, jamais dernier)');
-  perform tests.eq(tests.has_badge(L, 'safety_car'), 0, 'L : pas de Safety car (toujours dernier)');
-  raise notice 'Scénario 10 (Safety car) ✔';
+  perform tests.eq(tests.has_badge(Lo, 'safety_car'), 1, 'Lo (800, devant M et H) : Safety car');
+  perform tests.eq(tests.has_badge(M, 'safety_car'), 1, 'M (1000, devant H) : Safety car');
+  perform tests.eq(tests.has_badge(H, 'safety_car'), 0, 'H (personne au-dessus) : pas de Safety car');
+
+  perform tests.mk_user(H2, 1200); perform tests.mk_user(Lo2, 800);
+  insert into races (id, admin_id, scheduled_at) values (r2, H2, '2026-06-15 15:05:00+02');
+  insert into participations (id, race_id, profile_id) values (ph2, r2, H2), (plo2, r2, Lo2);
+  perform tests.call_submit(H2, r2, array[ph2, plo2]); -- le favori H2 gagne
+
+  perform tests.eq(tests.has_badge(Lo2, 'safety_car'), 0, 'Lo2 : un mieux classé (H2) a fini devant → pas de Safety car');
+  raise notice 'Scénario 10 (Safety car : devant les mieux classés) ✔';
 end $$;
 
 -- ═══ Scénario 11 : DRS n'est PAS donné pour avoir battu un FANTÔME +300 ═══

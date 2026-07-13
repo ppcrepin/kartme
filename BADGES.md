@@ -24,14 +24,14 @@ Les jeux de mots viennent de l'univers karting/course (voir aussi `PUNS.md`). Ch
 | 2 | Habitué des stands | bidon des stands | 10 courses jouées |
 | 3 | Champagne ! | podium F1 | 1ère victoire |
 | 4 | Sur les chapeaux de roues | expression | 3 victoires d'affilée |
-| 5 | Kart-astrophe | "catastrophe" | Perdre **plus de 30** points d'Elo en une course |
+| 5 | Kart-astrophe | "catastrophe" | Perdre **au moins 45** points d'Elo en une course |
 | 6 | Voiture balai | véhicule qui ferme la course | Finir dernier d'une course (3 pilotes ou plus) |
 | 7 | Tête-à-queue | figure de karting | Perdre un palier de grade entier |
 | 8 | Midi moins le kart | "midi moins le quart" | Participer à une course **le matin** (avant midi) |
 | 9 | Chef d'écurie | rôle F1 | Organiser 10 courses qui comptent |
 | 10 | DRS | aileron F1 (dépassement) | Battre un pilote **inscrit** 300+ Elo au-dessus de soi |
-| 11 | Safety car | voiture de sécurité | 10 courses sans jamais finir dernier |
-| 12 | Push | « push ! » à la radio | Gagner **plus de 30** points d'Elo en une course |
+| 11 | Safety car | voiture de sécurité | Finir devant tous les pilotes inscrits mieux classés que soi |
+| 12 | Push | « push ! » à la radio | Gagner **au moins 45** points d'Elo en une course |
 
 ---
 

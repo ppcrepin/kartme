@@ -106,11 +106,16 @@ $$;
 -- C. Refonte des clés de badges (12). On renomme les clés existantes pour ne
 --    pas perdre les badges déjà obtenus (pré-beta), puis on élargit le check.
 -- ─────────────────────────────────────────────────────────────────────────
+-- ORDRE IMPORTANT : on lève d'abord l'ancienne contrainte (qui n'autorise que
+-- les anciens noms), SINON le premier UPDATE d'une ligne réelle
+-- (« lanterne_rouge » d'un bêta-testeur) violerait le CHECK et annulerait toute
+-- la migration. Puis on renomme, puis on repose la contrainte élargie.
+alter table public.user_badges drop constraint badge_key_valid;
+
 update public.user_badges set badge_key = 'voiture_balai'      where badge_key = 'lanterne_rouge';
 update public.user_badges set badge_key = 'midi_moins_le_kart' where badge_key = 'deux_h_moins_le_kart';
 update public.user_badges set badge_key = 'drs'                 where badge_key = 'david_goliath';
 
-alter table public.user_badges drop constraint badge_key_valid;
 alter table public.user_badges add constraint badge_key_valid check (badge_key in (
   'kart_didentite', 'habitue_stands', 'champagne', 'chapeaux_de_roues',
   'kart_astrophe', 'voiture_balai', 'tete_a_queue', 'midi_moins_le_kart',
@@ -179,8 +184,8 @@ begin
         where last3.position = 1
       ) = 3
     union all
-    -- 5 · Kart-astrophe — perdre PLUS de 30 Elo en une course (Δ ≤ −31)
-    select profile_id, 'kart_astrophe' from counted where elo_delta <= -31
+    -- 5 · Kart-astrophe — perdre au moins 45 Elo en une course (Δ ≤ −45)
+    select profile_id, 'kart_astrophe' from counted where elo_delta <= -45
     union all
     -- 6 · Voiture balai — finir dernier d'une course d'au moins 3 pilotes
     select profile_id, 'voiture_balai' from counted where position = n and n >= 3
@@ -210,22 +215,25 @@ begin
         and c.position < r3.position
     )
     union all
-    -- 11 · Safety car — 10 courses qui comptent sans JAMAIS avoir fini dernier
+    -- 11 · Safety car — finir DEVANT tous les pilotes inscrits partis avec un
+    -- Elo plus élevé (il faut qu'au moins un inscrit soit au-dessus de moi).
     select c.profile_id, 'safety_car' from counted c
-    where (
-      select count(*) from results r4
-      join participations p4 on p4.id = r4.participation_id
-      where p4.profile_id = c.profile_id and public.race_is_ranked(r4.race_id)
-    ) >= 10
+    where exists (
+      select 1 from results rh
+      join participations ph on ph.id = rh.participation_id
+      where rh.race_id = p_race_id and ph.profile_id is not null
+        and rh.elo_before > c.elo_before
+    )
     and not exists (
-      select 1 from results r5
-      join participations p5 on p5.id = r5.participation_id
-      where p5.profile_id = c.profile_id
-        and r5.position = (select count(*) from results r6 where r6.race_id = r5.race_id)
+      select 1 from results rh2
+      join participations ph2 on ph2.id = rh2.participation_id
+      where rh2.race_id = p_race_id and ph2.profile_id is not null
+        and rh2.elo_before > c.elo_before
+        and rh2.position < c.position   -- un mieux classé (Elo) a fini devant moi
     )
     union all
-    -- 12 · Push — gagner PLUS de 30 Elo en une course (Δ ≥ +31)
-    select profile_id, 'push' from counted where elo_delta >= 31
+    -- 12 · Push — gagner au moins 45 Elo en une course (Δ ≥ +45)
+    select profile_id, 'push' from counted where elo_delta >= 45
   ) b
   on conflict (profile_id, badge_key) do nothing;
 end;

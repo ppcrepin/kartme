@@ -158,6 +158,37 @@ begin
   raise notice 'Scénario 5 (anti-triche : Elo entre inscrits) ✔';
 end $$;
 
+-- ═══ Scénario 6 : 3 inscrits + 1 fantôme intercalé → barème 3 joueurs normal ═══
+-- Verrouille la normalisation K/(n_reg−1) avec n_reg = 3 malgré un fantôme.
+do $$
+declare
+  A uuid := 'e0000000-0000-0000-0000-000000000031';
+  B uuid := 'e0000000-0000-0000-0000-000000000032';
+  C uuid := 'e0000000-0000-0000-0000-000000000033';
+  gid uuid := 'e0000000-0000-0000-0000-0000000000f8';
+  r uuid := '11110000-0000-0000-0000-000000000006';
+  pa uuid := 'fa000000-0000-0000-0000-000000000001';
+  pg uuid := 'fa000000-0000-0000-0000-000000000002';
+  pb uuid := 'fa000000-0000-0000-0000-000000000003';
+  pc uuid := 'fa000000-0000-0000-0000-000000000004';
+begin
+  perform tests.mk_user(A, 1000); perform tests.mk_user(B, 1000); perform tests.mk_user(C, 1000);
+  insert into ghost_profiles (id, display_name, elo, created_by) values (gid, 'Fantôme', 1000, A);
+  insert into races (id, admin_id, scheduled_at) values (r, A, now());
+  insert into participations (id, race_id, profile_id) values (pa, r, A), (pb, r, B), (pc, r, C);
+  insert into participations (id, race_id, ghost_id) values (pg, r, gid);
+
+  -- Ordre : A · fantôme · B · C → entre inscrits, A 1er, B 2e, C 3e.
+  perform tests.call_submit(A, r, array[pa, pg, pb, pc]);
+
+  perform tests.eq((select elo from profiles where id = A), 1032, 'A (1er inscrit) → 1032');
+  perform tests.eq((select elo from profiles where id = B), 1000, 'B (2e inscrit) → 1000');
+  perform tests.eq((select elo from profiles where id = C), 968,  'C (3e inscrit) → 968');
+  perform tests.eq((select elo from ghost_profiles where id = gid), 1000, 'fantôme : Elo figé');
+  perform tests.eq((select sum(elo_delta) from results where race_id = r), 0, 'somme des Δ nulle (fantôme inclus)');
+  raise notice 'Scénario 6 (3 inscrits + fantôme : barème 3 joueurs) ✔';
+end $$;
+
 do $$ begin raise notice 'Tous les tests Elo sont passés ✔'; end $$;
 
 rollback;
