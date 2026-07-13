@@ -15,11 +15,12 @@ import { CircuitPicker } from '@/components/circuit-picker';
 import { DateTimeField } from '@/components/date-time-field';
 import { Podium } from '@/components/podium';
 import { ShareCard } from '@/components/share-card';
-import { Avatar, Button, Card, Field, GradeMedal } from '@/components/ui';
+import { Avatar, Banner, Button, Card, Field, GradeMedal } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
+import { badgesForRace, type BadgeKey } from '@/lib/badges';
 import { formatRaceDate } from '@/lib/datetime';
 import { pairwiseBreakdown } from '@/lib/elo';
 import { listFriends, type FriendEntry } from '@/lib/friends';
@@ -93,6 +94,7 @@ export default function RaceDetailScreen() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [rematchError, setRematchError] = useState<string | null>(null);
+  const [myNewBadges, setMyNewBadges] = useState<BadgeKey[]>([]);
 
   const [editing, setEditing] = useState(false);
   const [editCircuit, setEditCircuit] = useState<Circuit | null>(null);
@@ -126,6 +128,18 @@ export default function RaceDetailScreen() {
   const isAdmin = !!race && race.admin_id === selfId;
   const completed = race?.status === 'completed';
   const selfParticipating = participants.some((p) => p.isSelf);
+
+  // Badges gagnés par MOI sur cette course (bandeau sous le podium).
+  useEffect(() => {
+    if (!completed || !id) return;
+    let active = true;
+    badgesForRace(id)
+      .then((b) => active && setMyNewBadges(b))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [completed, id]);
 
   async function onAddPilot() {
     const check = validateGhostName(name);
@@ -252,6 +266,16 @@ export default function RaceDetailScreen() {
               <View style={styles.section}>
                 <Label>{t.races.results}</Label>
                 <Podium results={results} />
+
+                {myNewBadges.length > 0 ? (
+                  <Banner
+                    kind="ok"
+                    title={(myNewBadges.length > 1
+                      ? t.badges.unlockedBannerMany
+                      : t.badges.unlockedBanner
+                    ).replace('%s', myNewBadges.map((k) => t.badges.items[k].name).join(' · '))}
+                  />
+                ) : null}
 
                 {results.map((r) => {
                   const grade = gradeForElo(r.eloAfter);

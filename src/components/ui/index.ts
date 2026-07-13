@@ -1,4 +1,5 @@
 export { Avatar } from './avatar';
+export { BadgeIcon, type BadgeKey } from './badge-icon';
 export { Banner, type BannerKind } from './banner';
 export { Button } from './button';
 export { Card } from './card';

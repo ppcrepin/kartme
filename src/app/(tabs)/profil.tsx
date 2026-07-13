@@ -4,11 +4,12 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { EloCurve } from '@/components/elo-curve';
 import { Screen } from '@/components/screen';
-import { Avatar, Button, Card, Gauge, GradeMedal } from '@/components/ui';
+import { Avatar, BadgeIcon, Button, Card, Gauge, GradeMedal } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
+import { BADGE_KEYS, listBadges, type BadgeKey, type UnlockedBadge } from '@/lib/badges';
 import { formatRaceDate } from '@/lib/datetime';
 import { gradeProgress } from '@/lib/grade';
 import {
@@ -31,16 +32,18 @@ export default function ProfilScreen() {
   const [profile, setProfile] = useState<MyProfile | null>(null);
   const [curve, setCurve] = useState<EloPoint[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [badges, setBadges] = useState<Map<BadgeKey, UnlockedBadge>>(new Map());
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      Promise.all([getMyProfile(), getEloCurve(), getRaceHistory()])
-        .then(([p, c, h]) => {
+      Promise.all([getMyProfile(), getEloCurve(), getRaceHistory(), listBadges()])
+        .then(([p, c, h, b]) => {
           if (!active) return;
           setProfile(p);
           setCurve(c);
           setHistory(h);
+          setBadges(b);
         })
         .catch(() => {});
       return () => {
@@ -108,18 +111,32 @@ export default function ProfilScreen() {
           )}
         </Card>
 
-        {/* Badges — teaser (le système arrive au lot 2.3) */}
-        <Card>
-          <Label>{t.profile.badges}</Label>
-          <View style={styles.badgesRow}>
-            {[0, 1, 2, 3].map((i) => (
-              <View key={i} style={styles.badgeLock}>
-                <Body style={styles.badgeLockTxt}>🔒</Body>
-              </View>
-            ))}
-          </View>
-          <Muted style={styles.badgesSoon}>{t.profile.badgesSoon}</Muted>
-        </Card>
+        {/* Badges (R3 : catalogue complet via « Voir tous les badges ») */}
+        <Pressable onPress={() => router.push('/badges')} accessibilityRole="button">
+          <Card>
+            <View style={styles.badgesHead}>
+              <Label>{t.profile.badges}</Label>
+              <Muted style={styles.badgesLink}>{t.badges.seeAll} ›</Muted>
+            </View>
+            <View style={styles.badgesRow}>
+              {BADGE_KEYS.map((key) => {
+                const got = badges.has(key);
+                return (
+                  <View key={key} style={[styles.badgeMedal, got ? styles.badgeOn : styles.badgeOff]}>
+                    <BadgeIcon badge={key} size={26} color={got ? colors.accent : colors.inkDim} />
+                  </View>
+                );
+              })}
+            </View>
+            <Muted style={styles.badgesSoon}>
+              {badges.size === 0
+                ? t.badges.none
+                : t.badges.progress
+                    .replace('%u', String(badges.size))
+                    .replace('%t', String(BADGE_KEYS.length))}
+            </Muted>
+          </Card>
+        </Pressable>
 
         {/* Échelle des grades */}
         <Button label={t.profile.gradesLadder} variant="ghost" onPress={() => router.push('/grades')} />
@@ -193,19 +210,19 @@ const styles = StyleSheet.create({
   statValue: { fontFamily: fonts.serifBlack, fontSize: 24, color: colors.ink },
   statLabel: { fontSize: 11 },
   curveEmpty: { marginTop: spacing.sm },
-  badgesRow: { flexDirection: 'row', gap: spacing.sm, marginVertical: spacing.sm },
-  badgeLock: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.line2,
-    borderStyle: 'dashed',
+  badgesHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  badgesLink: { color: colors.accent, fontSize: 12, fontWeight: '700' },
+  badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginVertical: spacing.sm },
+  badgeMedal: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeLockTxt: { opacity: 0.5 },
+  badgeOn: { borderColor: colors.accent, backgroundColor: colors.surface },
+  badgeOff: { borderColor: colors.line2, backgroundColor: colors.surface2, opacity: 0.6 },
   badgesSoon: { fontSize: 12 },
   section: { gap: spacing.sm },
   historyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

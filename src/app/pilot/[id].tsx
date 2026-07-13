@@ -4,11 +4,12 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EloCurve } from '@/components/elo-curve';
-import { Avatar, Button, Card, GradeMedal, Tag } from '@/components/ui';
+import { Avatar, BadgeIcon, Button, Card, GradeMedal, Tag } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
+import { listBadges, type BadgeKey, type UnlockedBadge } from '@/lib/badges';
 import { formatRaceDate } from '@/lib/datetime';
 import {
   getEloCurve,
@@ -51,6 +52,7 @@ export default function PilotScreen() {
   const [duel, setDuel] = useState<FaceToFace | null>(null);
   const [curve, setCurve] = useState<EloPoint[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [badges, setBadges] = useState<Map<BadgeKey, UnlockedBadge>>(new Map());
   const [reporting, setReporting] = useState(false);
   const [reported, setReported] = useState(false);
   const [blocked, setBlocked] = useState(false);
@@ -65,12 +67,18 @@ export default function PilotScreen() {
     // Stats/courbe/historique : seulement si le profil est pleinement visible
     // (public ou ami) — sinon la confidentialité prime.
     if (p?.eloExact) {
-      const [c, h] = await Promise.all([getEloCurve(id), getRaceHistory(id)]);
+      const [c, h, b] = await Promise.all([
+        getEloCurve(id),
+        getRaceHistory(id),
+        listBadges(id).catch(() => new Map<BadgeKey, UnlockedBadge>()),
+      ]);
       setCurve(c);
       setHistory(h);
+      setBadges(b);
     } else {
       setCurve([]);
       setHistory([]);
+      setBadges(new Map());
     }
   }, [id]);
 
@@ -236,6 +244,22 @@ export default function PilotScreen() {
                   </Card>
                 ) : null}
 
+                {badges.size > 0 ? (
+                  <Card>
+                    <Label>{t.profile.badges}</Label>
+                    <View style={styles.badgesRow}>
+                      {[...badges.keys()].map((key) => (
+                        <View
+                          key={key}
+                          style={styles.badgeMedal}
+                          accessibilityLabel={t.badges.items[key].name}>
+                          <BadgeIcon badge={key} size={26} color={colors.accent} />
+                        </View>
+                      ))}
+                    </View>
+                  </Card>
+                ) : null}
+
                 {history.length === 0 ? (
                   <Muted>{t.profile.historyEmpty}</Muted>
                 ) : (
@@ -330,6 +354,17 @@ const styles = StyleSheet.create({
   stat: { flex: 1, alignItems: 'center', paddingVertical: spacing.md },
   statValue: { fontFamily: fonts.serifBlack, fontSize: 24, color: colors.ink },
   statLabel: { fontSize: 11 },
+  badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  badgeMedal: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   historySection: { gap: spacing.sm },
   historyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   historyPos: { fontFamily: fonts.serifBlack, fontSize: 18, width: 22, textAlign: 'center', color: colors.ink },
