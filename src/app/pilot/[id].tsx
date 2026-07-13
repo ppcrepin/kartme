@@ -238,7 +238,7 @@ export default function PilotScreen() {
 
                 {history.length > 0 ? (
                   <View style={styles.historySection}>
-                    <Label>{t.profile.history}</Label>
+                    <Label>{t.profile.historyOther}</Label>
                     {history.map((h, i) => (
                       <Pressable
                         key={`${h.raceId}-${i}`}

@@ -165,6 +165,7 @@ export const fr = {
     curve: 'Évolution de l’Elo',
     curveEmpty: 'Ta courbe apparaîtra après ta première course.',
     history: 'Mes courses',
+    historyOther: 'Ses courses',
     historyEmpty: 'Aucune course terminée pour l’instant.',
     badges: 'Badges',
     badgesSoon: 'À débloquer bientôt',
