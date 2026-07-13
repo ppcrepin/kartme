@@ -23,8 +23,8 @@
 | **1.1 Authentification** | ✅ **en ligne & fonctionnel** — email **et Google** testés en prod (OAuth configuré : Google Cloud + Supabase), pseudo + profil + déconnexion. *Apple plus tard (compte dev à 99 $/an).* |
 | **1.2 Créer une course** | ✅ **en ligne & testé** — accueil, création (circuit + calendrier), participants (fantômes), partage lien + QR, édition/suppression. |
 | **1.3 Moteur Elo** | ✅ **en ligne & testé** — calcul serveur anti-triche déployé sur Supabase, tests DB (canonique +16/+8/0/−8/−16, somme nulle, plancher, 12 joueurs) ; saisie du classement au **tap** + résultats (Δ, grade). *Elo qui monte/descend vérifié en prod.* |
-| **1.4 Déroulé & résultats** | 🟡 **code livré** — « Qui était présent ? » (C6b), **glisser-déposer** + tap en repli (C7/F4), écran d'attente animé + **bascule temps réel** (C8), **podium** (C9), **détail par paire** (C10), partage résultats texte+lien+QR (C11 v1). *Reste : activer le realtime sur Supabase + test en ligne. Signalement (A2) → lot modération. Image PNG → polish pré-beta.* |
-| Phase 1 (suite) → 4 | ⏭️ **prochain : lot 1.5 (profil, historique & grades)** |
+| **1.4 Déroulé & résultats** | ✅ **en ligne & testé** — « Qui était présent ? » (C6b), **glisser-déposer** validé en prod (+ tap en repli, F4), attente animée + **temps réel activé** (C8), podium (C9), détail par paire (C10), partage résultats (C11 v1). *Signalement (A2) → lot modération. Image PNG → polish pré-beta.* |
+| Phase 1 (suite) → 4 | ⏭️ **prochain : lot 1.5 (profil, historique & grades) — dernier lot du MVP jouable** |
 
 **Déploiement (aperçu web) :** ✅ en ligne et **automatique à chaque push**.
 - **URL publique : https://ppcrepin.github.io/kartme/** (GitHub Pages)
