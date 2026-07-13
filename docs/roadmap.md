@@ -22,8 +22,8 @@
 | **0.3 Données & sécurité** | ✅ **livré** — 7 tables cœur, RLS anti-triche, seed circuits FR, tests RLS verts. Base Supabase cloud **déployée** ✅ |
 | **1.1 Authentification** | ✅ **en ligne & fonctionnel** — email **et Google** testés en prod (OAuth configuré : Google Cloud + Supabase), pseudo + profil + déconnexion. *Apple plus tard (compte dev à 99 $/an).* |
 | **1.2 Créer une course** | ✅ **en ligne & testé** — accueil, création (circuit + calendrier), participants (fantômes), partage lien + QR, édition/suppression. |
-| **1.3 Moteur Elo** | 🟡 **code livré** — fonction de calcul serveur (anti-triche) + tests (canonique +16/+8/0/−8/−16, somme nulle, plancher, 12 joueurs) ; saisie du classement (tap) + affichage des résultats (Δ, grade). *Reste : coller le SQL dans Supabase, puis test en ligne.* |
-| Phase 1 (suite) → 4 | ⏭️ **prochain : lot 1.4 (déroulé & résultats soignés)** |
+| **1.3 Moteur Elo** | ✅ **en ligne & testé** — calcul serveur anti-triche déployé sur Supabase, tests DB (canonique +16/+8/0/−8/−16, somme nulle, plancher, 12 joueurs) ; saisie du classement au **tap** + résultats (Δ, grade). *Elo qui monte/descend vérifié en prod.* |
+| Phase 1 (suite) → 4 | ⏭️ **prochain : lot 1.4 (déroulé & résultats soignés)** — inclut le **glisser-déposer** du classement (tap gardé en repli, décision F4). |
 
 **Déploiement (aperçu web) :** ✅ en ligne et **automatique à chaque push**.
 - **URL publique : https://ppcrepin.github.io/kartme/** (GitHub Pages)
