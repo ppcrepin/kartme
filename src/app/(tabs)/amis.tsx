@@ -64,11 +64,19 @@ export default function AmisScreen() {
   }, [query]);
 
   async function onAccept(f: FriendEntry) {
-    await acceptFriendRequest(f.friendshipId);
+    try {
+      await acceptFriendRequest(f.friendshipId);
+    } catch {
+      /* réseau : la liste sera resynchronisée par le refresh */
+    }
     refresh();
   }
   async function onDelete(f: FriendEntry) {
-    await deleteFriendship(f.friendshipId);
+    try {
+      await deleteFriendship(f.friendshipId);
+    } catch {
+      /* idem */
+    }
     refresh();
   }
 
@@ -138,8 +146,13 @@ export default function AmisScreen() {
                 {lists.sent.map((f) => (
                   <Card key={f.friendshipId}>
                     <View style={styles.row}>
-                      <Avatar name={f.username} size={36} />
-                      <Body style={styles.flex}>{f.username}</Body>
+                      <Pressable
+                        style={[styles.row, styles.flex]}
+                        onPress={() => router.push(`/pilot/${f.pilotId}`)}
+                        accessibilityRole="button">
+                        <Avatar name={f.username} size={36} />
+                        <Body style={styles.flex}>{f.username}</Body>
+                      </Pressable>
                       <Pressable onPress={() => onDelete(f)} accessibilityRole="button" style={styles.action}>
                         <Muted>{t.friends.cancel}</Muted>
                       </Pressable>

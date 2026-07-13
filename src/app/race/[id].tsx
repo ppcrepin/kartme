@@ -128,7 +128,7 @@ export default function RaceDetailScreen() {
   async function onAddPilot() {
     const check = validateGhostName(name);
     if (!check.ok) {
-      setNameError(t.auth.errors[check.error ?? 'generic']);
+      setNameError(t.races.nameErrors[check.error ?? 'generic']);
       return;
     }
     setNameError(null);
@@ -202,8 +202,11 @@ export default function RaceDetailScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Pressable onPress={() => router.replace('/(tabs)')} accessibilityRole="button" style={styles.back}>
-          <Muted>← {t.tabs.races}</Muted>
+        <Pressable
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
+          accessibilityRole="button"
+          style={styles.back}>
+          <Muted>←</Muted>
         </Pressable>
 
         {!race ? (
@@ -342,12 +345,13 @@ export default function RaceDetailScreen() {
                         const addable = friends.filter(
                           (f) => !participants.some((p) => p.profileId === f.pilotId),
                         );
-                        if (friends.length === 0) return null;
                         return (
                           <View style={styles.friendPick}>
                             <Label>{t.friends.addToRace}</Label>
-                            {addable.length === 0 ? (
-                              <Muted>—</Muted>
+                            {friends.length === 0 ? (
+                              <Muted>{t.friends.noFriendsYet}</Muted>
+                            ) : addable.length === 0 ? (
+                              <Muted>{t.friends.allFriendsAdded}</Muted>
                             ) : (
                               <View style={styles.friendChips}>
                                 {addable.map((f) => (

@@ -207,7 +207,7 @@ export default function PilotScreen() {
                   <Body style={styles.duelDash}>—</Body>
                   <View style={styles.duelSide}>
                     <Body style={styles.duelScore}>{duel.theirWins}</Body>
-                    <Muted>{t.friends.them}</Muted>
+                    <Muted numberOfLines={1}>{pilot.username}</Muted>
                   </View>
                 </View>
               ) : (
@@ -236,7 +236,9 @@ export default function PilotScreen() {
                   </Card>
                 ) : null}
 
-                {history.length > 0 ? (
+                {history.length === 0 ? (
+                  <Muted>{t.profile.historyEmpty}</Muted>
+                ) : (
                   <View style={styles.historySection}>
                     <Label>{t.profile.historyOther}</Label>
                     {history.map((h, i) => (
@@ -263,14 +265,12 @@ export default function PilotScreen() {
                       </Pressable>
                     ))}
                   </View>
-                ) : null}
+                )}
               </>
             ) : null}
 
-            {/* Signalement / blocage */}
-            {reported ? (
-              <Muted style={styles.center}>{t.friends.reportSent}</Muted>
-            ) : reporting ? (
+            {/* Signalement / blocage — bloquer reste possible après un signalement */}
+            {reporting ? (
               <Card>
                 <Label>{t.friends.reportTitle}</Label>
                 <View style={styles.reportRow}>
@@ -280,13 +280,18 @@ export default function PilotScreen() {
                 </View>
               </Card>
             ) : (
-              <View style={styles.footRow}>
-                <Pressable onPress={() => setReporting(true)} accessibilityRole="button" style={styles.footBtn}>
-                  <Muted>{t.friends.report}</Muted>
-                </Pressable>
-                <Pressable onPress={onBlock} accessibilityRole="button" style={styles.footBtn}>
-                  <Muted>{t.friends.block}</Muted>
-                </Pressable>
+              <View style={styles.footCol}>
+                {reported ? <Muted style={styles.center}>{t.friends.reportSent}</Muted> : null}
+                <View style={styles.footRow}>
+                  {!reported ? (
+                    <Pressable onPress={() => setReporting(true)} accessibilityRole="button" style={styles.footBtn}>
+                      <Muted>{t.friends.report}</Muted>
+                    </Pressable>
+                  ) : null}
+                  <Pressable onPress={onBlock} accessibilityRole="button" style={styles.footBtn}>
+                    <Muted>{t.friends.block}</Muted>
+                  </Pressable>
+                </View>
               </View>
             )}
           </>
@@ -330,6 +335,7 @@ const styles = StyleSheet.create({
   historyPos: { fontFamily: fonts.serifBlack, fontSize: 18, width: 22, textAlign: 'center', color: colors.ink },
   historyDelta: { fontWeight: '800' },
   reportRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  footCol: { gap: spacing.sm },
   footRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xl },
   footBtn: { paddingVertical: spacing.sm },
   center: { textAlign: 'center' },

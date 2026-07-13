@@ -102,10 +102,14 @@ type RawFriendship = {
 export async function getFriendshipWith(pilotId: string): Promise<FriendshipState> {
   const { data: auth } = await supabase.auth.getUser();
   const me = auth.user?.id;
+  // Filtre explicite sur la paire (lui, moi) — on ne s'appuie pas uniquement
+  // sur la RLS pour écarter les relations de tiers.
   const { data, error } = await supabase
     .from('friendships')
     .select('id, requester_id, addressee_id, status')
-    .or(`requester_id.eq.${pilotId},addressee_id.eq.${pilotId}`)
+    .or(
+      `and(requester_id.eq.${me},addressee_id.eq.${pilotId}),and(requester_id.eq.${pilotId},addressee_id.eq.${me})`,
+    )
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return { status: 'none', friendshipId: null };

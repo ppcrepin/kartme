@@ -46,24 +46,13 @@ export default function RankScreen() {
     });
   }
 
-  async function onConfirmPresents() {
-    setBusy(true);
-    setError(null);
-    try {
-      // Les absents n'ont pas couru : on les retire de la course.
-      for (const pid of absents) {
-        await removeParticipant(pid);
-      }
-      const present = participants.filter((p) => !absents.has(p.id));
-      setParticipants(present);
-      setOrdered(present);
-      setTapOrder([]);
-      setStep('order');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur');
-    } finally {
-      setBusy(false);
-    }
+  function onConfirmPresents() {
+    // Rien n'est écrit en base ici : le retrait effectif des absents se fait
+    // à la validation finale (revenir en arrière n'a donc aucun effet).
+    const present = participants.filter((p) => !absents.has(p.id));
+    setOrdered(present);
+    setTapOrder([]);
+    setStep('order');
   }
 
   function toggleTap(pid: string) {
@@ -71,11 +60,15 @@ export default function RankScreen() {
   }
 
   async function onValidate() {
-    const order =
-      mode === 'drag' ? ordered.map((p) => p.id) : tapOrder;
+    const order = mode === 'drag' ? ordered.map((p) => p.id) : tapOrder;
     setBusy(true);
     setError(null);
     try {
+      // Les absents n'ont pas couru : retirés seulement maintenant, juste
+      // avant le calcul (le moteur exige l'ensemble exact des participants).
+      for (const pid of absents) {
+        await removeParticipant(pid);
+      }
       await submitRaceResults(id!, order);
       router.replace(`/race/${id}`);
     } catch (e) {
@@ -84,9 +77,10 @@ export default function RankScreen() {
     }
   }
 
-  const presentCount = participants.length - absents.size;
-  const tapComplete = tapOrder.length === participants.length && participants.length >= 2;
-  const canValidate = mode === 'drag' ? participants.length >= 2 : tapComplete;
+  const present = participants.filter((p) => !absents.has(p.id));
+  const presentCount = present.length;
+  const tapComplete = tapOrder.length === present.length && present.length >= 2;
+  const canValidate = mode === 'drag' ? ordered.length >= 2 : tapComplete;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -155,7 +149,7 @@ export default function RankScreen() {
               />
             ) : (
               <View style={styles.list}>
-                {participants.map((p) => {
+                {present.map((p) => {
                   const pos = tapOrder.indexOf(p.id);
                   const ranked = pos >= 0;
                   return (
