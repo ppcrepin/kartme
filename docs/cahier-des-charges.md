@@ -236,7 +236,7 @@ Gratuit, sans publicité ni paiement au démarrage — **monétisation étudiée
 
 ## 15. Ce qui est donc figé aujourd'hui (résumé rapide)
 
-Stack technique · formule et paramètres Elo (K=32, diviseur 400, plancher 100, range cible 100-2500) · 6 grades (noms + bornes + couleurs + icônes) · 10 badges (+ icônes) · cycle de vie complet d'une course (dont modif avant saisie, signalement non-bloquant, pas de RSVP ni temps au tour) · système d'amis et de profils fantômes (rétention, fusion, exclusion du classement Amis) · règles de pseudo · profil public par défaut + option privée · notifications (heures de silence, ton) · modération manuelle + filtre de mots · limite 10 courses/jour · principes RGPD/accessibilité · design (Editorial Grand Prix / Rosso Corsa, formes, couleurs de grade, 40 écrans rendus + audités) · périmètre du MVP · lancement en beta fermée.
+Stack technique · formule et paramètres Elo (K=64, diviseur 800 depuis le 2026-07-13, plancher 100, range cible 100-2500) · 6 grades (noms + bornes + couleurs + icônes) · 10 badges (+ icônes) · cycle de vie complet d'une course (dont modif avant saisie, signalement non-bloquant, pas de RSVP ni temps au tour) · système d'amis et de profils fantômes (rétention, fusion, exclusion du classement Amis) · règles de pseudo · profil public par défaut + option privée · notifications (heures de silence, ton) · modération manuelle + filtre de mots · limite 10 courses/jour · principes RGPD/accessibilité · design (Editorial Grand Prix / Rosso Corsa, formes, couleurs de grade, 40 écrans rendus + audités) · périmètre du MVP · lancement en beta fermée.
 
 ## 16. Ce qui reste ouvert
 

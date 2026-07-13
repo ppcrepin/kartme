@@ -27,7 +27,8 @@
 | **1.5 Profil, historique & grades** | ✅ **en ligne & validé** — profil complet (Elo en grand, médaillon + jauge, stats, **courbe d'Elo**, teaser badges), échelle des grades (R2), historique cliquable (R5). |
 | **🏁 PHASE 1 (MVP jouable)** | ✅ **TERMINÉE** — compte → course → classement → Elo → profil, la boucle complète tourne en prod. |
 | **2.1 Amis** | ✅ **en ligne, testé & audité** — recherche (privés : grade seul), demandes, fiche pilote + face-à-face **+ stats/courbe/historique de l'ami**, blocage (demandes ET courses), signalement M1, amis sélectionnables dans une course. *Passage Reviewer adversarial effectué (10 correctifs). Déblocage UI → lot 2.5.* |
-| Phase 2 (suite) | ⏭️ prochain : lot 2.2 (Classements) |
+| **2.2 Classements** | 🟡 **code prêt, à activer** — écran L1 (bascule Amis/Global, ma ligne surlignée, rang épinglé si hors page, pagination), RPC `get_leaderboard`/`get_my_rank` (amis sans fantômes B1, privés non-amis exclus du Global A6, bloqués masqués, classé = ≥1 course), 4 scénarios de tests DB. *Reste : coller `leaderboard.sql` sur Supabase + test PO.* |
+| Phase 2 (suite) | ⏭️ ensuite : lot 2.3 (Badges) |
 
 **Déploiement (aperçu web) :** ✅ en ligne et **automatique à chaque push**.
 - **URL publique : https://ppcrepin.github.io/kartme/** (GitHub Pages)
