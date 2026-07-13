@@ -16,6 +16,7 @@ export type GradeKey =
 export interface Grade {
   key: GradeKey;
   name: string;
+  monogram: string; // monogramme 2 lettres (stand-in avant l'icône définitive)
   min: number;
   max: number | null; // null = pas de plafond
   color: string;
@@ -23,12 +24,12 @@ export interface Grade {
 
 /** Ordonné du plus bas au plus haut. Bornes contiguës, sans trou ni chevauchement. */
 export const GRADES: Grade[] = [
-  { key: 'kartambolage', name: 'Kartambolage', min: 100, max: 699, color: gradeColors.kartambolage },
-  { key: 'roueLibre', name: 'Roue Libre', min: 700, max: 999, color: gradeColors.roueLibre },
-  { key: 'rookie', name: 'Rookie', min: 1000, max: 1299, color: gradeColors.rookie },
-  { key: 'missile', name: 'Missile des Stands', min: 1300, max: 1699, color: gradeColors.missile },
-  { key: 'fusee', name: 'Fusée du Paddock', min: 1700, max: 2099, color: gradeColors.fusee },
-  { key: 'legende', name: 'Légende du Bitume', min: 2100, max: null, color: gradeColors.legende },
+  { key: 'kartambolage', name: 'Kartambolage', monogram: 'KA', min: 100, max: 699, color: gradeColors.kartambolage },
+  { key: 'roueLibre', name: 'Roue Libre', monogram: 'RL', min: 700, max: 999, color: gradeColors.roueLibre },
+  { key: 'rookie', name: 'Rookie', monogram: 'RK', min: 1000, max: 1299, color: gradeColors.rookie },
+  { key: 'missile', name: 'Missile des Stands', monogram: 'MS', min: 1300, max: 1699, color: gradeColors.missile },
+  { key: 'fusee', name: 'Fusée du Paddock', monogram: 'FP', min: 1700, max: 2099, color: gradeColors.fusee },
+  { key: 'legende', name: 'Légende du Bitume', monogram: 'LB', min: 2100, max: null, color: gradeColors.legende },
 ];
 
 /** Plancher d'Elo (cahier §5.1) : l'Elo ne descend jamais sous 100. */

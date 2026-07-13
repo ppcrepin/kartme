@@ -12,14 +12,14 @@
 
 > **À la reprise du projet :** relire d'abord `AGENTS.md` (architecture d'exécution — l'équipe des 6 agents et le pipeline restent le mode de travail), puis `docs/cahier-des-charges.md`, puis cette section.
 
-**Dernière session : 2026-07-12.**
+**Dernière session : 2026-07-13.**
 
 | Lot | État |
 |---|---|
 | 0.0 Prérequis | 🟡 en cours — *action Product Owner* : acheter `kartsquad.app`, recherche d'antériorité de marque (INPI/EUIPO), ouvrir comptes Apple/Google (non urgents) |
 | **0.1 Init & CI** | ✅ **livré** — app Expo (4 onglets), TypeScript strict, ESLint, Jest (vert), Playwright câblé, CI GitHub Actions |
-| 0.2 Design system & i18n | ⏭️ **prochain lot** |
-| 0.3 Données & sécurité | ☐ à faire |
+| **0.2 Design system & i18n** | ✅ **livré** — police Fraunces (OFL), tokens figés (rampe grades pierre→rouge, palette d'états), 9 composants de base, socle i18n (fr), galerie en ligne |
+| 0.3 Données & sécurité | ⏭️ **prochain lot** |
 | Phases 1 → 4 | ☐ à faire |
 
 **Déploiement (aperçu web) :** ✅ en ligne et **automatique à chaque push**.
@@ -28,7 +28,7 @@
 - CI qualité : `.github/workflows/ci.yml` (typecheck · lint · tests unitaires).
 - Doc d'architecture IT : `docs/architecture-it.html`.
 
-**Prochaine étape :** démarrer le **lot 0.2 (design system + logo/wordmark)**.
+**Prochaine étape :** démarrer le **lot 0.3 (schéma de données & sécurité — socle Supabase)**. *(Le logo/wordmark + icône d'app restent à planifier dans un lot d'identité dédié.)*
 
 ## Vue d'ensemble
 
@@ -61,14 +61,15 @@ Légende agents : 🎨 Design/UX · ⚙️ Backend · 📱 Frontend · 🔒 Séc
 - **Dépend de** : 0.0.
 - **Reste à traiter plus tard** (non bloquant) : Prettier explicite, projet Supabase cloud + secrets (→ 0.3), e2e Playwright dans la CI (→ après 0.2), protection de branche.
 
-### Lot 0.2 — Design system & i18n (socle)
-- 🎨 **Tokens Rosso Corsa** figés (fond carbone, rouge #e10600, rampe de grades terracotta→or, blanc cassé, typo serif+sans, espacements, rayons — angles nets + boutons pilule) ; **choix de la police serif définitive** sous licence *(E2, stratégique)*.
-- 🎨 **Palette d'états sémantiques** (succès/erreur/avertissement) distincte du rouge de marque *(E3, stratégique)*.
-- 📱 Implémentation du **design system en composants** réutilisables (bouton pilule, carte, avatar-initiales, tags, tabbar, filet damier, jauge, médaillon de grade, mini-icônes badges/grades) + thème.
-- 📱 **Socle i18n** (français, toutes les chaînes externalisées).
-- 🧪 **Galerie de composants** (Storybook ou écran de démo) couvrant tous les composants de base.
-- **Critères d'acceptation** : la galerie rend tous les composants conformes aux maquettes (`docs/ecrans-complets.html`) ; changer une chaîne se fait via i18n ; contrastes/focus vérifiés.
-- **Dépend de** : 0.1. **Validation PO** : police + palette sémantique.
+### Lot 0.2 — Design system & i18n (socle) ✅ *(livré le 2026-07-13)*
+- ✅ 🎨 **Tokens figés** (`src/constants/theme.ts`) : fond carbone, rouge #e10600, **rampe de grades pierre→bronze→argent→jaune→orange→rouge** *(révisée avec le PO)*, palette d'états, espacements, rayons. **Police serif définitive : Fraunces** (OFL, libre) via `@expo-google-fonts/fraunces` *(E2 tranché)*.
+- ✅ 🎨 **Palette d'états sémantiques** distincte du rouge de marque : succès #5fb27d, avertissement #e9a23b, **erreur #ff3d71 (rose-corsa)**, info #5b9bd5 — toujours doublée d'un signe *(E3 tranché)*.
+- ✅ 📱 **Composants réutilisables** (`src/components/ui/`) : Title/Heading/Body/Muted/Label, Button (pilule), Card, Avatar-initiales, Tag, GradeMedal, Gauge, Banner (états), CheckeredRule (filet damier).
+- ✅ 📱 **Socle i18n** (`src/i18n/`, français, chaînes externalisées, catalogue swap-ready).
+- ✅ 🧪 **Galerie de composants** : écran `/design-system` (accessible depuis l'onglet Profil) rendant tous les composants — visible sur le lien en ligne.
+- **Critères d'acceptation** : ✅ galerie rendant tous les composants ; ✅ chaînes via i18n ; ✅ typecheck + lint + tests verts ; ✅ export web OK.
+- **Dépend de** : 0.1. **Validé par le PO** : police Fraunces, palette d'erreur, rampe de grades.
+- **Reporté** (non bloquant) : détection auto de la langue de l'appareil (à rebrancher au 2e langage) ; icônes de grade définitives (déjà dessinées) en remplacement des monogrammes ; logo/wordmark (lot d'identité dédié).
 
 ### Lot 0.3 — Schéma de données & sécurité (socle)
 - ⚙️ **Schéma Postgres** + migrations : `profiles` (comptes), `ghost_profiles`, `circuits`, `races`, `participations`, `results`, `friendships`, `badges` + `user_badges`, `reports`, `notifications`, `elo_history`.

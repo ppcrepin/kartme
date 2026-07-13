@@ -1,9 +1,10 @@
 import { Screen, Muted } from '@/components/screen';
+import { t } from '@/i18n';
 
 export default function ClassementsScreen() {
   return (
-    <Screen title="Classements">
-      <Muted>Amis et Global — à venir.</Muted>
+    <Screen title={t.tabs.rankings}>
+      <Muted>{t.screens.rankingsEmpty}</Muted>
     </Screen>
   );
 }

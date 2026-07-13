@@ -1,31 +1,33 @@
 import { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, fonts, spacing } from '@/constants/theme';
+import { CheckeredRule } from '@/components/ui';
+import { Title } from '@/components/ui/text';
+import { colors, spacing } from '@/constants/theme';
 
 /**
- * Conteneur d'écran commun : fond carbone, marges, titre serif.
- * Squelette du lot 0.1 — le design system complet arrive au lot 0.2.
+ * Conteneur d'écran commun : fond carbone, marges, filet damier + titre.
  */
 export function Screen({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.body}>
-        <Text style={styles.title}>{title}</Text>
+        <View style={styles.rule}>
+          <CheckeredRule cells={10} />
+        </View>
+        <Title>{title}</Title>
         {children}
       </View>
     </SafeAreaView>
   );
 }
 
-export function Muted({ children }: { children: ReactNode }) {
-  return <Text style={styles.muted}>{children}</Text>;
-}
+// Muted reste disponible depuis les écrans existants.
+export { Muted } from '@/components/ui/text';
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: spacing.sm },
-  title: { color: colors.ink, fontFamily: fonts.serif, fontSize: 26, fontWeight: '800' },
-  muted: { color: colors.inkDim, fontSize: 14, lineHeight: 20 },
+  body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: spacing.md },
+  rule: { width: 64 },
 });

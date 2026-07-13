@@ -1,9 +1,10 @@
 import { Screen, Muted } from '@/components/screen';
+import { t } from '@/i18n';
 
 export default function CoursesScreen() {
   return (
-    <Screen title="Courses">
-      <Muted>Il est 2h moins le kart — bientôt, crée ta première course.</Muted>
+    <Screen title={t.tabs.races}>
+      <Muted>{t.screens.racesEmpty}</Muted>
     </Screen>
   );
 }
