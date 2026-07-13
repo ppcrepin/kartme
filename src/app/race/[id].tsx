@@ -4,13 +4,14 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CircuitPicker } from '@/components/circuit-picker';
+import { DateTimeField } from '@/components/date-time-field';
 import { ShareCard } from '@/components/share-card';
 import { Avatar, Button, Card, Field } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
-import { formatDateInput, formatRaceDate, formatTimeInput, parseDateTime } from '@/lib/datetime';
+import { formatRaceDate } from '@/lib/datetime';
 import {
   addGhostParticipant,
   addSelfParticipant,
@@ -40,8 +41,7 @@ export default function RaceDetailScreen() {
 
   const [editing, setEditing] = useState(false);
   const [editCircuit, setEditCircuit] = useState<Circuit | null>(null);
-  const [editDate, setEditDate] = useState('');
-  const [editTime, setEditTime] = useState('');
+  const [editWhen, setEditWhen] = useState<Date>(() => new Date());
 
   const refresh = useCallback(async () => {
     if (!id) return;
@@ -90,16 +90,13 @@ export default function RaceDetailScreen() {
   function startEdit() {
     if (!race) return;
     setEditCircuit(race.circuit);
-    setEditDate(formatDateInput(new Date(race.scheduled_at)));
-    setEditTime(formatTimeInput(new Date(race.scheduled_at)));
+    setEditWhen(new Date(race.scheduled_at));
     setEditing(true);
   }
 
   async function onSaveEdit() {
     if (!editCircuit) return;
-    const when = parseDateTime(editDate, editTime);
-    if (!when) return;
-    await updateRace(id!, editCircuit.id, when);
+    await updateRace(id!, editCircuit.id, editWhen);
     setEditing(false);
     await refresh();
   }
@@ -124,14 +121,7 @@ export default function RaceDetailScreen() {
           <View style={styles.section}>
             <Title>{t.races.edit}</Title>
             <CircuitPicker value={editCircuit} onChange={setEditCircuit} />
-            <View style={styles.dateRow}>
-              <View style={styles.flex}>
-                <Field label={t.races.date} value={editDate} onChangeText={setEditDate} placeholder={t.races.dateHint} />
-              </View>
-              <View style={styles.time}>
-                <Field label={t.races.time} value={editTime} onChangeText={setEditTime} placeholder={t.races.timeHint} />
-              </View>
-            </View>
+            <DateTimeField label={t.races.date} value={editWhen} onChange={setEditWhen} />
             <Button label={t.races.save} onPress={onSaveEdit} />
             <Button label={t.common.cancel} variant="ghost" onPress={() => setEditing(false)} />
           </View>
