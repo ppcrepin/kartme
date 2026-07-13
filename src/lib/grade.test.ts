@@ -1,4 +1,4 @@
-import { ELO_FLOOR, GRADES, gradeForElo } from './grade';
+import { ELO_FLOOR, GRADES, gradeForElo, gradeProgress } from './grade';
 
 describe('gradeForElo', () => {
   it('place l\'Elo de départ (1000) dans Rookie', () => {
@@ -31,5 +31,30 @@ describe('gradeForElo', () => {
     }
     expect(GRADES[0].min).toBe(ELO_FLOOR);
     expect(GRADES[GRADES.length - 1].max).toBeNull();
+  });
+});
+
+describe('gradeProgress', () => {
+  it('à 1150, mi-chemin de Rookie → il reste 150 avant Missile', () => {
+    const p = gradeProgress(1150);
+    expect(p.current.key).toBe('rookie');
+    expect(p.next?.key).toBe('missile');
+    expect(p.progress).toBeCloseTo(0.5, 6);
+    expect(p.remaining).toBe(150);
+  });
+
+  it('au début d’un grade, la jauge part de 0', () => {
+    const p = gradeProgress(1300);
+    expect(p.current.key).toBe('missile');
+    expect(p.progress).toBe(0);
+    expect(p.remaining).toBe(400);
+  });
+
+  it('au grade maximal, la jauge est pleine et rien ne reste', () => {
+    const p = gradeProgress(2300);
+    expect(p.current.key).toBe('legende');
+    expect(p.next).toBeNull();
+    expect(p.progress).toBe(1);
+    expect(p.remaining).toBe(0);
   });
 });

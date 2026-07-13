@@ -46,3 +46,29 @@ export function gradeForElo(elo: number): Grade {
   // Au-dessus de la dernière borne : Légende.
   return GRADES[GRADES.length - 1];
 }
+
+export interface GradeProgress {
+  current: Grade;
+  /** null si déjà au grade le plus haut. */
+  next: Grade | null;
+  /** Avancement 0–1 dans le grade courant (1 si dernier grade). */
+  progress: number;
+  /** Points restants avant le grade suivant (0 si dernier grade). */
+  remaining: number;
+}
+
+/** Position dans l'échelle des grades (pour la jauge du profil). */
+export function gradeProgress(elo: number): GradeProgress {
+  const current = gradeForElo(elo);
+  const index = GRADES.findIndex((g) => g.key === current.key);
+  const next = index < GRADES.length - 1 ? GRADES[index + 1] : null;
+  if (!next) return { current, next: null, progress: 1, remaining: 0 };
+  const clamped = Math.max(ELO_FLOOR, Math.round(elo));
+  const span = next.min - current.min;
+  return {
+    current,
+    next,
+    progress: Math.min(1, Math.max(0, (clamped - current.min) / span)),
+    remaining: Math.max(0, next.min - clamped),
+  };
+}

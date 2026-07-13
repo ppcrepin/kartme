@@ -1,24 +1,216 @@
-import { useRouter } from 'expo-router';
-import { View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Screen, Muted } from '@/components/screen';
-import { Button } from '@/components/ui';
-import { spacing } from '@/constants/theme';
+import { EloCurve } from '@/components/elo-curve';
+import { Screen } from '@/components/screen';
+import { Avatar, Button, Card, Gauge, GradeMedal } from '@/components/ui';
+import { Body, Label, Muted, Title } from '@/components/ui/text';
+import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
+import { formatRaceDate } from '@/lib/datetime';
+import { gradeProgress } from '@/lib/grade';
+import {
+  getEloCurve,
+  getMyProfile,
+  getRaceHistory,
+  statsFromHistory,
+  type EloPoint,
+  type HistoryEntry,
+  type MyProfile,
+} from '@/lib/profile';
+
+const fmtDelta = (d: number) => (d > 0 ? `▲ +${d}` : d < 0 ? `▼ ${d}` : '—');
+const deltaColor = (d: number) => (d > 0 ? colors.pos : d < 0 ? colors.accent : colors.inkDim);
 
 export default function ProfilScreen() {
   const router = useRouter();
   const { session, signOut } = useAuth();
 
+  const [profile, setProfile] = useState<MyProfile | null>(null);
+  const [curve, setCurve] = useState<EloPoint[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      Promise.all([getMyProfile(), getEloCurve(), getRaceHistory()])
+        .then(([p, c, h]) => {
+          if (!active) return;
+          setProfile(p);
+          setCurve(c);
+          setHistory(h);
+        })
+        .catch(() => {});
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
+
+  if (!profile) {
+    return (
+      <Screen title={t.tabs.profile}>
+        <Muted>…</Muted>
+      </Screen>
+    );
+  }
+
+  const gp = gradeProgress(profile.elo);
+  const stats = statsFromHistory(history);
+
   return (
     <Screen title={t.tabs.profile}>
-      <Muted>{t.screens.profileSubtitle}</Muted>
-      {session?.user.email ? <Muted>{session.user.email}</Muted> : null}
-      <View style={{ marginTop: spacing.md, gap: spacing.sm, alignItems: 'flex-start' }}>
-        <Button label={t.gallery.open} variant="ghost" onPress={() => router.push('/design-system')} />
-        <Button label={t.auth.signOut} variant="ghost" onPress={signOut} />
-      </View>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Identité + Elo + grade */}
+        <Card>
+          <View style={styles.identityRow}>
+            <Avatar name={profile.username} size={52} />
+            <View style={styles.flex}>
+              <Title style={styles.username}>{profile.username}</Title>
+              {session?.user.email ? <Muted>{session.user.email}</Muted> : null}
+            </View>
+            <GradeMedal grade={gp.current} size={46} />
+          </View>
+
+          <View style={styles.eloRow}>
+            <View>
+              <Label>{t.profile.eloLabel}</Label>
+              <Body style={styles.eloBig}>{profile.elo}</Body>
+            </View>
+            <View style={styles.flex}>
+              <Body style={[styles.gradeName, { color: gp.current.color }]}>{gp.current.name}</Body>
+              <Gauge value={gp.progress} color={gp.current.color} />
+              <Muted style={styles.nextGrade}>
+                {gp.next
+                  ? t.profile.nextGrade.replace('%n', String(gp.remaining)).replace('%g', gp.next.name)
+                  : t.profile.maxGrade}
+              </Muted>
+            </View>
+          </View>
+        </Card>
+
+        {/* Stats */}
+        <View style={styles.statsRow}>
+          <Stat label={t.profile.races} value={stats.races} />
+          <Stat label={t.profile.wins} value={stats.wins} />
+          <Stat label={t.profile.podiums} value={stats.podiums} />
+        </View>
+
+        {/* Courbe */}
+        <Card>
+          <Label>{t.profile.curve}</Label>
+          {curve.length === 0 ? (
+            <Muted style={styles.curveEmpty}>{t.profile.curveEmpty}</Muted>
+          ) : (
+            <EloCurve points={curve} />
+          )}
+        </Card>
+
+        {/* Badges — teaser (le système arrive au lot 2.3) */}
+        <Card>
+          <Label>{t.profile.badges}</Label>
+          <View style={styles.badgesRow}>
+            {[0, 1, 2, 3].map((i) => (
+              <View key={i} style={styles.badgeLock}>
+                <Body style={styles.badgeLockTxt}>🔒</Body>
+              </View>
+            ))}
+          </View>
+          <Muted style={styles.badgesSoon}>{t.profile.badgesSoon}</Muted>
+        </Card>
+
+        {/* Échelle des grades */}
+        <Button label={t.profile.gradesLadder} variant="ghost" onPress={() => router.push('/grades')} />
+
+        {/* Historique */}
+        <View style={styles.section}>
+          <Label>{t.profile.history}</Label>
+          {history.length === 0 ? (
+            <Muted>{t.profile.historyEmpty}</Muted>
+          ) : (
+            history.map((h, i) => (
+              <Pressable
+                key={`${h.raceId}-${i}`}
+                onPress={() => h.raceId && router.push(`/race/${h.raceId}`)}
+                accessibilityRole="button">
+                <Card>
+                  <View style={styles.historyRow}>
+                    <Body style={styles.historyPos}>{h.position}</Body>
+                    <View style={styles.flex}>
+                      <Body>{h.circuitName ?? t.races.noCircuit}</Body>
+                      {h.scheduledAt ? <Muted>{formatRaceDate(h.scheduledAt)}</Muted> : null}
+                    </View>
+                    <View style={styles.historyElo}>
+                      <Body style={[styles.historyDelta, { color: deltaColor(h.eloDelta) }]}>
+                        {fmtDelta(h.eloDelta)}
+                      </Body>
+                      <Muted>{h.eloAfter}</Muted>
+                    </View>
+                  </View>
+                </Card>
+              </Pressable>
+            ))
+          )}
+        </View>
+
+        {/* Pied de page */}
+        <View style={styles.foot}>
+          <Button label={t.gallery.open} variant="ghost" onPress={() => router.push('/design-system')} />
+          <Button label={t.auth.signOut} variant="ghost" onPress={signOut} />
+        </View>
+      </ScrollView>
     </Screen>
   );
 }
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <Card style={styles.stat}>
+      <Body style={styles.statValue}>{value}</Body>
+      <Muted style={styles.statLabel}>{label}</Muted>
+    </Card>
+  );
+}
+
+const styles = StyleSheet.create({
+  content: { gap: spacing.md, paddingBottom: spacing.xxl * 2 },
+  flex: { flex: 1 },
+  identityRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  username: { fontSize: 22, lineHeight: 26 },
+  eloRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing.lg,
+    marginTop: spacing.lg,
+  },
+  eloBig: { fontFamily: fonts.serifBlack, fontSize: 40, lineHeight: 44, color: colors.ink },
+  gradeName: { fontWeight: '800', marginBottom: spacing.xs },
+  nextGrade: { marginTop: spacing.xs, fontSize: 12 },
+  statsRow: { flexDirection: 'row', gap: spacing.sm },
+  stat: { flex: 1, alignItems: 'center', paddingVertical: spacing.md },
+  statValue: { fontFamily: fonts.serifBlack, fontSize: 24, color: colors.ink },
+  statLabel: { fontSize: 11 },
+  curveEmpty: { marginTop: spacing.sm },
+  badgesRow: { flexDirection: 'row', gap: spacing.sm, marginVertical: spacing.sm },
+  badgeLock: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.line2,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeLockTxt: { opacity: 0.5 },
+  badgesSoon: { fontSize: 12 },
+  section: { gap: spacing.sm },
+  historyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  historyPos: { fontFamily: fonts.serifBlack, fontSize: 18, width: 22, textAlign: 'center', color: colors.ink },
+  historyElo: { alignItems: 'flex-end' },
+  historyDelta: { fontWeight: '800' },
+  foot: { gap: spacing.sm, marginTop: spacing.md, alignItems: 'flex-start' },
+});
