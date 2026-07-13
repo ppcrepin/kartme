@@ -22,7 +22,6 @@ export const fr = {
   },
   screens: {
     racesEmpty: 'Aucune course pour le moment. Crée la première !',
-    rankingsEmpty: 'Les classements arriveront avec tes premières courses.',
     friendsEmpty: 'Invite tes amis pour lancer la compétition.',
     profileSubtitle: 'Ton Elo, tes grades et tes badges apparaîtront ici.',
   },
@@ -162,6 +161,20 @@ export const fr = {
     addToRace: 'Ajouter un ami à la course',
     noFriendsYet: 'Tes amis apparaîtront ici — va en ajouter depuis l’onglet Amis.',
     allFriendsAdded: 'Tous tes amis sont déjà dans la course.',
+  },
+  rankings: {
+    scopeFriends: 'Amis',
+    scopeGlobal: 'Global',
+    me: '(toi)',
+    myRank: 'Ta place : %r · %e Elo',
+    notRankedYet: 'Termine ta première course pour entrer au classement.',
+    emptyFriends: 'Aucun pilote classé parmi tes amis — courez ensemble !',
+    emptyGlobal: 'Aucun pilote classé pour l’instant.',
+    loadMore: 'Afficher la suite',
+    loadError: 'Impossible de charger le classement. Vérifie ta connexion et réessaie.',
+    retry: 'Réessayer',
+    ghostHint: 'Les profils fantômes ne sont classés qu’en Global et n’ont pas encore de fiche pilote.',
+    ghostLabel: '%s, profil fantôme',
   },
   profile: {
     eloLabel: 'Elo',
