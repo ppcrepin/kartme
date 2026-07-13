@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { PanResponder, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts, spacing } from '@/constants/theme';
@@ -28,41 +28,56 @@ interface DragListProps<T> {
 /**
  * Liste réordonnables par glisser-déposer (poignée ≡ à droite de chaque ligne).
  * PanResponder : fonctionne à la souris (web) comme au doigt (mobile).
- * Lignes de hauteur fixe pour un calcul de position simple et fiable.
+ *
+ * Important : les PanResponder sont créés UNE FOIS par position (stables entre
+ * rendus) — un gestionnaire recréé en plein geste perd le suivi du doigt.
+ * Ils lisent les données vivantes via une ref.
  */
 export function DragList<T>({ items, keyOf, renderItem, onReorder, onDraggingChange }: DragListProps<T>) {
   const [drag, setDrag] = useState<{ index: number; dy: number } | null>(null);
 
-  // Les gestionnaires sont recréés à chaque rendu : leurs closures voient
-  // toujours la liste courante — pas besoin de ref.
-  const targetIndex = (from: number, dy: number) =>
-    clamp(from + Math.round(dy / STEP), 0, items.length - 1);
+  const liveRef = useRef({ items, onReorder, onDraggingChange });
+  useEffect(() => {
+    liveRef.current = { items, onReorder, onDraggingChange };
+  }, [items, onReorder, onDraggingChange]);
 
-  function makeResponder(index: number) {
-    return PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        setDrag({ index, dy: 0 });
-        onDraggingChange?.(true);
-      },
-      onPanResponderMove: (_evt, g) => {
-        setDrag({ index, dy: g.dy });
-      },
-      onPanResponderRelease: (_evt, g) => {
-        const to = targetIndex(index, g.dy);
-        setDrag(null);
-        onDraggingChange?.(false);
-        if (to !== index) onReorder(move(items, index, to));
-      },
-      onPanResponderTerminate: () => {
-        setDrag(null);
-        onDraggingChange?.(false);
-      },
-    });
-  }
+  /* eslint-disable react-hooks/refs -- la ref n'est lue que dans les
+     callbacks de geste (jamais pendant le rendu) : le create() au rendu ne
+     fait que les enregistrer. */
+  const responders = useMemo(
+    () =>
+      Array.from({ length: items.length }, (_, index) =>
+        PanResponder.create({
+          onStartShouldSetPanResponder: () => true,
+          onMoveShouldSetPanResponder: () => true,
+          // Ne pas céder le geste au défilement une fois le drag commencé.
+          onPanResponderTerminationRequest: () => false,
+          onShouldBlockNativeResponder: () => true,
+          onPanResponderGrant: () => {
+            setDrag({ index, dy: 0 });
+            liveRef.current.onDraggingChange?.(true);
+          },
+          onPanResponderMove: (_evt, g) => {
+            setDrag({ index, dy: g.dy });
+          },
+          onPanResponderRelease: (_evt, g) => {
+            const list = liveRef.current.items;
+            const to = clamp(index + Math.round(g.dy / STEP), 0, list.length - 1);
+            setDrag(null);
+            liveRef.current.onDraggingChange?.(false);
+            if (to !== index) liveRef.current.onReorder(move(list, index, to));
+          },
+          onPanResponderTerminate: () => {
+            setDrag(null);
+            liveRef.current.onDraggingChange?.(false);
+          },
+        }),
+      ),
+    [items.length],
+  );
 
-  const dropAt = drag ? targetIndex(drag.index, drag.dy) : null;
+  /* eslint-enable react-hooks/refs */
+  const dropAt = drag ? clamp(drag.index + Math.round(drag.dy / STEP), 0, items.length - 1) : null;
 
   return (
     <View style={styles.list}>
@@ -84,7 +99,7 @@ export function DragList<T>({ items, keyOf, renderItem, onReorder, onDraggingCha
             ]}>
             <View style={styles.rowContent}>{renderItem(item, index)}</View>
             <View
-              {...makeResponder(index).panHandlers}
+              {...(responders[index]?.panHandlers ?? {})}
               style={[styles.handle, Platform.OS === 'web' && ({ touchAction: 'none', cursor: 'grab' } as object)]}
               accessibilityLabel="Réordonner"
               accessibilityHint="Glisser pour déplacer ce pilote">
