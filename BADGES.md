@@ -11,6 +11,11 @@ Les jeux de mots viennent de l'univers karting/course (voir aussi `PUNS.md`). Ch
 
 ---
 
+> ⏳ **À revoir avec le PO (2026-07-13)** : la liste MVP ci-dessous a été retenue
+> au cadrage ; le PO souhaite la repasser en revue (noms, conditions, seuils).
+> Voir aussi les seuils provisoires marqués dans la migration `…_badges.sql`
+> (Kart-astrophe ≤ −48, Lanterne rouge ≥ 3 pilotes, « après minuit » 00h–5h).
+
 ## ✅ Retenus pour le MVP
 
 | # | Badge | Jeu de mots | Condition |
