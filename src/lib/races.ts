@@ -32,6 +32,7 @@ export interface Participant {
   ghostId: string | null;
   name: string;
   isSelf: boolean;
+  elo: number;
 }
 
 // ── Circuits ───────────────────────────────────────────────────────────────
@@ -126,14 +127,14 @@ type RawParticipation = {
   id: string;
   profile_id: string | null;
   ghost_id: string | null;
-  profile: { username: string } | null;
-  ghost: { display_name: string } | null;
+  profile: { username: string; elo: number } | null;
+  ghost: { display_name: string; elo: number } | null;
 };
 
 export async function listParticipants(raceId: string, selfId?: string): Promise<Participant[]> {
   const { data, error } = await supabase
     .from('participations')
-    .select('id, profile_id, ghost_id, profile:profiles(username), ghost:ghost_profiles(display_name)')
+    .select('id, profile_id, ghost_id, profile:profiles(username, elo), ghost:ghost_profiles(display_name, elo)')
     .eq('race_id', raceId)
     .order('created_at');
   if (error) throw new Error(error.message);
@@ -143,6 +144,7 @@ export async function listParticipants(raceId: string, selfId?: string): Promise
     ghostId: p.ghost_id,
     name: p.profile?.username ?? p.ghost?.display_name ?? '—',
     isSelf: !!selfId && p.profile_id === selfId,
+    elo: p.profile?.elo ?? p.ghost?.elo ?? 1000,
   }));
 }
 
@@ -180,6 +182,7 @@ export interface RaceResult {
   position: number;
   name: string;
   isSelf: boolean;
+  eloBefore: number;
   eloAfter: number;
   eloDelta: number;
 }
@@ -195,6 +198,7 @@ export async function submitRaceResults(raceId: string, orderedParticipationIds:
 
 type RawResult = {
   position: number;
+  elo_before: number;
   elo_after: number;
   elo_delta: number;
   participation: {
@@ -207,7 +211,7 @@ type RawResult = {
 export async function listResults(raceId: string, selfId?: string): Promise<RaceResult[]> {
   const { data, error } = await supabase
     .from('results')
-    .select('position, elo_after, elo_delta, participation:participations(profile_id, profile:profiles(username), ghost:ghost_profiles(display_name))')
+    .select('position, elo_before, elo_after, elo_delta, participation:participations(profile_id, profile:profiles(username), ghost:ghost_profiles(display_name))')
     .eq('race_id', raceId)
     .order('position');
   if (error) throw new Error(error.message);
@@ -215,7 +219,27 @@ export async function listResults(raceId: string, selfId?: string): Promise<Race
     position: r.position,
     name: r.participation?.profile?.username ?? r.participation?.ghost?.display_name ?? '—',
     isSelf: !!selfId && r.participation?.profile_id === selfId,
+    eloBefore: r.elo_before,
     eloAfter: r.elo_after,
     eloDelta: r.elo_delta,
   }));
+}
+
+/**
+ * Abonnement temps réel aux changements d'une course (ex. l'admin valide le
+ * classement → l'écran du participant bascule tout seul). Renvoie la fonction
+ * de désabonnement. Nécessite le realtime activé sur la table `races`.
+ */
+export function onRaceUpdate(raceId: string, callback: () => void): () => void {
+  const channel = supabase
+    .channel(`race-${raceId}`)
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'races', filter: `id=eq.${raceId}` },
+      callback,
+    )
+    .subscribe();
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }
