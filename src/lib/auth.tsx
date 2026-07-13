@@ -12,6 +12,19 @@ if (typeof window !== 'undefined') {
   WebBrowser.maybeCompleteAuthSession();
 }
 
+/**
+ * URL de retour après OAuth / reset. Sur le web, on reconstruit explicitement
+ * l'adresse de l'app en incluant le sous-chemin de déploiement (EXPO_BASE_URL,
+ * ex. « /kartme »), car le calcul automatique l'oublie sous GitHub Pages.
+ */
+function appRedirectUrl(): string {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const base = process.env.EXPO_BASE_URL ?? '';
+    return `${window.location.origin}${base}/`.replace(/\/+$/, '/');
+  }
+  return Linking.createURL('/');
+}
+
 type AuthResult = { error: string | null };
 
 interface AuthState {
@@ -89,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signInWithGoogle(): Promise<AuthResult> {
-    const redirectTo = Linking.createURL('/');
+    const redirectTo = appRedirectUrl();
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo, skipBrowserRedirect: Platform.OS !== 'web' },
@@ -113,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function resetPassword(email: string): Promise<AuthResult> {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: Linking.createURL('/'),
+      redirectTo: appRedirectUrl(),
     });
     return { error: error?.message ?? null };
   }
