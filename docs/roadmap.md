@@ -26,7 +26,8 @@
 | **1.4 Déroulé & résultats** | ✅ **en ligne & testé** — « Qui était présent ? » (C6b), **glisser-déposer** validé en prod (+ tap en repli, F4), attente animée + **temps réel activé** (C8), podium (C9), détail par paire (C10), partage résultats (C11 v1). *Signalement (A2) → lot modération. Image PNG → polish pré-beta.* |
 | **1.5 Profil, historique & grades** | ✅ **en ligne & validé** — profil complet (Elo en grand, médaillon + jauge, stats, **courbe d'Elo**, teaser badges), échelle des grades (R2), historique cliquable (R5). |
 | **🏁 PHASE 1 (MVP jouable)** | ✅ **TERMINÉE** — compte → course → classement → Elo → profil, la boucle complète tourne en prod. |
-| Phase 2 (Social & gamification) | ⏭️ **prochain : lot 2.1 (Amis)** |
+| **2.1 Amis** | 🟡 **code livré** — recherche de pilotes (privés : grade seul), demandes reçues/envoyées/amis, fiche pilote + **face-à-face**, blocage (demandes ET courses), signalement M1, **amis sélectionnables dans une course**. *Reste : coller le SQL dans Supabase + test en ligne.* |
+| Phase 2 (suite) | ⏭️ prochain : lot 2.2 (Classements) |
 
 **Déploiement (aperçu web) :** ✅ en ligne et **automatique à chaque push**.
 - **URL publique : https://ppcrepin.github.io/kartme/** (GitHub Pages)

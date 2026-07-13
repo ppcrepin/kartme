@@ -22,9 +22,11 @@ import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
 import { formatRaceDate } from '@/lib/datetime';
 import { pairwiseBreakdown } from '@/lib/elo';
+import { listFriends, type FriendEntry } from '@/lib/friends';
 import { gradeForElo } from '@/lib/grade';
 import {
   addGhostParticipant,
+  addProfileParticipant,
   addSelfParticipant,
   deleteRace,
   getRace,
@@ -84,6 +86,7 @@ export default function RaceDetailScreen() {
   const [race, setRace] = useState<Race | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [results, setResults] = useState<RaceResult[]>([]);
+  const [friends, setFriends] = useState<FriendEntry[]>([]);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
@@ -95,14 +98,16 @@ export default function RaceDetailScreen() {
 
   const refresh = useCallback(async () => {
     if (!id) return;
-    const [r, p, res] = await Promise.all([
+    const [r, p, res, f] = await Promise.all([
       getRace(id),
       listParticipants(id, selfId),
       listResults(id, selfId),
+      listFriends().catch(() => [] as FriendEntry[]),
     ]);
     setRace(r);
     setParticipants(p);
     setResults(res);
+    setFriends(f);
   }, [id, selfId]);
 
   useFocusEffect(
@@ -140,6 +145,16 @@ export default function RaceDetailScreen() {
   async function onRemove(participationId: string) {
     await removeParticipant(participationId);
     await refresh();
+  }
+
+  async function onAddFriend(profileId: string) {
+    setBusy(true);
+    try {
+      await addProfileParticipant(id!, profileId);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onToggleSelf() {
@@ -323,6 +338,36 @@ export default function RaceDetailScreen() {
                         </View>
                       </View>
                       <Button label={t.races.add} onPress={onAddPilot} disabled={busy} />
+
+                      {/* Sélection parmi mes amis (lot 2.1) */}
+                      {(() => {
+                        const addable = friends.filter(
+                          (f) => !participants.some((p) => p.profileId === f.pilotId),
+                        );
+                        if (friends.length === 0) return null;
+                        return (
+                          <View style={styles.friendPick}>
+                            <Label>{t.friends.addToRace}</Label>
+                            {addable.length === 0 ? (
+                              <Muted>—</Muted>
+                            ) : (
+                              <View style={styles.friendChips}>
+                                {addable.map((f) => (
+                                  <Pressable
+                                    key={f.pilotId}
+                                    onPress={() => onAddFriend(f.pilotId)}
+                                    accessibilityRole="button"
+                                    style={styles.friendChip}>
+                                    <Avatar name={f.username} size={24} />
+                                    <Body style={styles.friendChipTxt}>+ {f.username}</Body>
+                                  </Pressable>
+                                ))}
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })()}
+
                       {!selfParticipating ? (
                         <Button label={t.races.rejoin} variant="ghost" onPress={onToggleSelf} />
                       ) : null}
@@ -367,6 +412,21 @@ const styles = StyleSheet.create({
   pilotRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   remove: { color: colors.inkDim2 },
   addRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  friendPick: { gap: spacing.sm, marginTop: spacing.sm },
+  friendChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  friendChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.surface,
+    borderColor: colors.line2,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 4,
+    paddingLeft: 4,
+    paddingRight: spacing.md,
+  },
+  friendChipTxt: { fontSize: 13, fontWeight: '700' },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   posNum: { fontFamily: fonts.serifBlack, fontSize: 18, width: 22, textAlign: 'center', color: colors.ink },
   delta: { fontWeight: '800' },

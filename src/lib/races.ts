@@ -163,6 +163,14 @@ export async function addGhostParticipant(raceId: string, name: string): Promise
   if (error) throw new Error(error.message);
 }
 
+/** Ajoute un ami (compte inscrit) comme pilote de la course. */
+export async function addProfileParticipant(raceId: string, profileId: string): Promise<void> {
+  const { error } = await supabase
+    .from('participations')
+    .insert({ race_id: raceId, profile_id: profileId });
+  if (error) throw new Error(error.message);
+}
+
 /** (Ré)ajoute le créateur comme pilote de sa course. */
 export async function addSelfParticipant(raceId: string): Promise<void> {
   const { data: auth } = await supabase.auth.getUser();
