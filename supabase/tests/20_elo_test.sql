@@ -127,6 +127,37 @@ begin
   raise notice 'Scénario 4 (12 joueurs, somme nulle) ✔';
 end $$;
 
+-- ═══ Scénario 5 : anti-triche — l'Elo ne s'échange QU'ENTRE INSCRITS ═══
+-- Ordre : P (1er) · fantôme (2e) · Q (3e). Seul le duel P↔Q compte ; le fantôme
+-- intercalé est ignoré et son Elo reste figé.
+do $$
+declare
+  P uuid := 'e0000000-0000-0000-0000-000000000021';
+  Q uuid := 'e0000000-0000-0000-0000-000000000022';
+  gid uuid := 'e0000000-0000-0000-0000-0000000000f9';
+  r uuid := '11110000-0000-0000-0000-000000000005';
+  pp uuid := 'ff000000-0000-0000-0000-000000000001';
+  pg uuid := 'ff000000-0000-0000-0000-000000000002';
+  pq uuid := 'ff000000-0000-0000-0000-000000000003';
+begin
+  perform tests.mk_user(P, 1000); perform tests.mk_user(Q, 1000);
+  insert into ghost_profiles (id, display_name, elo, created_by) values (gid, 'Fantôme', 1000, P);
+  insert into races (id, admin_id, scheduled_at) values (r, P, now());
+  insert into participations (id, race_id, profile_id) values (pp, r, P), (pq, r, Q);
+  insert into participations (id, race_id, ghost_id) values (pg, r, gid);
+
+  perform tests.call_submit(P, r, array[pp, pg, pq]); -- P 1er, fantôme 2e, Q 3e
+
+  -- P a battu Q (1 seul adversaire inscrit) : duel 1v1 → +32 / −32.
+  perform tests.eq((select elo from profiles where id = P), 1032, 'P (1er) → 1032 (duel vs Q seul)');
+  perform tests.eq((select elo from profiles where id = Q), 968,  'Q (3e) → 968');
+  perform tests.eq((select elo from ghost_profiles where id = gid), 1000, 'fantôme : Elo figé (1000)');
+  perform tests.eq((select elo_delta from results r2 join participations pa on pa.id = r2.participation_id where pa.ghost_id = gid), 0,
+                   'fantôme : Δ = 0');
+  perform tests.eq((select sum(elo_delta) from results where race_id = r), 0, 'somme des Δ nulle (fantôme inclus)');
+  raise notice 'Scénario 5 (anti-triche : Elo entre inscrits) ✔';
+end $$;
+
 do $$ begin raise notice 'Tous les tests Elo sont passés ✔'; end $$;
 
 rollback;

@@ -1,10 +1,10 @@
 import type { ReactElement } from 'react';
-import Svg, { Circle, Ellipse, Line, Path, Polyline, Rect } from 'react-native-svg';
+import Svg, { Circle, Line, Path, Polyline, Rect } from 'react-native-svg';
 
-// Icônes des 10 badges, tracées à la main dans docs/badges-icones.html
-// (source de vérité). Les primitives sont reprises telles quelles ; le style
-// vient du CSS d'origine : stroke-width 1.7, extrémités et jointures rondes,
-// aucun remplissage — appliqué ici sur le <Svg> parent et hérité.
+// Icônes des 12 badges (refonte 2026-07-13). Style hérité du <Svg> parent :
+// trait 1.7, extrémités/jointures rondes, aucun remplissage. Les 7 badges
+// d'origine reprennent la maquette docs/badges-icones.html ; « Voiture balai »,
+// « Midi moins le kart », « DRS », « Safety car » et « Push » sont neufs.
 
 export type BadgeKey =
   | 'kart_didentite'
@@ -12,13 +12,14 @@ export type BadgeKey =
   | 'champagne'
   | 'chapeaux_de_roues'
   | 'kart_astrophe'
-  | 'lanterne_rouge'
+  | 'voiture_balai'
   | 'tete_a_queue'
-  | 'deux_h_moins_le_kart'
+  | 'midi_moins_le_kart'
   | 'chef_ecurie'
-  | 'david_goliath';
+  | 'drs'
+  | 'safety_car'
+  | 'push';
 
-// Tracés dans l'ordre des badges 1 à 10 de la maquette.
 const ICONS: Record<BadgeKey, ReactElement> = {
   // 1. Kart d'identité — carte avec photo et lignes de texte.
   kart_didentite: (
@@ -72,18 +73,14 @@ const ICONS: Record<BadgeKey, ReactElement> = {
       <Path d="M33 14v8M29 18h8M31 15l4 6M35 15l-4 6" />
     </>
   ),
-  // 6. Lanterne rouge — lanterne suspendue.
-  lanterne_rouge: (
+  // 6. Voiture balai — balai (manche + tête en éventail).
+  voiture_balai: (
     <>
-      <Path d="M22 6a2 2 0 0 1 4 0" />
-      <Line x1={24} y1={8} x2={24} y2={9.8} />
-      <Path d="M20.5 12h7l-.6-2.2h-5.8z" />
-      <Ellipse cx={24} cy={24} rx={9} ry={11.5} />
-      <Line x1={16.4} y1={20} x2={31.6} y2={20} />
-      <Line x1={15.3} y1={24} x2={32.7} y2={24} />
-      <Line x1={16.4} y1={28} x2={31.6} y2={28} />
-      <Path d="M20.5 36h7l-.6 2.2h-5.8z" />
-      <Line x1={24} y1={38.4} x2={24} y2={41.6} />
+      <Line x1={34} y1={12} x2={23} y2={23} />
+      <Path d="M23 23L14 37h18z" />
+      <Line x1={18.5} y1={30} x2={16} y2={37} />
+      <Line x1={23} y1={30} x2={23} y2={37} />
+      <Line x1={27.5} y1={30} x2={30} y2={37} />
     </>
   ),
   // 7. Tête-à-queue — flèche en rotation, traces de gomme.
@@ -95,14 +92,15 @@ const ICONS: Record<BadgeKey, ReactElement> = {
       <Path d="M18 34c-1 2-1 3 0 4M28 34c1 1.5 1 3 0 4" />
     </>
   ),
-  // 8. Il est 2h moins le kart — horloge et croissant de lune.
-  deux_h_moins_le_kart: (
+  // 8. Midi moins le kart — horloge à ~11h45 et soleil (course du matin).
+  midi_moins_le_kart: (
     <>
-      <Circle cx={21} cy={25} r={12} />
-      <Line x1={21} y1={25} x2={12.5} y2={25} />
-      <Line x1={21} y1={25} x2={26} y2={18} />
-      <Circle cx={21} cy={25} r={1.3} />
-      <Path d="M38 9a5 5 0 1 0 4 8 6 6 0 0 1-4-8z" />
+      <Circle cx={20} cy={25} r={12} />
+      <Line x1={20} y1={25} x2={12} y2={25} />
+      <Line x1={20} y1={25} x2={19} y2={16} />
+      <Circle cx={20} cy={25} r={1.3} />
+      <Circle cx={38} cy={12} r={3.5} />
+      <Path d="M38 5v-2M38 19v2M31 12h-2M45 12h2M33.4 7.4l-1.4-1.4M42.6 16.6l1.4 1.4M42.6 7.4l1.4-1.4M33.4 16.6l-1.4 1.4" />
     </>
   ),
   // 9. Chef d'écurie — casque radio du muret des stands.
@@ -115,22 +113,41 @@ const ICONS: Record<BadgeKey, ReactElement> = {
       <Circle cx={25} cy={40} r={1.6} />
     </>
   ),
-  // 10. David contre Goliath — lance-pierre armé.
-  david_goliath: (
+  // 10. DRS — aileron arrière, volet ouvert (incliné).
+  drs: (
     <>
-      <Line x1={24} y1={43} x2={24} y2={30} />
-      <Line x1={21} y1={35} x2={27} y2={35} />
-      <Line x1={21} y1={38} x2={27} y2={38} />
-      <Path d="M24 30l-6.5-12M24 30l6.5-12" />
-      <Path d="M17.5 18L24 25l6.5-7" />
-      <Circle cx={24} cy={25} r={2.4} />
+      <Line x1={11} y1={15} x2={11} y2={33} />
+      <Line x1={37} y1={15} x2={37} y2={33} />
+      <Line x1={11} y1={31} x2={37} y2={31} />
+      <Line x1={11} y1={23} x2={37} y2={19} />
+      <Line x1={19} y1={31} x2={19} y2={21.7} />
+      <Line x1={29} y1={31} x2={29} y2={19.9} />
+    </>
+  ),
+  // 11. Safety car — voiture de profil avec gyrophare sur le toit.
+  safety_car: (
+    <>
+      <Line x1={7} y1={31} x2={41} y2={31} />
+      <Path d="M9 31v-5l4-4h6l3-4h6l3 8h4v5" />
+      <Path d="M19 22l3-4M28 22h-9" />
+      <Circle cx={16} cy={31} r={3} />
+      <Circle cx={32} cy={31} r={3} />
+      <Rect x={20} y={11} width={7} height={3.5} rx={1} />
+      <Line x1={23.5} y1={11} x2={23.5} y2={9} />
+    </>
+  ),
+  // 12. Push — courbe qui grimpe, flèche vers le haut (pendant de Kart-astrophe).
+  push: (
+    <>
+      <Polyline points="7,34 16,25 21,29 33,14" />
+      <Path d="M33 14l-7 1M33 14l-1 7" />
     </>
   ),
 };
 
 /**
- * Icône de badge au trait, fidèle à la maquette docs/badges-icones.html.
- * La couleur est imposée par l'appelant (badge débloqué ou grisé).
+ * Icône de badge au trait. La couleur est imposée par l'appelant (badge
+ * débloqué ou grisé).
  */
 export function BadgeIcon({
   badge,

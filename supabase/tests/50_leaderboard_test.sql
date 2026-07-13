@@ -126,16 +126,20 @@ begin
   raise notice 'Scénario 1 (classement Amis) ✔';
 end $$;
 
--- ═══ Scénario 2 : classement Global (publics + amis + fantômes non réclamés) ═══
+-- ═══ Scénario 2 : classement Global (publics + amis ; fantômes EXCLUS) ═══
+-- Depuis la refonte anti-triche, les fantômes n'ont plus d'Elo compétitif et
+-- ne figurent plus au classement (décision A du 2026-07-13).
 do $$
 declare A uuid := 'a0000000-0000-0000-0000-00000000000a';
 begin
   perform tests.eq(tests.rows_as(A, $q$ select count(*) from public.get_leaderboard('global', 100, 0) $q$),
-                   7, 'Global : 7 classés (Ghost, Bob, Tara, Tom, Carl, moi, Emma)');
-  perform tests.eq(tests.rows_as(A, $q$ select rank from public.get_leaderboard('global', 100, 0) where username = 'Ghost' $q$),
-                   1, 'Global : le fantôme (1400) est 1er');
+                   6, 'Global : 6 classés (Bob, Tara, Tom, Carl, moi, Emma)');
+  perform tests.eq(tests.rows_as(A, $q$ select count(*) from public.get_leaderboard('global', 100, 0) where ghost_id is not null $q$),
+                   0, 'Global : aucun fantôme (Elo non compétitif)');
+  perform tests.eq(tests.rows_as(A, $q$ select rank from public.get_leaderboard('global', 100, 0) where username = 'Bob' $q$),
+                   1, 'Global : Bob (1200) est 1er');
   perform tests.eq(tests.rows_as(A, $q$ select rank from public.get_leaderboard('global', 100, 0) where is_me $q$),
-                   6, 'Global : moi 6e');
+                   5, 'Global : moi 5e');
   perform tests.eq(tests.rows_as(A, $q$ select count(*) from public.get_leaderboard('global', 100, 0) where username = 'Dora' $q$),
                    0, 'Global : Dora (privée non-amie) invisible (A6)');
   perform tests.eq(tests.rows_as(A, $q$ select count(*) from public.get_leaderboard('global', 100, 0) where username = 'Emma' $q$),
@@ -144,10 +148,6 @@ begin
                    0, 'Global : Xavier (m''a bloquée) invisible');
   perform tests.eq(tests.rows_as(A, $q$ select count(*) from public.get_leaderboard('global', 100, 0) where username = 'Fred' $q$),
                    0, 'Global : Fred (0 course) non classé');
-  perform tests.eq(tests.rows_as(A, $q$ select count(*) from public.get_leaderboard('global', 100, 0) where username = 'Idle' $q$),
-                   0, 'Global : fantôme sans course non classé');
-  perform tests.eq(tests.rows_as(A, $q$ select count(*) from public.get_leaderboard('global', 100, 0) where username = 'Claimed' $q$),
-                   0, 'Global : fantôme réclamé exclu (représenté par son profil)');
   raise notice 'Scénario 2 (classement Global) ✔';
 end $$;
 
@@ -156,11 +156,11 @@ do $$
 declare A uuid := 'a0000000-0000-0000-0000-00000000000a';
 begin
   perform tests.eq(tests.rows_as(A, $q$ select rank from public.get_leaderboard('global', 100, 0) where username = 'Tara' $q$),
-                   3, 'Ex æquo : Tara (1150) 3e');
+                   2, 'Ex æquo : Tara (1150) 2e');
   perform tests.eq(tests.rows_as(A, $q$ select rank from public.get_leaderboard('global', 100, 0) where username = 'Tom' $q$),
-                   3, 'Ex æquo : Tom (1150) 3e aussi');
+                   2, 'Ex æquo : Tom (1150) 2e aussi');
   perform tests.eq(tests.rows_as(A, $q$ select rank from public.get_leaderboard('global', 100, 0) where username = 'Carl' $q$),
-                   5, 'Ex æquo : Carl (1100) 5e (le rang 4 saute)');
+                   4, 'Ex æquo : Carl (1100) 4e (le rang 3 saute)');
   raise notice 'Scénario 3 (ex æquo) ✔';
 end $$;
 
@@ -172,11 +172,11 @@ declare
 begin
   -- Pour Carl : Emma (privée, pas son amie) disparaît mais Xavier apparaît.
   perform tests.eq(tests.rows_as(C, $q$ select count(*) from public.get_leaderboard('global', 100, 0) $q$),
-                   7, 'Global vu par Carl : 7 classés');
+                   6, 'Global vu par Carl : 6 classés');
   perform tests.eq(tests.rows_as(C, $q$ select count(*) from public.get_leaderboard('global', 100, 0) where username = 'Emma' $q$),
                    0, 'Global vu par Carl : Emma invisible');
   perform tests.eq(tests.rows_as(C, $q$ select rank from public.get_leaderboard('global', 100, 0) where username = 'Xavier' $q$),
-                   6, 'Global vu par Carl : Xavier (1050) 6e');
+                   5, 'Global vu par Carl : Xavier (1050) 5e');
   -- Symétrie : le bloqueur (Xavier) ne voit pas non plus sa cible (Anna).
   perform tests.eq(tests.rows_as(X, $q$ select count(*) from public.get_leaderboard('global', 100, 0) where username = 'Anna' $q$),
                    0, 'Global vu par Xavier : Anna (qu''il a bloquée) invisible');
@@ -195,16 +195,16 @@ declare
   err text;
 begin
   perform tests.eq(tests.rows_as(A, $q$ select rank from public.get_my_rank('global') $q$),
-                   6, 'get_my_rank(global) : 6e');
+                   5, 'get_my_rank(global) : 5e');
   perform tests.eq(tests.rows_as(A, $q$ select rank from public.get_my_rank('friends') $q$),
                    2, 'get_my_rank(friends) : 2e');
   perform tests.eq(tests.rows_as(F, $q$ select count(*) from public.get_my_rank('global') $q$),
                    0, 'get_my_rank(global) : aucune ligne si jamais couru');
   perform tests.eq(tests.rows_as(F, $q$ select count(*) from public.get_my_rank('friends') $q$),
                    0, 'get_my_rank(friends) : aucune ligne si jamais couru');
-  -- Pagination : fenêtre (limit 2, offset 2) du Global de A → Tara(3), Tom(3).
+  -- Pagination : fenêtre (limit 2, offset 2) du Global de A → Tom(2), Carl(4).
   perform tests.eq(tests.rows_as(A, $q$ select min(rank) from public.get_leaderboard('global', 2, 2) $q$),
-                   3, 'pagination : la fenêtre commence au rang 3');
+                   2, 'pagination : la fenêtre commence au rang 2 (ex æquo à cheval)');
   perform tests.eq(tests.rows_as(A, $q$ select count(*) from public.get_leaderboard('global', 2, 2) $q$),
                    2, 'pagination : 2 lignes');
   -- Deux pages contiguës ne se chevauchent pas (même instantané).
@@ -217,11 +217,11 @@ begin
                    0, 'pagination : pages 1 et 2 disjointes');
   -- Garde-fous : limit null → défaut (100), limit 0 → rien, offset négatif → 0.
   perform tests.eq(tests.rows_as(A, $q$ select count(*) from public.get_leaderboard('global', null, 0) $q$),
-                   7, 'limit null → défaut raisonnable');
+                   6, 'limit null → défaut raisonnable');
   perform tests.eq(tests.rows_as(A, $q$ select count(*) from public.get_leaderboard('global', 0, 0) $q$),
                    0, 'limit 0 → aucune ligne');
   perform tests.eq(tests.rows_as(A, $q$ select count(*) from public.get_leaderboard('global', 100, -5) $q$),
-                   7, 'offset négatif → ramené à 0');
+                   6, 'offset négatif → ramené à 0');
   -- Portée inconnue → refus avec LE bon message (pas une autre erreur).
   perform tests.as_user(A);
   begin

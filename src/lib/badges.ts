@@ -9,18 +9,20 @@ import { supabase } from '@/lib/supabase';
 
 export type { BadgeKey };
 
-/** Les 10 badges MVP, dans l'ordre du catalogue (BADGES.md). */
+/** Les 12 badges MVP, dans l'ordre du catalogue (BADGES.md). */
 export const BADGE_KEYS: readonly BadgeKey[] = [
   'kart_didentite',
   'habitue_stands',
   'champagne',
   'chapeaux_de_roues',
   'kart_astrophe',
-  'lanterne_rouge',
+  'voiture_balai',
   'tete_a_queue',
-  'deux_h_moins_le_kart',
+  'midi_moins_le_kart',
   'chef_ecurie',
-  'david_goliath',
+  'drs',
+  'safety_car',
+  'push',
 ] as const;
 
 export interface UnlockedBadge {

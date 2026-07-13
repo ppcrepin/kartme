@@ -11,25 +11,27 @@ Les jeux de mots viennent de l'univers karting/course (voir aussi `PUNS.md`). Ch
 
 ---
 
-> ⏳ **À revoir avec le PO (2026-07-13)** : la liste MVP ci-dessous a été retenue
-> au cadrage ; le PO souhaite la repasser en revue (noms, conditions, seuils).
-> Voir aussi les seuils provisoires marqués dans la migration `…_badges.sql`
-> (Kart-astrophe ≤ −48, Lanterne rouge ≥ 3 pilotes, « après minuit » 00h–5h).
+> ✅ **Revu avec le PO le 2026-07-13** : liste portée à **12 badges** (renommages,
+> seuils actés, 2 ajouts positifs). Les badges de performance exigent une
+> **« course qui compte »** (≥ 2 comptes inscrits) — cohérent avec l'anti-triche
+> « Elo entre inscrits seulement » (voir `docs/integrite-elo.md`).
 
-## ✅ Retenus pour le MVP
+## ✅ Retenus pour le MVP (12)
 
 | # | Badge | Jeu de mots | Condition |
 |---|---|---|---|
 | 1 | Kart d'identité | "carte d'identité" | 1ère course jouée |
-| 2 | Habitué des stands | — | 10 courses jouées |
+| 2 | Habitué des stands | bidon des stands | 10 courses jouées |
 | 3 | Champagne ! | podium F1 | 1ère victoire |
 | 4 | Sur les chapeaux de roues | expression | 3 victoires d'affilée |
-| 5 | Kart-astrophe | "catastrophe" | Plus grosse chute d'Elo en une course |
-| 6 | Lanterne rouge | expression course | Finir dernier d'une course |
+| 5 | Kart-astrophe | "catastrophe" | Perdre **plus de 30** points d'Elo en une course |
+| 6 | Voiture balai | véhicule qui ferme la course | Finir dernier d'une course (3 pilotes ou plus) |
 | 7 | Tête-à-queue | figure de karting | Perdre un palier de grade entier |
-| 8 | Il est 2h moins le kart | LE jeu de mots d'origine | Course validée après minuit |
-| 9 | Chef d'écurie | rôle F1 | Organiser 10 courses |
-| 10 | David contre Goliath | référence | Battre un pilote 300+ Elo au-dessus de soi |
+| 8 | Midi moins le kart | "midi moins le quart" | Participer à une course **le matin** (avant midi) |
+| 9 | Chef d'écurie | rôle F1 | Organiser 10 courses qui comptent |
+| 10 | DRS | aileron F1 (dépassement) | Battre un pilote **inscrit** 300+ Elo au-dessus de soi |
+| 11 | Safety car | voiture de sécurité | 10 courses sans jamais finir dernier |
+| 12 | Push | « push ! » à la radio | Gagner **plus de 30** points d'Elo en une course |
 
 ---
 

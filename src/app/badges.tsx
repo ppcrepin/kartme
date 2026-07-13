@@ -10,7 +10,7 @@ import { t } from '@/i18n';
 import { BADGE_KEYS, listBadges, type BadgeKey, type UnlockedBadge } from '@/lib/badges';
 import { formatRaceDate } from '@/lib/datetime';
 
-/** R3 + R4 — catalogue des 10 badges ; taper un badge ouvre son détail. */
+/** R3 + R4 — catalogue des 12 badges ; taper un badge ouvre son détail. */
 export default function BadgesScreen() {
   const router = useRouter();
   const [unlocked, setUnlocked] = useState<Map<BadgeKey, UnlockedBadge> | null>(null);

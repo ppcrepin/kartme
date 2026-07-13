@@ -106,7 +106,6 @@ export default function ClassementsScreen() {
   }
 
   const meInList = current?.rows.some((r) => r.isMe) ?? false;
-  const hasGhosts = scope === 'global' && (current?.rows.some((r) => r.ghostId) ?? false);
 
   return (
     <Screen title={t.tabs.rankings}>
@@ -143,34 +142,24 @@ export default function ClassementsScreen() {
           <>
             {current.rows.map((row) => {
               const grade = gradeForElo(row.elo);
-              const isGhost = row.ghostId !== null;
-              const inner = (
-                <Card style={[row.isMe && styles.meCard, isGhost && styles.ghostCard]}>
-                  <View style={styles.row}>
-                    <Body style={styles.rank}>{row.rank}</Body>
-                    <Avatar name={row.username} size={36} />
-                    <View style={styles.flex}>
-                      <Body>
-                        {row.username}
-                        {row.isMe ? ` ${t.rankings.me}` : ''}
-                      </Body>
-                      <Muted style={{ color: grade.color }}>
-                        {grade.name} · {row.elo}
-                      </Muted>
-                    </View>
-                    <GradeMedal grade={grade} size={28} />
-                  </View>
-                </Card>
-              );
-              return isGhost ? (
-                <View
-                  key={rowKey(row)}
-                  accessibilityLabel={t.rankings.ghostLabel.replace('%s', row.username)}>
-                  {inner}
-                </View>
-              ) : (
+              return (
                 <Pressable key={rowKey(row)} onPress={() => openPilot(row)} accessibilityRole="button">
-                  {inner}
+                  <Card style={row.isMe ? styles.meCard : undefined}>
+                    <View style={styles.row}>
+                      <Body style={styles.rank}>{row.rank}</Body>
+                      <Avatar name={row.username} size={36} />
+                      <View style={styles.flex}>
+                        <Body>
+                          {row.username}
+                          {row.isMe ? ` ${t.rankings.me}` : ''}
+                        </Body>
+                        <Muted style={{ color: grade.color }}>
+                          {grade.name} · {row.elo}
+                        </Muted>
+                      </View>
+                      <GradeMedal grade={grade} size={28} />
+                    </View>
+                  </Card>
                 </Pressable>
               );
             })}
@@ -179,8 +168,6 @@ export default function ClassementsScreen() {
               <Button label={t.rankings.loadMore} onPress={onLoadMore} disabled={loadingMore} />
             ) : null}
             {moreFailed ? <Muted>{t.rankings.loadError}</Muted> : null}
-
-            {hasGhosts ? <Muted style={styles.hint}>{t.rankings.ghostHint}</Muted> : null}
 
             {!meInList ? (
               current.myRank ? (
@@ -209,7 +196,6 @@ const styles = StyleSheet.create({
   rank: { fontFamily: fonts.serifBlack, fontSize: 18, color: colors.inkDim, minWidth: 30, textAlign: 'center' },
   flex: { flex: 1 },
   meCard: { borderColor: colors.accent },
-  ghostCard: { opacity: 0.55 },
   hint: { marginTop: spacing.xs },
   center: { gap: spacing.md, alignItems: 'flex-start' },
 });
