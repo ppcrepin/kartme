@@ -46,3 +46,8 @@ example
 /playwright-report/
 /test-results/
 /e2e/.auth/
+
+# Env locale (les clés publiques Supabase vivent ici en dev)
+.env
+.env.local
+!.env.example

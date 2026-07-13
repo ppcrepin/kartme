@@ -3,6 +3,7 @@ export { Banner, type BannerKind } from './banner';
 export { Button } from './button';
 export { Card } from './card';
 export { CheckeredRule } from './checkered-rule';
+export { Field } from './field';
 export { Gauge } from './gauge';
 export { GradeMedal } from './grade-medal';
 export { Tag } from './tag';

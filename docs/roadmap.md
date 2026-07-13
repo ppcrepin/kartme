@@ -19,8 +19,9 @@
 | 0.0 Prérequis | 🟡 en cours — *action Product Owner* : acheter `kartsquad.app`, recherche d'antériorité de marque (INPI/EUIPO), ouvrir comptes Apple/Google (non urgents) |
 | **0.1 Init & CI** | ✅ **livré** — app Expo (4 onglets), TypeScript strict, ESLint, Jest (vert), Playwright câblé, CI GitHub Actions |
 | **0.2 Design system & i18n** | ✅ **livré** — police Fraunces (OFL), tokens figés (rampe grades pierre→rouge, palette d'états), 9 composants de base, socle i18n (fr), galerie en ligne |
-| **0.3 Données & sécurité** | ✅ **livré** — 7 tables cœur, RLS anti-triche, seed circuits FR, tests RLS verts (local + CI). *Reste ta part : créer le projet Supabase pour déployer.* |
-| Phase 1 (MVP) → 4 | ⏭️ **prochain : lot 1.1 (Auth)** |
+| **0.3 Données & sécurité** | ✅ **livré** — 7 tables cœur, RLS anti-triche, seed circuits FR, tests RLS verts. Base Supabase cloud **déployée** ✅ |
+| **1.1 Authentification** | 🟡 **code livré** — écrans connexion/inscription/pseudo, Supabase Auth (email + Google), garde de routes, filtre de pseudo. *Reste : brancher les clés (secrets GitHub) + config Google + désactiver la confirmation email → puis test en ligne.* |
+| Phase 1 (suite) → 4 | ☐ à faire |
 
 **Déploiement (aperçu web) :** ✅ en ligne et **automatique à chaque push**.
 - **URL publique : https://ppcrepin.github.io/kartme/** (GitHub Pages)

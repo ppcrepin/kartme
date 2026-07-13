@@ -32,6 +32,10 @@ jobs:
       - name: Export web (base URL /kartme)
         env:
           EXPO_BASE_URL: /kartme
+          # Clés publiques Supabase (secrets du dépôt). Absentes → l'app se
+          # déploie en mode « connexion bientôt active ».
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: npx expo export --platform web
 
       - name: SPA fallback (routes profondes → index)
