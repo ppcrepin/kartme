@@ -4,20 +4,20 @@ const five = (elos: number[]): PairInput[] =>
   elos.map((e, i) => ({ name: `P${i + 1}`, eloBefore: e, position: i + 1 }));
 
 describe('pairwiseBreakdown', () => {
-  it('5 joueurs à 1000 : le 1er totalise +16, le 3e 0, le 5e −16', () => {
+  it('5 joueurs à 1000 : le 1er totalise +32, le 3e 0, le 5e −32', () => {
     const players = five([1000, 1000, 1000, 1000, 1000]);
-    expect(totalDelta(pairwiseBreakdown(players[0], players))).toBeCloseTo(16, 6);
+    expect(totalDelta(pairwiseBreakdown(players[0], players))).toBeCloseTo(32, 6);
     expect(totalDelta(pairwiseBreakdown(players[2], players))).toBeCloseTo(0, 6);
-    expect(totalDelta(pairwiseBreakdown(players[4], players))).toBeCloseTo(-16, 6);
+    expect(totalDelta(pairwiseBreakdown(players[4], players))).toBeCloseTo(-32, 6);
   });
 
-  it('à Elo égal, chaque duel gagné vaut K/(n−1) × 0,5 (= +4 à 5 joueurs)', () => {
+  it('à Elo égal, chaque duel gagné vaut K/(n−1) × 0,5 (= +8 à 5 joueurs)', () => {
     const players = five([1000, 1000, 1000, 1000, 1000]);
     const first = pairwiseBreakdown(players[0], players);
     expect(first).toHaveLength(4);
     for (const duel of first) {
       expect(duel.beat).toBe(true);
-      expect(duel.points).toBeCloseTo(4, 6);
+      expect(duel.points).toBeCloseTo(8, 6);
     }
   });
 

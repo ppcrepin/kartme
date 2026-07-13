@@ -22,7 +22,7 @@
 | **0.3 Données & sécurité** | ✅ **livré** — 7 tables cœur, RLS anti-triche, seed circuits FR, tests RLS verts. Base Supabase cloud **déployée** ✅ |
 | **1.1 Authentification** | ✅ **en ligne & fonctionnel** — email **et Google** testés en prod (OAuth configuré : Google Cloud + Supabase), pseudo + profil + déconnexion. *Apple plus tard (compte dev à 99 $/an).* |
 | **1.2 Créer une course** | ✅ **en ligne & testé** — accueil, création (circuit + calendrier), participants (fantômes), partage lien + QR, édition/suppression. |
-| **1.3 Moteur Elo** | ✅ **en ligne & testé** — calcul serveur anti-triche déployé sur Supabase, tests DB (canonique +16/+8/0/−8/−16, somme nulle, plancher, 12 joueurs) ; saisie du classement au **tap** + résultats (Δ, grade). *Elo qui monte/descend vérifié en prod.* |
+| **1.3 Moteur Elo** | ✅ **en ligne & testé** — calcul serveur anti-triche déployé sur Supabase, tests DB (canonique +32/+16/0/−16/−32, somme nulle, plancher, 12 joueurs) ; saisie du classement au **tap** + résultats (Δ, grade). *Elo qui monte/descend vérifié en prod.* **Barème révisé le 2026-07-13 → K=64 · diviseur 800 (« Dynamique & amplitude », validé par simulation) : n'affecte que les courses futures, Elo existants conservés.* |
 | **1.4 Déroulé & résultats** | ✅ **en ligne & testé** — « Qui était présent ? » (C6b), **glisser-déposer** validé en prod (+ tap en repli, F4), attente animée + **temps réel activé** (C8), podium (C9), détail par paire (C10), partage résultats (C11 v1). *Signalement (A2) → lot modération. Image PNG → polish pré-beta.* |
 | **1.5 Profil, historique & grades** | ✅ **en ligne & validé** — profil complet (Elo en grand, médaillon + jauge, stats, **courbe d'Elo**, teaser badges), échelle des grades (R2), historique cliquable (R5). |
 | **🏁 PHASE 1 (MVP jouable)** | ✅ **TERMINÉE** — compte → course → classement → Elo → profil, la boucle complète tourne en prod. |
@@ -118,7 +118,7 @@ Légende agents : 🎨 Design/UX · ⚙️ Backend · 📱 Frontend · 🔒 Séc
 - **Dépend de** : 1.1.
 
 ### Lot 1.3 — Moteur Elo (cœur) *(pièce maîtresse)*
-- ⚙️ **Fonction de calcul Elo** (comparaisons par paires normalisées, **K=32**, diviseur **400**, plancher **100**) ; **mapping des grades** ; application **atomique** à la validation du classement ; **recalcul** dans la fenêtre de correction 24h.
+- ⚙️ **Fonction de calcul Elo** (comparaisons par paires normalisées, **K=64**, diviseur **800** — barème « Dynamique & amplitude » retenu le 2026-07-13, plancher **100**) ; **mapping des grades** ; application **atomique** à la validation du classement ; **recalcul** dans la fenêtre de correction 24h.
 - 🔒 Seul l'admin écrit les résultats (RLS) ; fenêtre de 24h contrôlée côté serveur ; recalcul serveur (non falsifiable côté client).
 - 🧪 **Tests unitaires étendus** : cas de référence (`elo_world.py` : +18/0/−3/−6/−9, détail par paire +6/+5/+4/+3), **somme nulle**, plancher 100, cas limites **2 et 12 joueurs**, propriété « battre plus fort rapporte plus ».
 - **Critères d'acceptation** : les résultats correspondent **exactement** aux calculs de référence ; somme des Δ nulle ; grades corrects ; recalcul cohérent après correction.

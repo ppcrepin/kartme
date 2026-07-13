@@ -56,23 +56,22 @@ Démocratiser l'accès au karting amateur via un système "Elo" façon échecs :
 - **Elo de départ** : 1000 pour tout nouveau joueur.
 - **Un seul Elo global** par joueur (pas d'Elo par circuit au démarrage).
 - **Pas de saisons**, pas de decay d'inactivité — Elo continu, figé jusqu'à la prochaine course.
-- **Facteur K = 32** (convention échecs, mouvements marqués).
-- **Diviseur = 400** (convention Elo standard).
-- **Plancher = 100** (l'Elo ne descend jamais en dessous).
+- **Facteur K = 64** et **diviseur = 800** — barème « Dynamique & amplitude » retenu le 2026-07-13 (validé par simulation) : la convention échecs (K=32 / div 400) rendait les hauts grades quasi inatteignables dans un groupe d'amis et la montée trop lente. K=64 double la vitesse de progression ; le diviseur 800 élargit l'amplitude (Fusée/Légende deviennent des objectifs crédibles). *(Historique : K=32 / diviseur 400 au lancement du projet.)*
+- **Plancher = 100** (l'Elo ne descend jamais en dessous), plafond 2500.
 
 ### 5.2 Formule (comparaisons par paires normalisées)
 
 Pour un joueur *i* face à chaque autre participant *j* d'une course à *n* joueurs (donc *n − 1* comparaisons) :
 
 ```
-E(i,j) = 1 / (1 + 10^((Elo_j − Elo_i) / 400))
+E(i,j) = 1 / (1 + 10^((Elo_j − Elo_i) / D))   avec D = 800 (diviseur)
 S(i,j) = 1 si i devant j, sinon 0
-ΔElo_i = K × Σⱼ [S(i,j) − E(i,j)] / (n − 1)
+ΔElo_i = K × Σⱼ [S(i,j) − E(i,j)] / (n − 1)     avec K = 64
 ```
 
 La division par `(n − 1)` normalise l'impact d'une course à *n* participants pour rester comparable à un duel 1 contre 1, quelle que soit la taille du groupe.
 
-**Propriété importante confirmée par simulation** : plus l'écart d'Elo entre deux joueurs est grand, plus une victoire du plus faible sur le plus fort rapporte de points (car cette victoire est statistiquement plus improbable, donc plus informative). Exemple chiffré : à écart nul, une victoire "à la régulière" rapporte 16 points (K=32) ; à 800 points d'écart, l'exploit du plus faible en rapporte près de 32.
+**Propriété importante confirmée par simulation** : plus l'écart d'Elo entre deux joueurs est grand, plus une victoire du plus faible sur le plus fort rapporte de points (car cette victoire est statistiquement plus improbable, donc plus informative). Avec le barème retenu (K=64), à écart nul une victoire "à la régulière" rapporte au plus **32 points** (K÷2).
 
 ### 5.3 Amplitude réelle de l'échelle (validée par simulation, pas choisie arbitrairement)
 
@@ -80,7 +79,7 @@ Une simulation (60-300 joueurs, plusieurs milliers de courses, tailles de groupe
 
 - **En tout début de vie de l'app** (petit groupe d'amis, peu de courses cumulées) : amplitude naturelle resserrée, environ **350 à 1700**.
 - **À plus grande échelle** (communauté large, historique de plusieurs milliers de courses cumulées, écart de niveau réellement marqué entre un très bon et un très faible joueur) : un joueur exceptionnel converge naturellement vers **~2300-2550**, le plancher à 100 capte les cas extrêmes en bas.
-- **Cible retenue** : range affiché 100-2500, avec le diviseur standard (400) — validé comme atteignable à terme, sans avoir besoin d'étirer artificiellement l'échelle (option envisagée un temps, écartée).
+- **Cible retenue** : range affiché 100-2500. Avec le barème « Dynamique & amplitude » (K=64 / diviseur 800), la simulation montre qu'un groupe d'amis de niveaux réalistes couvre déjà ~140–2050 sur quelques centaines de courses — toute l'échelle des grades devient jouable, sans étirer artificiellement.
 
 *Cette amplitude s'élargira donc naturellement avec l'usage réel de l'app — exactement comme aux échecs, où le range 100-2900 n'existe que parce qu'il y a des millions de parties cumulées.*
 

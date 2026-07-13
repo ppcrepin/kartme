@@ -5,8 +5,9 @@
  * chiffres, duel par duel.
  */
 
-export const K = 32;
-export const DIVISOR = 400;
+// Barème « Dynamique & amplitude » (aligné sur la fonction serveur).
+export const K = 64;
+export const DIVISOR = 800;
 
 export interface PairInput {
   name: string;

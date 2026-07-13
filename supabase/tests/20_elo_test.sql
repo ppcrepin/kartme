@@ -25,7 +25,7 @@ begin
   end if;
 end $$;
 
--- ═══ Scénario 1 : 5 joueurs à Elo égal (1000) → +16/+8/0/−8/−16 ═══
+-- ═══ Scénario 1 : 5 joueurs à Elo égal (1000) → +32/+16/0/−16/−32 (K=64) ═══
 do $$
 declare
   A uuid := 'e0000000-0000-0000-0000-000000000001';
@@ -48,14 +48,14 @@ begin
 
   perform tests.call_submit(A, r, array[pa, pb, pc, pd, pe]);
 
-  perform tests.eq((select elo from profiles where id = A), 1016, 'A (1er) → 1016');
-  perform tests.eq((select elo from profiles where id = B), 1008, 'B (2e) → 1008');
+  perform tests.eq((select elo from profiles where id = A), 1032, 'A (1er) → 1032');
+  perform tests.eq((select elo from profiles where id = B), 1016, 'B (2e) → 1016');
   perform tests.eq((select elo from profiles where id = C), 1000, 'C (3e) → 1000');
-  perform tests.eq((select elo from profiles where id = D), 992,  'D (4e) → 992');
-  perform tests.eq((select elo from profiles where id = E), 984,  'E (5e) → 984');
+  perform tests.eq((select elo from profiles where id = D), 984,  'D (4e) → 984');
+  perform tests.eq((select elo from profiles where id = E), 968,  'E (5e) → 968');
   perform tests.eq((select sum(elo_delta) from results where race_id = r), 0, 'somme des Δ nulle');
   perform tests.eq((select count(*) from results where race_id = r), 5, '5 résultats écrits');
-  perform tests.eq((select elo_delta from results r2 join participations p on p.id = r2.participation_id where p.profile_id = A), 18 - 2, 'Δ du 1er');
+  perform tests.eq((select elo_delta from results r2 join participations p on p.id = r2.participation_id where p.profile_id = A), 32, 'Δ du 1er');
   perform tests.eq((select count(*) from elo_history where race_id = r), 5, '5 lignes d''historique');
   perform tests.eq((select case when status = 'completed' then 1 else 0 end from races where id = r), 1, 'course clôturée');
   raise notice 'Scénario 1 (égalité 5 joueurs) ✔';
@@ -94,7 +94,7 @@ begin
   insert into races (id, admin_id, scheduled_at) values (r3, W, now());
   insert into participations (id, race_id, profile_id) values (pw, r3, W), (pl, r3, L);
   perform tests.call_submit(W, r3, array[pw, pl]);
-  perform tests.eq((select elo from profiles where id = W), 116, 'W (1er, 100) → 116');
+  perform tests.eq((select elo from profiles where id = W), 132, 'W (1er, 100) → 132 (K=64)');
   perform tests.eq((select elo from profiles where id = L), 100, 'L (2e, 100) reste au plancher 100');
   raise notice 'Scénario 3 (plancher) ✔';
 end $$;
