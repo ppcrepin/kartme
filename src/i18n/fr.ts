@@ -69,6 +69,8 @@ export const fr = {
     circuit: 'Circuit',
     circuitSearch: 'Rechercher un karting…',
     circuitAdd: 'Ajouter « %s »',
+    circuitBanned: 'Ce nom de circuit n’est pas autorisé.',
+    circuitAddError: 'Impossible d’ajouter ce circuit.',
     date: 'Date',
     time: 'Heure',
     dateHint: 'JJ/MM/AAAA',

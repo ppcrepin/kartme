@@ -1,4 +1,4 @@
-import { validateUsername } from './username';
+import { validateCircuitName, validateUsername } from './username';
 
 describe('validateUsername', () => {
   it('accepte un pseudo valide', () => {
@@ -28,5 +28,26 @@ describe('validateUsername', () => {
   it('n’exige pas l’unicité (deux fois le même pseudo passent)', () => {
     expect(validateUsername('Pilote').ok).toBe(true);
     expect(validateUsername('Pilote').ok).toBe(true);
+  });
+
+  it('bloque « con » mot isolé mais pas en sous-chaîne (pas de faux positif)', () => {
+    expect(validateUsername('espèce de con')).toMatchObject({ ok: false, error: 'banned' });
+    expect(validateUsername('Concombre').ok).toBe(true);
+  });
+});
+
+describe('validateCircuitName', () => {
+  it('accepte les kartings réels contenant « con » en sous-chaîne', () => {
+    expect(validateCircuitName('Karting de Concarneau').ok).toBe(true);
+    expect(validateCircuitName('Draveil-Concept').ok).toBe(true);
+  });
+
+  it('bloque un nom de circuit interdit', () => {
+    expect(validateCircuitName('Circuit de merde')).toMatchObject({ ok: false, error: 'banned' });
+    expect(validateCircuitName('n a z i')).toMatchObject({ ok: false, error: 'banned' });
+  });
+
+  it('rejette trop court (< 2)', () => {
+    expect(validateCircuitName('a')).toMatchObject({ ok: false, error: 'too_short' });
   });
 });

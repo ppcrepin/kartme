@@ -14,18 +14,36 @@ export interface UsernameCheck {
   error?: UsernameError;
 }
 
-// Liste de base, volontairement courte et extensible. Le filtre travaille sur
-// une forme normalisée (sans accents, sans séparateurs) pour éviter les
-// contournements simples (e-s-p-a-c-e-s, accents…).
-const BANNED = ['con', 'connard', 'salope', 'pute', 'merde', 'nazi', 'fdp', 'ntm', 'encule'];
+// Filtre à deux passes (miroir exact de public.contains_banned_word en base) :
+//  · SUB : tokens longs/sans ambiguïté → sous-chaîne sur la forme collée (attrape
+//    aussi les contournements espacés « n a z i ») ;
+//  · WORD : tokens courts/ambigus → MOT ISOLÉ seulement, pour ne pas bloquer des
+//    noms légitimes (Concarneau, Concorde, député…).
+const SUB_BANNED = ['connard', 'salope', 'encule', 'nazi', 'merde'];
+const WORD_BANNED = ['con', 'pute', 'fdp', 'ntm'];
 
-/** Normalise pour la comparaison : minuscules, sans accents, lettres/chiffres seuls. */
-function normalize(input: string): string {
+/** Minuscules + sans accents (diacritiques combinants retirés). */
+function fold(input: string): string {
   return input
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // retire les accents (diacritiques combinants)
-    .replace(/[^a-z0-9]/g, ''); // retire espaces/ponctuation
+    .replace(/[̀-ͯ]/g, '');
+}
+
+/** Forme collée (sans séparateurs), utilisée à l'inscription pour l'unicité visuelle. */
+function normalize(input: string): string {
+  return fold(input).replace(/[^a-z0-9]/g, '');
+}
+
+/** Vrai si le texte contient un mot interdit (deux passes, comme le serveur). */
+function containsBanned(input: string): boolean {
+  const collapsed = normalize(input);
+  if (SUB_BANNED.some((w) => collapsed.includes(w))) return true;
+  const tokens = fold(input)
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(' ');
+  return WORD_BANNED.some((w) => tokens.includes(w));
 }
 
 /** Valide un nom d'invité (profil fantôme) : 1–40 caractères + filtre de mots. */
@@ -33,7 +51,19 @@ export function validateGhostName(raw: string): UsernameCheck {
   const value = raw.trim();
   if (value.length === 0) return { ok: false, value, error: 'empty' };
   if (value.length > 40) return { ok: false, value, error: 'too_long' };
-  if (BANNED.some((word) => normalize(value).includes(word))) {
+  if (containsBanned(value)) {
+    return { ok: false, value, error: 'banned' };
+  }
+  return { ok: true, value };
+}
+
+/** Valide un nom de circuit : 2–80 caractères + filtre de mots (miroir de la contrainte SQL). */
+export function validateCircuitName(raw: string): UsernameCheck {
+  const value = raw.trim();
+  if (value.length === 0) return { ok: false, value, error: 'empty' };
+  if (value.length < 2) return { ok: false, value, error: 'too_short' };
+  if (value.length > 80) return { ok: false, value, error: 'too_long' };
+  if (containsBanned(value)) {
     return { ok: false, value, error: 'banned' };
   }
   return { ok: true, value };
@@ -46,8 +76,7 @@ export function validateUsername(raw: string): UsernameCheck {
   if (value.length < USERNAME_MIN) return { ok: false, value, error: 'too_short' };
   if (value.length > USERNAME_MAX) return { ok: false, value, error: 'too_long' };
 
-  const normalized = normalize(value);
-  if (BANNED.some((word) => normalized.includes(word))) {
+  if (containsBanned(value)) {
     return { ok: false, value, error: 'banned' };
   }
   return { ok: true, value };

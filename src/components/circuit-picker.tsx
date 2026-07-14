@@ -6,6 +6,7 @@ import { Body, Label, Muted } from '@/components/ui/text';
 import { colors, radius, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { createCircuit, searchCircuits, type Circuit } from '@/lib/races';
+import { validateCircuitName } from '@/lib/username';
 
 export function CircuitPicker({
   value,
@@ -18,6 +19,7 @@ export function CircuitPicker({
   const [results, setResults] = useState<Circuit[]>([]);
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
   useEffect(() => {
     if (value) return;
@@ -53,13 +55,21 @@ export function CircuitPicker({
   }
 
   const exact = results.some((r) => r.name.toLowerCase() === query.trim().toLowerCase());
-  const canAdd = query.trim().length >= 2 && !exact;
+  const nameCheck = validateCircuitName(query);
+  const banned = query.trim().length >= 2 && nameCheck.error === 'banned';
+  const canAdd = nameCheck.ok && !exact;
 
   async function onAdd() {
     setAdding(true);
+    setAddError(null);
     try {
       const c = await createCircuit(query.trim());
       onChange(c);
+    } catch (e) {
+      // Le serveur peut refuser (mot interdit, limite de création) : on n'affiche
+      // que ces messages métier ; toute autre erreur technique → message générique.
+      const msg = e instanceof Error ? e.message : '';
+      setAddError(/autoris|Trop de/i.test(msg) ? msg : t.races.circuitAddError);
     } finally {
       setAdding(false);
     }
@@ -81,6 +91,8 @@ export function CircuitPicker({
             <Body style={styles.addTxt}>{t.races.circuitAdd.replace('%s', query.trim())}</Body>
           </Pressable>
         ) : null}
+        {banned ? <Muted style={styles.err}>{t.races.circuitBanned}</Muted> : null}
+        {addError ? <Muted style={styles.err}>{addError}</Muted> : null}
       </View>
     </View>
   );
@@ -92,6 +104,7 @@ const styles = StyleSheet.create({
   row: { paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.sharp, backgroundColor: colors.surface },
   addRow: { backgroundColor: colors.surface2 },
   addTxt: { color: colors.accent, fontWeight: '700' },
+  err: { color: colors.accent, paddingHorizontal: spacing.sm, paddingTop: spacing.xs },
   selected: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderColor: colors.line, borderWidth: 1, borderRadius: radius.card, padding: spacing.md },
   selectedName: { fontWeight: '700' },
   flex: { flex: 1, gap: 2 },
