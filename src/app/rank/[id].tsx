@@ -9,17 +9,25 @@ import { Body, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
-import { listParticipants, removeParticipant, submitRaceResults, type Participant } from '@/lib/races';
+import {
+  correctRaceResults,
+  listParticipants,
+  removeParticipant,
+  resultOrder,
+  submitRaceResults,
+  type Participant,
+} from '@/lib/races';
 
 type Step = 'presents' | 'order';
 type Mode = 'drag' | 'tap';
 
 export default function RankScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, correct } = useLocalSearchParams<{ id: string; correct?: string }>();
+  const isCorrect = correct === '1'; // mode correction (lot 2.6) : roster figé, on ré-ordonne
   const router = useRouter();
   const { session } = useAuth();
 
-  const [step, setStep] = useState<Step>('presents');
+  const [step, setStep] = useState<Step>(isCorrect ? 'order' : 'presents');
   const [mode, setMode] = useState<Mode>('drag');
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [absents, setAbsents] = useState<Set<string>>(new Set());
@@ -32,9 +40,18 @@ export default function RankScreen() {
   useFocusEffect(
     useCallback(() => {
       listParticipants(id!, session?.user.id)
-        .then(setParticipants)
+        .then(async (parts) => {
+          setParticipants(parts);
+          // Correction : pré-remplir dans l'ordre du classement enregistré.
+          if (isCorrect) {
+            const order = await resultOrder(id!).catch(() => [] as string[]);
+            const byId = new Map(parts.map((p) => [p.id, p]));
+            const ord = order.map((pid) => byId.get(pid)).filter(Boolean) as Participant[];
+            setOrdered(ord.length ? ord : parts);
+          }
+        })
         .catch(() => {});
-    }, [id, session?.user.id]),
+    }, [id, session?.user.id, isCorrect]),
   );
 
   function toggleAbsent(pid: string) {
@@ -64,12 +81,17 @@ export default function RankScreen() {
     setBusy(true);
     setError(null);
     try {
-      // Les absents n'ont pas couru : retirés seulement maintenant, juste
-      // avant le calcul (le moteur exige l'ensemble exact des participants).
-      for (const pid of absents) {
-        await removeParticipant(pid);
+      if (isCorrect) {
+        // Correction : roster figé, on ne fait que réordonner.
+        await correctRaceResults(id!, order);
+      } else {
+        // Les absents n'ont pas couru : retirés seulement maintenant, juste
+        // avant le calcul (le moteur exige l'ensemble exact des participants).
+        for (const pid of absents) {
+          await removeParticipant(pid);
+        }
+        await submitRaceResults(id!, order);
       }
-      await submitRaceResults(id!, order);
       router.replace(`/race/${id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur');
@@ -125,8 +147,10 @@ export default function RankScreen() {
           </>
         ) : (
           <>
-            <Title>{t.races.rankingTitle}</Title>
-            <Muted>{mode === 'drag' ? t.races.dragHint : t.races.tapHint}</Muted>
+            <Title>{isCorrect ? t.races.correctTitle : t.races.rankingTitle}</Title>
+            <Muted>
+              {isCorrect ? t.races.correctHint : mode === 'drag' ? t.races.dragHint : t.races.tapHint}
+            </Muted>
 
             {mode === 'drag' ? (
               <DragList
@@ -187,7 +211,11 @@ export default function RankScreen() {
               {mode === 'tap' && tapOrder.length > 0 ? (
                 <Button label={t.races.reset} variant="ghost" onPress={() => setTapOrder([])} />
               ) : null}
-              <Button label={t.races.validateRanking} onPress={onValidate} disabled={!canValidate || busy} />
+              <Button
+                label={isCorrect ? t.races.confirmCorrection : t.races.validateRanking}
+                onPress={onValidate}
+                disabled={!canValidate || busy}
+              />
             </View>
           </>
         )}

@@ -33,10 +33,13 @@ import {
   getRace,
   listParticipants,
   listResults,
+  lockRace,
   onRaceUpdate,
   rematch,
   removeParticipant,
+  reopenRace,
   updateRace,
+  withinCorrectionWindow,
   type Circuit,
   type Participant,
   type Race,
@@ -127,6 +130,8 @@ export default function RaceDetailScreen() {
 
   const isAdmin = !!race && race.admin_id === selfId;
   const completed = race?.status === 'completed';
+  const locked = race?.status === 'locked';
+  const canCorrect = !!race && withinCorrectionWindow(race);
   const selfParticipating = participants.some((p) => p.isSelf);
 
   // Badges gagnés par MOI sur cette course (bandeau sous le podium).
@@ -211,6 +216,26 @@ export default function RaceDetailScreen() {
     }
   }
 
+  async function onLock() {
+    setBusy(true);
+    try {
+      await lockRace(id!);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onReopen() {
+    setBusy(true);
+    try {
+      await reopenRace(id!);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const shareUrl = `${appBaseUrl()}race/${id}`;
 
   // Résumé texte des résultats (podium) pour le partage.
@@ -254,7 +279,7 @@ export default function RaceDetailScreen() {
                 <Title>{race.circuit?.name ?? t.races.noCircuit}</Title>
                 <Muted>{formatRaceDate(race.scheduled_at)}</Muted>
               </View>
-              {isAdmin && !completed ? (
+              {isAdmin && !completed && !locked ? (
                 <Pressable onPress={startEdit} accessibilityRole="button">
                   <Muted style={styles.editLink}>{t.races.edit}</Muted>
                 </Pressable>
@@ -337,6 +362,19 @@ export default function RaceDetailScreen() {
                     {rematchError ? <Muted style={styles.rematchErr}>{rematchError}</Muted> : null}
                   </>
                 ) : null}
+
+                {/* Correction du classement — fenêtre 24 h (lot 2.6) */}
+                {isAdmin && canCorrect ? (
+                  <View style={styles.correctBox}>
+                    <Button
+                      label={t.races.correctRanking}
+                      variant="ghost"
+                      onPress={() => router.push(`/rank/${id}?correct=1`)}
+                      disabled={busy}
+                    />
+                    <Muted style={styles.correctHint}>{t.races.correctWindowHint}</Muted>
+                  </View>
+                ) : null}
               </View>
             ) : (
               /* ── Course à venir ── */
@@ -361,7 +399,7 @@ export default function RaceDetailScreen() {
                             </Muted>
                           </View>
                           <GradeMedal grade={grade} size={30} />
-                          {isAdmin ? (
+                          {isAdmin && !locked ? (
                             <Pressable onPress={() => onRemove(p.id)} accessibilityRole="button">
                               <Muted style={styles.remove}>{t.races.remove}</Muted>
                             </Pressable>
@@ -371,7 +409,9 @@ export default function RaceDetailScreen() {
                     );
                   })}
 
-                  {isAdmin ? (
+                  {locked ? <Banner kind="info" title={t.races.lockedBanner} /> : null}
+
+                  {isAdmin && !locked ? (
                     <>
                       <View style={styles.addRow}>
                         <View style={styles.flex}>
@@ -425,7 +465,24 @@ export default function RaceDetailScreen() {
 
                 {isAdmin ? (
                   participants.length >= 2 ? (
-                    <Button label={t.races.enterRanking} onPress={() => router.push(`/rank/${id}`)} />
+                    <View style={styles.actions}>
+                      {locked ? (
+                        <Button
+                          label={t.races.reopen}
+                          variant="ghost"
+                          onPress={onReopen}
+                          disabled={busy}
+                        />
+                      ) : (
+                        <Button
+                          label={t.races.lock}
+                          variant="ghost"
+                          onPress={onLock}
+                          disabled={busy}
+                        />
+                      )}
+                      <Button label={t.races.enterRanking} onPress={() => router.push(`/rank/${id}`)} />
+                    </View>
                   ) : (
                     <Muted>{t.races.needTwoPilots}</Muted>
                   )
@@ -496,4 +553,7 @@ const styles = StyleSheet.create({
   deleteBtn: { alignItems: 'center', paddingVertical: spacing.md },
   deleteTxt: { color: colors.inkDim2 },
   rematchErr: { color: colors.accent, textAlign: 'center' },
+  actions: { gap: spacing.sm },
+  correctBox: { gap: spacing.xs, marginTop: spacing.sm },
+  correctHint: { textAlign: 'center' },
 });

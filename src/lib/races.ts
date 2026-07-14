@@ -14,7 +14,11 @@ export interface Circuit {
   is_official: boolean;
 }
 
-export type RaceStatus = 'upcoming' | 'completed';
+// 'locked' = grille figée (invitations clôturées), en attente de la saisie.
+export type RaceStatus = 'upcoming' | 'locked' | 'completed';
+
+/** Durée de la fenêtre de correction du classement après validation (lot 2.6). */
+export const CORRECTION_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export interface Race {
   id: string;
@@ -23,7 +27,14 @@ export interface Race {
   scheduled_at: string;
   status: RaceStatus;
   invite_token: string;
+  completed_at: string | null;
   circuit: Circuit | null;
+}
+
+/** Vrai si le classement est encore corrigeable (< 24 h après validation). */
+export function withinCorrectionWindow(race: Race): boolean {
+  if (race.status !== 'completed' || !race.completed_at) return false;
+  return Date.now() - new Date(race.completed_at).getTime() < CORRECTION_WINDOW_MS;
 }
 
 export interface Participant {
@@ -76,7 +87,7 @@ export async function createRace(circuitId: string, scheduledAt: Date): Promise<
   const { data, error } = await supabase
     .from('races')
     .insert({ admin_id: userId, circuit_id: circuitId, scheduled_at: scheduledAt.toISOString() })
-    .select('id, admin_id, circuit_id, scheduled_at, status, invite_token, circuit:circuits(*)')
+    .select(RACE_SELECT)
     .single();
   if (error) throw new Error(error.message);
   const race = data as unknown as Race;
@@ -86,7 +97,7 @@ export async function createRace(circuitId: string, scheduledAt: Date): Promise<
 }
 
 const RACE_SELECT =
-  'id, admin_id, circuit_id, scheduled_at, status, invite_token, circuit:circuits(*)';
+  'id, admin_id, circuit_id, scheduled_at, status, invite_token, completed_at, circuit:circuits(*)';
 
 export async function listMyRaces(): Promise<{ upcoming: Race[]; past: Race[] }> {
   const { data: auth } = await supabase.auth.getUser();
@@ -98,7 +109,8 @@ export async function listMyRaces(): Promise<{ upcoming: Race[]; past: Race[] }>
   if (error) throw new Error(error.message);
   const races = (data ?? []) as unknown as Race[];
   return {
-    upcoming: races.filter((r) => r.status === 'upcoming'),
+    // Les courses clôturées (« prêtes ») restent dans « à venir ».
+    upcoming: races.filter((r) => r.status !== 'completed'),
     past: races.filter((r) => r.status === 'completed'),
   };
 }
@@ -214,6 +226,42 @@ export async function submitRaceResults(raceId: string, orderedParticipationIds:
     p_order: orderedParticipationIds,
   });
   if (error) throw new Error(error.message);
+}
+
+/**
+ * Corrige le classement d'une course terminée (fenêtre 24 h). Refusé côté
+ * serveur si la fenêtre est passée ou si un pilote a couru une autre course
+ * depuis (l'Elo serait faussé).
+ */
+export async function correctRaceResults(raceId: string, orderedParticipationIds: string[]): Promise<void> {
+  const { error } = await supabase.rpc('correct_race_results', {
+    p_race_id: raceId,
+    p_order: orderedParticipationIds,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Clôture les invitations : fige la grille et envoie un rappel (une fois). */
+export async function lockRace(raceId: string): Promise<void> {
+  const { error } = await supabase.rpc('lock_race', { p_race_id: raceId });
+  if (error) throw new Error(error.message);
+}
+
+/** Rouvre les invitations d'une course clôturée (le rappel n'est pas renvoyé). */
+export async function reopenRace(raceId: string): Promise<void> {
+  const { error } = await supabase.rpc('reopen_race', { p_race_id: raceId });
+  if (error) throw new Error(error.message);
+}
+
+/** Ids de participation dans l'ordre du classement enregistré (pour pré-remplir la correction). */
+export async function resultOrder(raceId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('results')
+    .select('participation_id, position')
+    .eq('race_id', raceId)
+    .order('position');
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as { participation_id: string }[]).map((r) => r.participation_id);
 }
 
 type RawResult = {
