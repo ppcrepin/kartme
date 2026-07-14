@@ -8,6 +8,7 @@ export interface MyProfile {
   id: string;
   username: string;
   elo: number;
+  isPrivate: boolean;
 }
 
 export interface ProfileStats {
@@ -36,11 +37,37 @@ export async function getMyProfile(): Promise<MyProfile | null> {
   if (!userId) return null;
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, elo')
+    .select('id, username, elo, is_private')
     .eq('id', userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return data;
+  if (!data) return null;
+  return { id: data.id, username: data.username, elo: data.elo, isPrivate: data.is_private };
+}
+
+// ── Réglages du compte (lot 2.5) ───────────────────────────────────────────
+/** Change mon pseudo (validé en amont par validateUsername). */
+export async function setUsername(username: string): Promise<void> {
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id;
+  if (!userId) throw new Error('Session introuvable.');
+  const { error } = await supabase.from('profiles').update({ username }).eq('id', userId);
+  if (error) throw new Error(error.message);
+}
+
+/** Bascule profil public / « amis uniquement » (décision A6). */
+export async function setPrivacy(isPrivate: boolean): Promise<void> {
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id;
+  if (!userId) throw new Error('Session introuvable.');
+  const { error } = await supabase.from('profiles').update({ is_private: isPrivate }).eq('id', userId);
+  if (error) throw new Error(error.message);
+}
+
+/** Suppression RGPD : anonymise le compte et efface les données personnelles. */
+export async function deleteMyAccount(): Promise<void> {
+  const { error } = await supabase.rpc('delete_my_account');
+  if (error) throw new Error(error.message);
 }
 
 /**

@@ -168,6 +168,24 @@ export async function blockPilot(pilotId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/** Les pilotes que j'ai bloqués (pour l'écran de déblocage, lot 2.5). */
+export async function listBlocked(): Promise<{ id: string; username: string }[]> {
+  const { data, error } = await supabase.rpc('list_blocked');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as { id: string; username: string }[];
+}
+
+/** Débloque un pilote (retire le blocage que j'ai posé). */
+export async function unblockPilot(pilotId: string): Promise<void> {
+  const { data: auth } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from('blocks')
+    .delete()
+    .eq('blocker_id', auth.user?.id)
+    .eq('blocked_id', pilotId);
+  if (error) throw new Error(error.message);
+}
+
 export async function reportPilot(
   pilotId: string,
   category: ReportCategory,

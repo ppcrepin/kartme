@@ -7,19 +7,29 @@ import { Body, Muted, Title } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 
-/** S1 — hub des réglages. Une seule entrée au lot 2.4 ; le lot 2.5 ajoutera
- *  compte, confidentialité, suppression, aide. */
+/** S1 — hub des réglages : Compte, Notifications, Aide & légal. */
 export default function SettingsScreen() {
   const router = useRouter();
 
   const rows: { key: string; label: string; sub: string; onPress?: () => void; soon?: boolean }[] = [
+    {
+      key: 'account',
+      label: t.settings.account,
+      sub: t.settings.accountSub,
+      onPress: () => router.push('/settings/compte'),
+    },
     {
       key: 'notifications',
       label: t.settings.notifications,
       sub: t.settings.notificationsSub,
       onPress: () => router.push('/settings/notifications'),
     },
-    { key: 'account', label: t.settings.account, sub: t.settings.accountSub, soon: true },
+    {
+      key: 'help',
+      label: t.settings.help,
+      sub: t.settings.helpSub,
+      onPress: () => router.push('/settings/aide'),
+    },
   ];
 
   return (

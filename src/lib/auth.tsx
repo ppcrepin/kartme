@@ -42,7 +42,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setHasProfile(null);
       return;
     }
-    const { data } = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, deleted_at')
+      .eq('id', userId)
+      .maybeSingle();
+    // Compte supprimé (RGPD) : on ferme toute session résiduelle (ex. autre
+    // appareil encore connecté) au lieu de laisser entrer un compte anonymisé.
+    if (data && (data as { deleted_at: string | null }).deleted_at) {
+      await supabase.auth.signOut();
+      setSession(null);
+      setHasProfile(null);
+      return;
+    }
     setHasProfile(!!data);
   }
 
