@@ -6,6 +6,8 @@ import { Button, Card } from '@/components/ui';
 import { Label, Muted } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
+import { track, withRef } from '@/lib/analytics';
+import { useAuth } from '@/lib/auth';
 
 /**
  * Carte de partage d'une course : QR code + lien + bouton copier/partager.
@@ -21,9 +23,13 @@ export function ShareCard({
   message?: string;
 }) {
   const [copied, setCopied] = useState(false);
-  const payload = message ? `${message}\n${url}` : url;
+  const { session } = useAuth();
+  // Lien de partage porteur du parrain (?ref=<moi>) pour attribuer les inscriptions.
+  const shareUrl = withRef(url, session?.user.id);
+  const payload = message ? `${message}\n${shareUrl}` : shareUrl;
 
   async function onShare() {
+    track('share_clicked', { kind: message ? 'results' : 'race' }).catch(() => {});
     // Web : partage natif si dispo (mobile), sinon copie dans le presse-papier.
     if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
       if (navigator.share) {
@@ -49,12 +55,12 @@ export function ShareCard({
       <Label>{title ?? t.races.share}</Label>
       <View style={styles.qrWrap}>
         <View style={styles.qrBox}>
-          <QRCode value={url} size={148} color={colors.bg} backgroundColor={colors.ink} />
+          <QRCode value={shareUrl} size={148} color={colors.bg} backgroundColor={colors.ink} />
         </View>
       </View>
       <Muted style={styles.hint}>{message ? t.races.shareResultsHint : t.races.shareHint}</Muted>
       <Muted style={styles.url} numberOfLines={1}>
-        {url}
+        {shareUrl}
       </Muted>
       <Button label={copied ? t.races.copied : t.races.copyLink} variant="ghost" onPress={onShare} />
     </Card>

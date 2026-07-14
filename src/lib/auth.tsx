@@ -4,6 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 
+import { trackSignup } from '@/lib/analytics';
 import { disablePush } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 import { appBaseUrl } from '@/lib/url';
@@ -89,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error: pErr } = await supabase.from('profiles').insert({ id: data.user.id, username });
       if (pErr) return { error: pErr.message };
       setHasProfile(true);
+      trackSignup().catch(() => {});
     }
     return { error: null };
   }
@@ -99,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.from('profiles').insert({ id: userId, username });
     if (error) return { error: error.message };
     setHasProfile(true);
+    trackSignup().catch(() => {});
     return { error: null };
   }
 

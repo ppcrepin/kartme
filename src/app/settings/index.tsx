@@ -60,6 +60,12 @@ export default function SettingsScreen() {
       sub: t.settings.moderationSub,
       onPress: () => router.push('/settings/moderation'),
     });
+    rows.push({
+      key: 'stats',
+      label: t.settings.stats,
+      sub: t.settings.statsSub,
+      onPress: () => router.push('/settings/stats'),
+    });
   }
 
   return (

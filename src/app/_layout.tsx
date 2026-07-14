@@ -2,8 +2,9 @@ import { Fraunces_700Bold, Fraunces_900Black, useFonts } from '@expo-google-font
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
+import { captureReferralFromUrl, logError, track } from '@/lib/analytics';
 import { colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/lib/auth';
 
@@ -18,6 +19,16 @@ function RootNavigator() {
   const { initializing, session, hasProfile } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+  // Analytics : une ouverture d'app par session connectée (rétention/DAU).
+  const openedFor = useRef<string | null>(null);
+  useEffect(() => {
+    const uid = session?.user.id;
+    if (hasProfile === true && uid && openedFor.current !== uid) {
+      openedFor.current = uid;
+      track('app_open').catch(() => {});
+    }
+  }, [session, hasProfile]);
 
   useEffect(() => {
     if (initializing) return;
@@ -52,6 +63,31 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  // Analytics maison : capture le parrain de l'URL + garde-fou d'erreurs global.
+  useEffect(() => {
+    captureReferralFromUrl();
+    if (typeof window === 'undefined') return;
+    // Contexte réduit au pathname (pas de query string : évite de journaliser un
+    // éventuel token/identifiant présent dans l'URL — minimisation RGPD).
+    const cleanPath = (u?: string) => {
+      if (!u) return undefined;
+      try {
+        return new URL(u).pathname;
+      } catch {
+        return undefined;
+      }
+    };
+    const onError = (e: ErrorEvent) => logError(e.message || 'error', cleanPath(e.filename));
+    const onRejection = (e: PromiseRejectionEvent) =>
+      logError(String(e.reason ?? 'unhandledrejection'), 'promise');
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onRejection);
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRejection);
+    };
+  }, []);
 
   if (!fontsLoaded) {
     return null;

@@ -19,6 +19,7 @@ import { Avatar, Banner, Button, Card, Field, GradeMedal } from '@/components/ui
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
+import { track } from '@/lib/analytics';
 import { useAuth } from '@/lib/auth';
 import { badgesForRace, type BadgeKey } from '@/lib/badges';
 import { formatRaceDate } from '@/lib/datetime';
@@ -209,6 +210,7 @@ export default function RaceDetailScreen() {
     setRematchError(null);
     try {
       const newId = await rematch(id!);
+      track('rematch').catch(() => {});
       router.replace(`/race/${newId}`);
     } catch {
       setRematchError(t.races.rematchError);
