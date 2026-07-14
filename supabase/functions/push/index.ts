@@ -14,12 +14,15 @@
 import webpush from 'npm:web-push@3.6.7';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-type NotifType = 'invite' | 'result' | 'friend_request';
-const PREF_COLUMN: Record<NotifType, string> = {
+// 'report' = notification de modération : toujours envoyée (pas d'interrupteur
+// de préférence), seules les heures de silence s'appliquent.
+type NotifType = 'invite' | 'result' | 'friend_request' | 'report';
+const PREF_COLUMN: Record<string, string> = {
   invite: 'invites',
   result: 'results',
   friend_request: 'friend_requests',
 };
+const KNOWN_TYPES = new Set<NotifType>(['invite', 'result', 'friend_request', 'report']);
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -60,7 +63,7 @@ Deno.serve(async (req) => {
     return new Response('bad request', { status: 400 });
   }
   const { type, recipient, title, body, url } = payload;
-  if (!type || !recipient || !title || !Object.hasOwn(PREF_COLUMN, type)) {
+  if (!type || !recipient || !title || !KNOWN_TYPES.has(type)) {
     return new Response('bad request', { status: 400 });
   }
 
@@ -71,7 +74,9 @@ Deno.serve(async (req) => {
     .eq('profile_id', recipient)
     .maybeSingle();
 
-  const enabled = pref ? (pref as Record<string, boolean>)[PREF_COLUMN[type]] : true;
+  // 'report' n'a pas d'interrupteur : toujours actif. Les autres suivent la préférence.
+  const enabled =
+    type === 'report' ? true : pref ? (pref as Record<string, boolean>)[PREF_COLUMN[type]] : true;
   if (!enabled) return Response.json({ skipped: 'muted' });
 
   const qStart = pref?.quiet_start ?? 22;

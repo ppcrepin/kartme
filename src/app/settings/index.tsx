@@ -1,4 +1,5 @@
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -6,10 +7,30 @@ import { Card } from '@/components/ui';
 import { Body, Muted, Title } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
+import { countOpenReports } from '@/lib/moderation';
+import { getMyProfile } from '@/lib/profile';
 
-/** S1 — hub des réglages : Compte, Notifications, Aide & légal. */
+/** S1 — hub des réglages : Compte, Notifications, Aide & légal (+ Modération si modérateur). */
 export default function SettingsScreen() {
   const router = useRouter();
+  const [isModerator, setIsModerator] = useState(false);
+  const [openReports, setOpenReports] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      getMyProfile()
+        .then(async (p) => {
+          if (!active || !p?.isModerator) return;
+          setIsModerator(true);
+          setOpenReports(await countOpenReports().catch(() => 0));
+        })
+        .catch(() => {});
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   const rows: { key: string; label: string; sub: string; onPress?: () => void; soon?: boolean }[] = [
     {
@@ -31,6 +52,15 @@ export default function SettingsScreen() {
       onPress: () => router.push('/settings/aide'),
     },
   ];
+
+  if (isModerator) {
+    rows.push({
+      key: 'moderation',
+      label: openReports > 0 ? `${t.settings.moderation} (${openReports})` : t.settings.moderation,
+      sub: t.settings.moderationSub,
+      onPress: () => router.push('/settings/moderation'),
+    });
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

@@ -9,6 +9,7 @@ export interface MyProfile {
   username: string;
   elo: number;
   isPrivate: boolean;
+  isModerator: boolean;
 }
 
 export interface ProfileStats {
@@ -37,12 +38,18 @@ export async function getMyProfile(): Promise<MyProfile | null> {
   if (!userId) return null;
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, elo, is_private')
+    .select('id, username, elo, is_private, is_moderator')
     .eq('id', userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return null;
-  return { id: data.id, username: data.username, elo: data.elo, isPrivate: data.is_private };
+  return {
+    id: data.id,
+    username: data.username,
+    elo: data.elo,
+    isPrivate: data.is_private,
+    isModerator: data.is_moderator,
+  };
 }
 
 // ── Réglages du compte (lot 2.5) ───────────────────────────────────────────
