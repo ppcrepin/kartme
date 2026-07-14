@@ -261,7 +261,7 @@ export const fr = {
       { q: 'Comment mon Elo est-il calculé ?', a: 'À chaque course, tu échanges des points avec les autres pilotes inscrits selon votre classement d’arrivée : battre plus fort rapporte plus. Les scores sont à somme nulle entre inscrits.' },
       { q: 'Pourquoi un joueur non inscrit ne me fait pas gagner de points ?', a: 'Pour empêcher la triche, l’Elo ne s’échange qu’entre comptes inscrits. Les pilotes « invités » comptent dans la course mais pas dans l’Elo.' },
       { q: 'Qui peut voir mon profil ?', a: 'Par défaut tout le monde. Passe ton profil en « privé » dans Compte pour ne le montrer qu’à tes amis.' },
-      { q: 'Comment corriger un classement erroné ?', a: 'L’admin de la course peut le modifier pendant 24 h après la validation.' },
+      { q: 'Comment corriger un classement erroné ?', a: 'Une fois validé, un classement est définitif — pour préserver l’Elo de tous. Vérifie bien l’ordre avant de valider ; en cas d’erreur manifeste, contacte l’éditeur.' },
     ],
     cgu: 'Conditions d’utilisation',
     privacy: 'Politique de confidentialité',
@@ -274,7 +274,7 @@ export const fr = {
     ],
     privacyBody: [
       'KartSquad collecte le minimum de données nécessaires : ton adresse e-mail (connexion), ton pseudo, et l’historique des courses auxquelles tu participes.',
-      'Ces données ne sont ni vendues ni cédées à des tiers. Elles servent uniquement au fonctionnement du jeu (classements, Elo, amis).',
+      'Ces données ne sont ni vendues ni cédées à des tiers à des fins commerciales. Elles servent uniquement au fonctionnement du jeu (classements, Elo, amis) et transitent par des prestataires techniques (hébergement, connexion Google/Apple) agissant pour notre compte.',
       'Tu peux à tout moment passer ton profil en privé, ou supprimer ton compte depuis Compte → Supprimer mon compte : tes données personnelles sont alors effacées et ton historique anonymisé.',
       'Pour toute question relative à tes données, contacte l’éditeur.',
     ],

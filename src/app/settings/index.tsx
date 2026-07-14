@@ -38,6 +38,7 @@ export default function SettingsScreen() {
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/profil'))}
           accessibilityRole="button"
+          accessibilityLabel="Retour"
           style={styles.back}>
           <Muted>←</Muted>
         </Pressable>

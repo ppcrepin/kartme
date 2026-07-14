@@ -39,6 +39,7 @@ export default function SupprimerScreen() {
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings/compte'))}
           accessibilityRole="button"
+          accessibilityLabel="Retour"
           style={styles.back}>
           <Muted>←</Muted>
         </Pressable>

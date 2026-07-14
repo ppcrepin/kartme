@@ -19,6 +19,16 @@ create table if not exists auth.users (
   id    uuid primary key default gen_random_uuid(),
   email text
 );
+-- Colonnes/table supplémentaires pour émuler le nettoyage RGPD (delete_my_account
+-- neutralise l'identité de connexion). Supabase les fournit déjà en vrai.
+alter table auth.users add column if not exists encrypted_password text;
+alter table auth.users add column if not exists raw_user_meta_data jsonb;
+
+create table if not exists auth.identities (
+  id       uuid primary key default gen_random_uuid(),
+  user_id  uuid references auth.users (id) on delete cascade,
+  provider text
+);
 
 -- auth.uid() / auth.role() : lisent le claim JWT injecté par le test.
 create or replace function auth.uid() returns uuid language sql stable as $$

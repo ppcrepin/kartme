@@ -16,6 +16,7 @@ export default function CguScreen() {
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings/aide'))}
           accessibilityRole="button"
+          accessibilityLabel="Retour"
           style={styles.back}>
           <Muted>←</Muted>
         </Pressable>

@@ -133,7 +133,10 @@ begin
           raw_user_meta_data = '{}'::jsonb
       where id = uid;
   exception when others then
-    null; -- droits insuffisants sur le schéma auth → deleted_at fait foi
+    -- On NE masque PAS l'échec en silence : on le journalise. L'accès est déjà
+    -- coupé (deleted_at + garde AuthProvider), mais un échec de purge de la PII
+    -- e-mail/OAuth doit être visible dans les logs pour être corrigé (droits auth).
+    raise warning 'delete_my_account : nettoyage de l''identité auth impossible pour % (%). deleted_at fait foi ; vérifier les droits sur le schéma auth.', uid, sqlerrm;
   end;
 end $$;
 revoke all on function public.delete_my_account() from public, anon;

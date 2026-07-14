@@ -17,6 +17,7 @@ export default function AideScreen() {
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings'))}
           accessibilityRole="button"
+          accessibilityLabel="Retour"
           style={styles.back}>
           <Muted>←</Muted>
         </Pressable>

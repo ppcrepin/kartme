@@ -57,10 +57,14 @@ begin
 
   -- Données perso & sociales de A.
   insert into friendships (requester_id, addressee_id, status) values (A, X, 'accepted');
-  insert into blocks (blocker_id, blocked_id) values (A, X);
+  insert into blocks (blocker_id, blocked_id) values (A, X);   -- A a bloqué X (sortant)
+  insert into blocks (blocker_id, blocked_id) values (X, A);   -- X a bloqué A (ENTRANT)
   insert into push_subscriptions (profile_id, endpoint, p256dh, auth) values (A, 'https://push/x', 'p', 'a');
   insert into notification_preferences (profile_id) values (A);
   insert into reports (reporter_id, reported_profile_id, category) values (A, X, 'comportement');
+  -- Identité de connexion de A (e-mail + OAuth) à neutraliser.
+  update auth.users set email = 'anna@perso.fr', encrypted_password = 'secret' where id = A;
+  insert into auth.identities (user_id, provider) values (A, 'google');
 
   -- Une vraie course A vs B → participations / results / elo_history pour les deux.
   insert into races (id, admin_id, scheduled_at) values (r, A, now());
@@ -77,13 +81,18 @@ begin
   perform tests.eq((select case when username = 'Joueur supprimé' and is_private and deleted_at is not null then 1 else 0 end
                     from profiles where id = A), 1, 'A anonymisé : « Joueur supprimé », privé, deleted_at');
 
-  -- Données perso & sociales effacées.
+  -- Données perso & sociales effacées (blocages SORTANTS et ENTRANTS).
   perform tests.eq((select count(*) from friendships where requester_id = A or addressee_id = A), 0, 'amitiés de A effacées');
-  perform tests.eq((select count(*) from blocks where blocker_id = A or blocked_id = A), 0, 'blocages de A effacés');
+  perform tests.eq((select count(*) from blocks where blocker_id = A or blocked_id = A), 0, 'blocages de A (sortants + entrants) effacés');
   perform tests.eq((select count(*) from push_subscriptions where profile_id = A), 0, 'abonnements push de A effacés');
   perform tests.eq((select count(*) from notification_preferences where profile_id = A), 0, 'préférences notif de A effacées');
   perform tests.eq((select count(*) from reports where reporter_id = A), 0, 'signalements émis par A effacés');
   perform tests.eq((select count(*) from user_badges where profile_id = A), 0, 'badges de A effacés');
+
+  -- Identité de connexion neutralisée (PII e-mail / OAuth).
+  perform tests.eq((select count(*) from auth.identities where user_id = A), 0, 'identités OAuth de A supprimées');
+  perform tests.eq((select case when email like 'deleted+%@kartsquad.invalid' and encrypted_password is null then 1 else 0 end
+                    from auth.users where id = A), 1, 'e-mail/mot de passe de A neutralisés');
 
   -- Intégrité Elo : l'historique de course de A ET de B est PRÉSERVÉ.
   perform tests.eq((select count(*) from results where race_id = r), 2, 'les 2 résultats de la course subsistent');
@@ -140,10 +149,12 @@ declare
   M uuid := '90000000-0000-0000-0000-00000000000d';
   N uuid := '90000000-0000-0000-0000-00000000000e';
 begin
+  -- N est un profil PRIVÉ : le SECURITY DEFINER de list_blocked doit quand même
+  -- montrer son pseudo à M (sinon M ne saurait pas qui il débloque).
+  update public.profiles set is_private = true where id = N;
   perform tests.as_user(M);
   insert into blocks (blocker_id, blocked_id) values (M, N);
-  -- list_blocked montre bien N à M.
-  perform tests.eq((select count(*) from public.list_blocked() where id = N), 1, 'list_blocked montre N');
+  perform tests.eq((select count(*) from public.list_blocked() where id = N), 1, 'list_blocked montre N (même privé)');
   perform tests.as_super();
 
   -- N ne peut pas supprimer le blocage posé par M (RLS → 0 ligne, pas d'erreur).
@@ -158,6 +169,38 @@ begin
   perform tests.as_super();
   perform tests.eq((select count(*) from blocks where blocker_id = M), 0, 'M a bien débloqué N');
   raise notice 'Scénario 4 (déblocage) ✔';
+end $$;
+
+-- ═══ Scénario 5 : un compte supprimé disparaît AUSSI des classements ═══
+-- (verrou : aujourd'hui l'exclusion vient de is_private + amitiés purgées ;
+-- ce test la fige pour détecter toute régression future.)
+do $$
+declare
+  P uuid := '90000000-0000-0000-0000-000000000f01'; -- sera supprimé
+  Q uuid := '90000000-0000-0000-0000-000000000f02'; -- son ami, qui consulte
+  r uuid := '91110000-0000-0000-0000-000000000002';
+  pp uuid := '92000000-0000-0000-0000-000000000021';
+  pq uuid := '92000000-0000-0000-0000-000000000022';
+  n_friends bigint; n_global bigint;
+begin
+  perform tests.mk_user(P, 1000); perform tests.mk_user(Q, 1000);
+  insert into friendships (requester_id, addressee_id, status) values (P, Q, 'accepted');
+  insert into races (id, admin_id, scheduled_at) values (r, P, now());
+  insert into participations (id, race_id, profile_id) values (pp, r, P), (pq, r, Q);
+  perform tests.call_submit(P, r, array[pp, pq]);
+
+  perform set_config('request.jwt.claims', json_build_object('sub', P, 'role', 'authenticated')::text, true);
+  perform public.delete_my_account();
+  perform set_config('request.jwt.claims', '', true);
+
+  -- Q consulte ses classements : P (supprimé) n'y figure plus.
+  perform tests.as_user(Q);
+  select count(*) into n_friends from public.get_leaderboard('friends', 100, 0) where profile_id = P;
+  select count(*) into n_global from public.get_leaderboard('global', 100, 0) where profile_id = P;
+  perform tests.as_super();
+  perform tests.eq(n_friends, 0, 'compte supprimé absent du classement Amis');
+  perform tests.eq(n_global, 0, 'compte supprimé absent du classement Global');
+  raise notice 'Scénario 5 (compte supprimé hors classements) ✔';
 end $$;
 
 do $$ begin raise notice 'Tous les tests réglages/RGPD sont passés ✔'; end $$;
