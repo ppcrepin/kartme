@@ -31,7 +31,9 @@
 | **2.3 Badges** | ✅ **en ligne (12 badges) & testé** — moteur de déblocage serveur, catalogue R3 + détail R4 (SVG natif, 5 icônes neuves), section badges profil + fiche pilote, bandeau « badge débloqué », 12 scénarios de tests DB. **Revue PO 2026-07-13** : 12 badges (Voiture balai, Midi moins le kart, DRS, Safety car, Push ; seuils ±45 ; « course qui compte »). *Reviewer adversarial (bug bloquant de migration attrapé). `elo_integrity_badges.sql` collé (« success » PO).* |
 | **🔒 Intégrité Elo** | ✅ **en ligne** — anti-triche « **Elo entre inscrits seulement** » : l'Elo ne s'échange qu'entre comptes inscrits ; fantômes figés + hors classement Global → le farming par faux joueurs ne rapporte plus rien (voir `docs/integrite-elo.md`). Livrée dans la même migration que les 12 badges. *N'affecte que les courses futures ; Elo existants conservés.* |
 | **2.4 Notifications** | 🟢 **déployée — côté appareil validé, envoi serveur à confirmer** — **Web Push** complet : réglages S3 (3 interrupteurs + silence 22h–8h, notif de test locale), service worker + abonnement VAPID, tables préférences/abonnements (RLS), Edge Function d'envoi (respecte prefs + silence, purge des abonnés morts), déclencheurs invitation/résultat/demande d'ami. Reviewer (bloquants corrigés : fuite d'abonnement sur appareil partagé, durcissement des droits). 12 scénarios de tests DB (préférences + livraison). **Déployé par le PO** (2 SQL + fonction `push` + 4 secrets + config) ; **notif de test locale OK sur iPhone (PWA)**. *Reste : valider l'envoi serveur (test `enqueue_push` de jour, hors 22h–8h).* |
-| Phase 2 (suite) | ⏭️ ensuite : lot 2.5 (Réglages : compte, confidentialité, RGPD) |
+| **2.5 Réglages** | 🟢 **code prêt, à activer** — Compte (changer pseudo + filtre, profil privé/public A6, pilotes bloqués + déblocage), **suppression RGPD** (confirmation « SUPPRIMER » → anonymise en « Joueur supprimé », purge les données perso, préserve l'Elo des autres), Aide & légal (FAQ + CGU/confidentialité en brouillon). Reviewer adversarial (FAQ corrigée, scrub auth journalisé, a11y, tests durcis) ; 5 scénarios de tests DB. *Reste : coller `settings_rgpd.sql` + test PO (avec un compte jetable).* |
+| **2.6 Cycle de vie de course** | 🧭 **validé, à planifier** *(décision PO 2026-07-14)* — **verrou optionnel** « Clôturer les invitations » → état « prête » (liste figée) + **un rappel** aux participants (sens unique, **pas de RSVP**) ; l'usage spontané (saisie directe) reste possible. À regrouper avec la **fenêtre de correction 24 h** (prévue au cahier §4.8, jamais implémentée : un classement validé est aujourd'hui définitif). |
+| Phase 2 (suite) | ⏭️ ensuite : lot 2.6 (cycle de vie) puis Phase 3 (beta) |
 
 **Déploiement (aperçu web) :** ✅ en ligne et **automatique à chaque push**.
 - **URL publique : https://ppcrepin.github.io/kartme/** (GitHub Pages)
@@ -194,7 +196,17 @@ Légende agents : 🎨 Design/UX · ⚙️ Backend · 📱 Frontend · 🔒 Séc
 - **Critères d'acceptation** : tous les réglages fonctionnent ; la suppression anonymise sans casser l'Elo des autres ; pages légales présentes.
 - **Dépend de** : 1.1, 2.2.
 
-> **Fin de Phase 2 = boucle virale complète** : amis, classements, badges, notifications, partage.
+### Lot 2.6 — Cycle de vie de course *(nouveau, validé PO 2026-07-14)*
+Décisions actées : **verrou optionnel** (choix A) + **rappel à sens unique, pas de RSVP** (choix a).
+- 🎨 Bouton **« Clôturer les invitations »** sur l'écran course → nouvel état **« prête »** (roster figé) ; l'admin peut toujours saisir directement le classement sans clôturer (usage spontané préservé).
+- ⚙️ Nouvel état de course entre `à venir` et `terminée` (ex. `ready`/`locked`) ; **rappel** aux participants inscrits (« Tu es sur la grille pour [circuit] le [date] ») — 1 notification, pas de confirmation demandée.
+- ⚙️ **Fenêtre de correction 24 h** (cahier §4.8, à implémenter) : rendre un classement modifiable par l'admin pendant 24 h après validation, avec recalcul Elo — aujourd'hui un classement validé est définitif (FAQ mise à jour en conséquence).
+- 🔒 Rappel/notif dans le respect des préférences + heures de silence (réutilise l'infra 2.4).
+- 🧪 Tests : transition d'états, rappel envoyé une seule fois, recalcul Elo dans la fenêtre 24 h.
+- **Dépend de** : 1.2, 1.3, 2.4.
+- **Rester vigilant** : ne pas rendre le verrou obligatoire (garder le chemin « je saisis tout de suite »).
+
+> **Fin de Phase 2 = boucle virale complète** : amis, classements, badges, notifications, partage. *(Lot 2.6 = amélioration du cycle de vie, planifiable avant ou pendant la beta.)*
 
 ---
 
