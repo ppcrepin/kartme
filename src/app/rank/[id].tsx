@@ -22,12 +22,14 @@ type Step = 'presents' | 'order';
 type Mode = 'drag' | 'tap';
 
 export default function RankScreen() {
-  const { id, correct } = useLocalSearchParams<{ id: string; correct?: string }>();
+  const { id, correct, locked } = useLocalSearchParams<{ id: string; correct?: string; locked?: string }>();
   const isCorrect = correct === '1'; // mode correction (lot 2.6) : roster figé, on ré-ordonne
+  const isLocked = locked === '1'; // course clôturée : grille figée → tous présents (pas d'étape « présents »)
+  const rosterFinal = isCorrect || isLocked; // roster définitif : on saute l'étape « présents »
   const router = useRouter();
   const { session } = useAuth();
 
-  const [step, setStep] = useState<Step>(isCorrect ? 'order' : 'presents');
+  const [step, setStep] = useState<Step>(rosterFinal ? 'order' : 'presents');
   const [mode, setMode] = useState<Mode>('drag');
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [absents, setAbsents] = useState<Set<string>>(new Set());
@@ -42,16 +44,19 @@ export default function RankScreen() {
       listParticipants(id!, session?.user.id)
         .then(async (parts) => {
           setParticipants(parts);
-          // Correction : pré-remplir dans l'ordre du classement enregistré.
           if (isCorrect) {
+            // Correction : pré-remplir dans l'ordre du classement enregistré.
             const order = await resultOrder(id!).catch(() => [] as string[]);
             const byId = new Map(parts.map((p) => [p.id, p]));
             const ord = order.map((pid) => byId.get(pid)).filter(Boolean) as Participant[];
             setOrdered(ord.length ? ord : parts);
+          } else if (isLocked) {
+            // Course clôturée : roster figé → tous présents, ordre à saisir.
+            setOrdered(parts);
           }
         })
         .catch(() => {});
-    }, [id, session?.user.id, isCorrect]),
+    }, [id, session?.user.id, isCorrect, isLocked]),
   );
 
   function toggleAbsent(pid: string) {
@@ -151,6 +156,7 @@ export default function RankScreen() {
             <Muted>
               {isCorrect ? t.races.correctHint : mode === 'drag' ? t.races.dragHint : t.races.tapHint}
             </Muted>
+            {isLocked && !isCorrect ? <Muted>{t.races.lockedRankHint}</Muted> : null}
 
             {mode === 'drag' ? (
               <DragList

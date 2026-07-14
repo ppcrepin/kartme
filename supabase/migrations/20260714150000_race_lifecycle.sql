@@ -230,7 +230,7 @@ begin
     where rr.race_id = p_race_id
       and pp.profile_id is not null
       and eh.race_id is distinct from p_race_id
-      and eh.created_at > v_ref
+      and eh.created_at >= v_ref   -- >= : durci contre une égalité d'horodatage (la course elle-même est déjà exclue par race_id)
   ) then
     raise exception 'Correction impossible : un pilote a couru une autre course depuis.';
   end if;
@@ -246,6 +246,11 @@ begin
     where rr.race_id = p_race_id and pp.ghost_id = g.id;
   delete from elo_history where race_id = p_race_id;
   delete from results where race_id = p_race_id;
+  -- Rembobiner aussi les badges gagnés SUR CETTE course, sinon un admin
+  -- pourrait saisir un faux ordre favorable, encaisser les badges de perf,
+  -- puis « corriger » vers la vérité en les conservant (badge-farming).
+  -- award_badges les reconstruira à partir du classement corrigé.
+  delete from user_badges where race_id = p_race_id;
 
   -- Re-saisie : repasser 'upcoming' puis rejouer le moteur (completed_at
   -- conservé via coalesce → la fenêtre 24 h reste ancrée à la validation initiale).

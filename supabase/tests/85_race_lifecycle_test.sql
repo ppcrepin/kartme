@@ -33,12 +33,16 @@ insert into auth.users (id, email) values
   ('e0000000-0000-0000-0000-00000000000a', 'a@t'),
   ('e0000000-0000-0000-0000-00000000000b', 'b@t'),
   ('e0000000-0000-0000-0000-00000000000c', 'c@t'),
-  ('e0000000-0000-0000-0000-00000000000d', 'd@t');
+  ('e0000000-0000-0000-0000-00000000000d', 'd@t'),
+  ('e0000000-0000-0000-0000-00000000000e', 'e@t'),
+  ('e0000000-0000-0000-0000-00000000000f', 'f@t');
 insert into public.profiles (id, username, elo) values
   ('e0000000-0000-0000-0000-00000000000a', 'Alan', 1000),
   ('e0000000-0000-0000-0000-00000000000b', 'Bea', 1000),
   ('e0000000-0000-0000-0000-00000000000c', 'Cyril', 1000),
-  ('e0000000-0000-0000-0000-00000000000d', 'Dina', 1000);
+  ('e0000000-0000-0000-0000-00000000000d', 'Dina', 1000),
+  ('e0000000-0000-0000-0000-00000000000e', 'Elio', 1000),
+  ('e0000000-0000-0000-0000-00000000000f', 'Fara', 1000);
 insert into public.circuits (id, name, created_by) values
   ('e1000000-0000-0000-0000-000000000001', 'Karting Vaux', 'e0000000-0000-0000-0000-00000000000a');
 
@@ -250,6 +254,34 @@ begin
   perform tests.eq((select case when status = 'completed' then 1 else 0 end from races where id = r), 1, 'course terminée depuis locked');
   perform tests.eq((select case when completed_at is not null then 1 else 0 end from races where id = r), 1, 'completed_at renseigné');
   raise notice 'Scénario 6 (saisie depuis locked) ✔';
+end $$;
+
+-- ═══ Scénario 7 : la correction rembobine les badges (anti-farming) ═══
+-- Joueurs neufs E/F (jamais vainqueurs) pour isoler le badge « champagne ».
+do $$
+declare
+  E uuid := 'e0000000-0000-0000-0000-00000000000e';   -- admin, saisit E vainqueur puis corrige
+  F uuid := 'e0000000-0000-0000-0000-00000000000f';
+  r uuid := 'e2000000-0000-0000-0000-000000000071';
+  pe uuid := 'e4000000-0000-0000-0000-000000000711';
+  pf uuid := 'e4000000-0000-0000-0000-000000000712';
+begin
+  insert into races (id, admin_id, scheduled_at) values (r, E, now());
+  insert into participations (id, race_id, profile_id) values (pe, r, E), (pf, r, F);
+  perform tests.as_admin(E);
+  perform public.submit_race_results(r, array[pe, pf]);   -- E vainqueur (faux ordre favorable)
+  perform set_config('kartsquad.elo_engine', '', true);
+  perform tests.eq((select count(*) from user_badges where profile_id = E and badge_key = 'champagne' and race_id = r), 1, 'E (1er) décroche champagne');
+  perform tests.eq((select count(*) from user_badges where profile_id = F and badge_key = 'champagne'), 0, 'F (2e) n''a pas champagne');
+
+  update races set completed_at = now() - interval '1 hour' where id = r;   -- dans la fenêtre
+  perform tests.as_admin(E);
+  perform public.correct_race_results(r, array[pf, pe]);   -- correction vers la vérité : F vainqueur
+  perform set_config('kartsquad.elo_engine', '', true);
+
+  perform tests.eq((select count(*) from user_badges where profile_id = E and badge_key = 'champagne'), 0, 'E perd champagne après correction (anti-farming)');
+  perform tests.eq((select count(*) from user_badges where profile_id = F and badge_key = 'champagne' and race_id = r), 1, 'F décroche champagne (nouveau 1er)');
+  raise notice 'Scénario 7 (correction rembobine les badges) ✔';
 end $$;
 
 do $$ begin raise notice 'Tous les tests du cycle de vie de course sont passés ✔'; end $$;

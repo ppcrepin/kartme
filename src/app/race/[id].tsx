@@ -481,7 +481,10 @@ export default function RaceDetailScreen() {
                           disabled={busy}
                         />
                       )}
-                      <Button label={t.races.enterRanking} onPress={() => router.push(`/rank/${id}`)} />
+                      <Button
+                        label={t.races.enterRanking}
+                        onPress={() => router.push(`/rank/${id}${locked ? '?locked=1' : ''}`)}
+                      />
                     </View>
                   ) : (
                     <Muted>{t.races.needTwoPilots}</Muted>

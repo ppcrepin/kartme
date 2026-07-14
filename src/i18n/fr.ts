@@ -123,6 +123,7 @@ export const fr = {
     correctTitle: 'Corriger le classement',
     correctHint: 'Remets les pilotes dans le bon ordre d’arrivée, puis confirme. L’Elo sera recalculé.',
     confirmCorrection: 'Confirmer la correction',
+    lockedRankHint: 'Grille figée : tous les inscrits sont comptés. Un absent ? Reviens à la course et rouvre les invitations pour le retirer.',
     results: 'Résultats',
     completed: 'Course terminée',
     grade: 'Grade',
