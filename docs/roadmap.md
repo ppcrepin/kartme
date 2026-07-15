@@ -222,7 +222,7 @@ Découpé en deux temps testables (décisions PO 2026-07-14).
 - **Dépend de** : Phase 2.
 
 ### Lot 3.2 — Analytics & observabilité
-🟢 **code prêt, à activer** *(construit 2026-07-14 — décision PO : 100 % maison, aucun tiers)*. Tables `analytics_events` + `error_logs` (écriture seule client, lecture réservée modérateur) ; **`get_metrics`** dérive **activation / rétention / K-factor / engagement** des tables existantes + événements instrumentés (`app_open`, `signup`+parrain `?ref=`, `share_clicked`, `rematch`) ; **garde-fou d'erreurs** global. **Écran Stats** (modérateur). Best-effort silencieux (ne casse jamais un flux). 3 scénarios de tests DB. Reviewer adversarial (K-factor non falsifiable, erreurs anon non exposées, cohérence RGPD). *Pas de PostHog/Sentry pour l'instant — réévaluable à l'échelle.* Reste : coller `20260714210000_analytics.sql`.
+✅ **en ligne** *(SQL collé 2026-07-14 — décision PO : 100 % maison, aucun tiers)*. Tables `analytics_events` + `error_logs` (écriture seule client, lecture réservée modérateur) ; **`get_metrics`** dérive **activation / rétention / K-factor / engagement** des tables existantes + événements instrumentés (`app_open`, `signup`+parrain `?ref=`, `share_clicked`, `rematch`) ; **garde-fou d'erreurs** global. **Écran Stats** (modérateur). Best-effort silencieux (ne casse jamais un flux). 3 scénarios de tests DB. Reviewer adversarial (K-factor non falsifiable, erreurs anon non exposées, cohérence RGPD). *Pas de PostHog/Sentry pour l'instant — réévaluable à l'échelle. Métriques non rétroactives : comptage depuis l'activation.*
 - **Critères d'acceptation** : métriques consultables in-app ; erreurs capturées ; zéro tiers.
 - **Dépend de** : Phase 2.
 
