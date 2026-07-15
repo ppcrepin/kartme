@@ -227,11 +227,10 @@ Découpé en deux temps testables (décisions PO 2026-07-14).
 - **Dépend de** : Phase 2.
 
 ### Lot 3.3 — Légal & onboarding beta
-- 🎨/📱 Écrans CGU/confidentialité alimentés ; **age gate** (seuil à trancher juridiquement *(C1)*).
-- ⚙️ Mécanisme d'invitation beta (TestFlight / Play Console interne ou lien web).
-- **Action PO** : **trame CGU + politique de confidentialité** rédigée par nous, **relue par un juriste** *(C2)* ; décision d'âge minimum *(C1)*.
-- **Critères d'acceptation** : pages légales en ligne ; testeurs beta intégrables.
-- **Dépend de** : 2.5. **Validation PO** : légal.
+🟢 **code prêt, à activer** *(construit 2026-07-14 — décisions PO)*. **Consentement obligatoire** CGU + confidentialité à l'inscription (case à cocher + liens, sur les 2 chemins email/Google), **horodaté + versionné** et **exigé côté serveur**. Pages légales **finalisées** (bandeau « brouillon » retiré, contenu à jour : push, analytics 100 % maison, modération/suspension, RGPD) et rendues **publiques** (lisibles pendant l'inscription). **Beta en lien ouvert** (pas de barrière d'accès) + **aucune barrière d'âge** *(choix PO — rien à coder)*. Tests DB (consentement requis / seed exempté). Reviewer adversarial (BLOQUANT liens légaux inaccessibles corrigé). Reste : coller `20260714230000_legal_consent.sql`.
+- ⚠️ **Décision PO assumée** : pages légales publiées **sans relecture juriste** *(C2 en attente)* et **sans âge minimum** *(C1)* — à réviser quand un juriste passe (incrémenter `TERMS_VERSION`).
+- **Critères d'acceptation** : consentement exigé ; pages légales en ligne ; testeurs beta intégrables (lien).
+- **Dépend de** : 2.5.
 
 ### Lot 3.4 — Campagne beta
 - Test en conditions réelles avec le **groupe d'amis/karteurs** ; boucle de feedback ; triage des bugs ; itérations.
