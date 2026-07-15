@@ -32,6 +32,10 @@ function RootNavigator() {
 
   useEffect(() => {
     if (initializing) return;
+    // Pages légales publiques : accessibles dans tout état d'auth (l'utilisateur
+    // doit pouvoir LIRE les CGU/confidentialité qu'il accepte à l'inscription).
+    const path = segments.join('/');
+    if (path === 'settings/cgu' || path === 'settings/confidentialite') return;
     const group = segments[0];
     const inAuth = group === '(auth)';
     const inOnboarding = group === '(onboarding)';

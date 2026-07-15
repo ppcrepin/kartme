@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { Platform } from 'react-native';
 
 import { trackSignup } from '@/lib/analytics';
+import { TERMS_VERSION } from '@/lib/legal';
 import { disablePush } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 import { appBaseUrl } from '@/lib/url';
@@ -87,7 +88,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) return { error: error.message };
     // Confirmation email désactivée → session immédiate, on crée le profil.
     if (data.user) {
-      const { error: pErr } = await supabase.from('profiles').insert({ id: data.user.id, username });
+      const { error: pErr } = await supabase.from('profiles').insert({
+        id: data.user.id,
+        username,
+        terms_accepted_at: new Date().toISOString(),
+        terms_version: TERMS_VERSION,
+      });
       if (pErr) return { error: pErr.message };
       setHasProfile(true);
       trackSignup().catch(() => {});
@@ -98,7 +104,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function createProfile(username: string): Promise<AuthResult> {
     const userId = session?.user.id;
     if (!userId) return { error: 'Session introuvable.' };
-    const { error } = await supabase.from('profiles').insert({ id: userId, username });
+    const { error } = await supabase.from('profiles').insert({
+      id: userId,
+      username,
+      terms_accepted_at: new Date().toISOString(),
+      terms_version: TERMS_VERSION,
+    });
     if (error) return { error: error.message };
     setHasProfile(true);
     trackSignup().catch(() => {});

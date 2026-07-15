@@ -50,8 +50,9 @@ begin
   insert into auth.users (id, email) values (Z, 'z@t');
   perform set_config('request.jwt.claims', json_build_object('sub', Z, 'role', 'authenticated')::text, true);
   set local role authenticated;
-  -- Tentative d'auto-élévation + Elo gonflé à l'inscription.
-  insert into public.profiles (id, username, elo, is_moderator) values (Z, 'Zack', 2500, true);
+  -- Tentative d'auto-élévation + Elo gonflé à l'inscription (avec consentement).
+  insert into public.profiles (id, username, elo, is_moderator, terms_accepted_at, terms_version)
+    values (Z, 'Zack', 2500, true, now(), '2026-07-14');
   reset role;
   perform tests.eq((select case when is_moderator then 1 else 0 end from profiles where id = Z), 0, 'is_moderator forcé à faux à l''insertion');
   perform tests.eq((select elo from profiles where id = Z), 1000, 'elo forcé à 1000 à l''insertion');

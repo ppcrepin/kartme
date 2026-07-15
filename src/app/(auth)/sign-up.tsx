@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { AuthShell } from '@/components/auth-shell';
+import { ConsentCheckbox } from '@/components/consent-checkbox';
 import { Button, Field } from '@/components/ui';
 import { Body, Muted } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
@@ -18,6 +19,7 @@ export default function SignUpScreen() {
   const [username, setUsername] = useState('');
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function onSignUp() {
@@ -61,9 +63,11 @@ export default function SignUpScreen() {
         autoComplete="new-password"
       />
 
+      <ConsentCheckbox checked={consent} onChange={setConsent} />
+
       {error ? <Body style={styles.error}>{error}</Body> : null}
 
-      <Button label={t.auth.signUp} onPress={onSignUp} disabled={busy} />
+      <Button label={t.auth.signUp} onPress={onSignUp} disabled={busy || !consent} />
 
       <Pressable
         accessibilityRole="link"

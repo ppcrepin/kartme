@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 
 import { AuthShell } from '@/components/auth-shell';
+import { ConsentCheckbox } from '@/components/consent-checkbox';
 import { Button, Field } from '@/components/ui';
 import { Body, Muted } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -15,6 +16,7 @@ export default function UsernameScreen() {
   const [username, setUsername] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function onConfirm() {
@@ -42,9 +44,11 @@ export default function UsernameScreen() {
       />
       <Muted>{t.auth.usernameHint}</Muted>
 
+      <ConsentCheckbox checked={consent} onChange={setConsent} />
+
       {error ? <Body style={styles.error}>{error}</Body> : null}
 
-      <Button label={t.auth.confirm} onPress={onConfirm} disabled={busy} />
+      <Button label={t.auth.confirm} onPress={onConfirm} disabled={busy || !consent} />
       <Button label={t.auth.signOut} variant="ghost" onPress={signOut} disabled={busy} />
     </AuthShell>
   );
