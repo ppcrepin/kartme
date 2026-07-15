@@ -217,12 +217,14 @@ export async function removeParticipant(participationId: string): Promise<void> 
 
 // ── Classement & résultats ───────────────────────────────────────────────
 export interface RaceResult {
+  participationId: string;
   position: number;
   name: string;
   isSelf: boolean;
   eloBefore: number;
   eloAfter: number;
   eloDelta: number;
+  bestLapMs: number | null;
 }
 
 /** Soumet l'ordre d'arrivée (ids de participation) → calcul Elo serveur. */
@@ -271,10 +273,12 @@ export async function resultOrder(raceId: string): Promise<string[]> {
 }
 
 type RawResult = {
+  participation_id: string;
   position: number;
   elo_before: number;
   elo_after: number;
   elo_delta: number;
+  best_lap_ms: number | null;
   participation: {
     profile_id: string | null;
     profile: { username: string } | null;
@@ -285,18 +289,37 @@ type RawResult = {
 export async function listResults(raceId: string, selfId?: string): Promise<RaceResult[]> {
   const { data, error } = await supabase
     .from('results')
-    .select('position, elo_before, elo_after, elo_delta, participation:participations(profile_id, profile:profiles(username), ghost:ghost_profiles(display_name))')
+    .select('participation_id, position, elo_before, elo_after, elo_delta, best_lap_ms, participation:participations(profile_id, profile:profiles(username), ghost:ghost_profiles(display_name))')
     .eq('race_id', raceId)
     .order('position');
   if (error) throw new Error(error.message);
   return ((data ?? []) as unknown as RawResult[]).map((r) => ({
+    participationId: r.participation_id,
     position: r.position,
     name: r.participation?.profile?.username ?? r.participation?.ghost?.display_name ?? '—',
     isSelf: !!selfId && r.participation?.profile_id === selfId,
     eloBefore: r.elo_before,
     eloAfter: r.elo_after,
     eloDelta: r.elo_delta,
+    bestLapMs: r.best_lap_ms,
   }));
+}
+
+/** Renseigne / efface (p_ms null) le meilleur tour d'un pilote (soi-même ou admin). */
+export async function setLapTime(participationId: string, ms: number | null): Promise<void> {
+  const { error } = await supabase.rpc('set_lap_time', {
+    p_participation_id: participationId,
+    p_ms: ms,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Record du circuit : meilleur tour jamais enregistré + son auteur. */
+export async function getCircuitRecord(circuitId: string): Promise<{ ms: number; holder: string } | null> {
+  const { data, error } = await supabase.rpc('get_circuit_record', { p_circuit_id: circuitId });
+  if (error) throw new Error(error.message);
+  const row = (data as { best_lap_ms: number; holder: string }[] | null)?.[0];
+  return row ? { ms: row.best_lap_ms, holder: row.holder } : null;
 }
 
 /**

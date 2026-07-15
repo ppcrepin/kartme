@@ -24,6 +24,7 @@ import { useAuth } from '@/lib/auth';
 import { badgesForRace, type BadgeKey } from '@/lib/badges';
 import { formatRaceDate } from '@/lib/datetime';
 import { pairwiseBreakdown } from '@/lib/elo';
+import { formatLap, parseLap } from '@/lib/laptime';
 import { listFriends, type FriendEntry } from '@/lib/friends';
 import { gradeForElo } from '@/lib/grade';
 import {
@@ -31,11 +32,13 @@ import {
   addProfileParticipant,
   addSelfParticipant,
   deleteRace,
+  getCircuitRecord,
   getRace,
   joinRace,
   listParticipants,
   listResults,
   lockRace,
+  setLapTime,
   onRaceUpdate,
   rematch,
   removeParticipant,
@@ -51,6 +54,13 @@ import { appBaseUrl } from '@/lib/url';
 import { validateGhostName } from '@/lib/username';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
+// Tri des meilleurs tours : le plus rapide d'abord, les temps absents en dernier.
+const lapSort = (a: RaceResult, b: RaceResult) => {
+  if (a.bestLapMs == null && b.bestLapMs == null) return a.position - b.position;
+  if (a.bestLapMs == null) return 1;
+  if (b.bestLapMs == null) return -1;
+  return a.bestLapMs - b.bestLapMs;
+};
 const fmtDelta = (d: number) => (d > 0 ? `▲ +${d}` : d < 0 ? `▼ ${d}` : '—');
 const deltaColor = (d: number) => (d > 0 ? colors.pos : d < 0 ? colors.accent : colors.inkDim);
 
@@ -102,6 +112,10 @@ export default function RaceDetailScreen() {
   const [joinError, setJoinError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [myNewBadges, setMyNewBadges] = useState<BadgeKey[]>([]);
+  const [circuitRecord, setCircuitRecord] = useState<{ ms: number; holder: string } | null>(null);
+  const [lapEditId, setLapEditId] = useState<string | null>(null);
+  const [lapInput, setLapInput] = useState('');
+  const [lapError, setLapError] = useState<string | null>(null);
 
   const [editing, setEditing] = useState(false);
   const [editCircuit, setEditCircuit] = useState<Circuit | null>(null);
@@ -137,6 +151,18 @@ export default function RaceDetailScreen() {
   const locked = race?.status === 'locked';
   const canCorrect = !!race && withinCorrectionWindow(race);
   const selfParticipating = participants.some((p) => p.isSelf);
+
+  // Record du circuit (temps au tour) — chargé une fois la course terminée.
+  useEffect(() => {
+    if (!completed || !race?.circuit_id) return;
+    let active = true;
+    getCircuitRecord(race.circuit_id)
+      .then((r) => active && setCircuitRecord(r))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [completed, race?.circuit_id]);
 
   // Badges gagnés par MOI sur cette course (bandeau sous le podium).
   useEffect(() => {
@@ -224,6 +250,35 @@ export default function RaceDetailScreen() {
       await refresh();
     } catch (e) {
       setJoinError(e instanceof Error ? e.message : t.races.joinError);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startLapEdit(r: RaceResult) {
+    setLapEditId(r.participationId);
+    setLapInput(r.bestLapMs != null ? formatLap(r.bestLapMs) : '');
+    setLapError(null);
+  }
+
+  async function onSaveLap(participationId: string) {
+    // Champ vidé = effacement du temps ; sinon on parse.
+    const cleared = lapInput.trim() === '';
+    const ms = cleared ? null : parseLap(lapInput);
+    if (!cleared && ms === null) {
+      setLapError(t.races.lapInvalid);
+      return;
+    }
+    setLapError(null);
+    setBusy(true);
+    try {
+      await setLapTime(participationId, ms);
+      setLapEditId(null);
+      setLapInput('');
+      await refresh();
+      if (race?.circuit_id) setCircuitRecord(await getCircuitRecord(race.circuit_id).catch(() => null));
+    } catch (e) {
+      setLapError(e instanceof Error ? e.message : t.races.lapInvalid);
     } finally {
       setBusy(false);
     }
@@ -380,6 +435,74 @@ export default function RaceDetailScreen() {
                     </Pressable>
                   );
                 })}
+
+                {/* ── Meilleurs tours ⏱ (informatif, hors Elo) ── */}
+                <View style={styles.section}>
+                  <Label>{t.races.lapTimes}</Label>
+                  {circuitRecord ? (
+                    <Muted style={styles.lapRecord}>
+                      {t.races.circuitRecord
+                        .replace('%t', formatLap(circuitRecord.ms))
+                        .replace('%n', circuitRecord.holder)}
+                    </Muted>
+                  ) : null}
+                  {[...results].sort(lapSort).map((r) => {
+                    const editable = r.isSelf || isAdmin;
+                    const editing = lapEditId === r.participationId;
+                    return (
+                      <Card key={r.participationId}>
+                        <View style={styles.lapRow}>
+                          <Body style={styles.flex}>
+                            {r.name}
+                            {r.isSelf ? <Muted> ({t.races.you})</Muted> : null}
+                          </Body>
+                          {!editing ? (
+                            <Body style={styles.lapTime}>
+                              {r.bestLapMs != null ? formatLap(r.bestLapMs) : '—'}
+                            </Body>
+                          ) : null}
+                          {editable && !editing ? (
+                            <Pressable onPress={() => startLapEdit(r)} accessibilityRole="button">
+                              <Muted style={styles.lapEdit}>
+                                {r.bestLapMs != null
+                                  ? t.races.lapEdit
+                                  : r.isSelf
+                                    ? t.races.lapAdd
+                                    : t.races.lapAddOther}
+                              </Muted>
+                            </Pressable>
+                          ) : null}
+                        </View>
+                        {editing ? (
+                          <View style={styles.lapEditBox}>
+                            <Field
+                              label={t.races.lapLabel}
+                              value={lapInput}
+                              onChangeText={setLapInput}
+                              placeholder="0:52.348"
+                            />
+                            {lapError ? <Muted style={styles.rematchErr}>{lapError}</Muted> : null}
+                            <View style={styles.actions}>
+                              <Button
+                                label={t.common.cancel}
+                                variant="ghost"
+                                onPress={() => {
+                                  setLapEditId(null);
+                                  setLapError(null);
+                                }}
+                              />
+                              <Button
+                                label={t.races.lapSave}
+                                onPress={() => onSaveLap(r.participationId)}
+                                disabled={busy}
+                              />
+                            </View>
+                          </View>
+                        ) : null}
+                      </Card>
+                    );
+                  })}
+                </View>
 
                 <ShareCard url={shareUrl} title={t.races.shareResults} message={resultsMessage} />
 
@@ -605,4 +728,9 @@ const styles = StyleSheet.create({
   actions: { gap: spacing.sm },
   correctBox: { gap: spacing.xs, marginTop: spacing.sm },
   correctHint: { textAlign: 'center' },
+  lapRecord: { color: colors.accent, marginBottom: spacing.xs },
+  lapRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  lapTime: { fontVariant: ['tabular-nums'], fontWeight: '800' },
+  lapEdit: { color: colors.accent, fontWeight: '700' },
+  lapEditBox: { marginTop: spacing.sm, gap: spacing.sm },
 });
