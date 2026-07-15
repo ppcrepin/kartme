@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EloCurve } from '@/components/elo-curve';
-import { Avatar, BadgeIcon, Button, Card, GradeMedal, Tag } from '@/components/ui';
+import { Avatar, BadgeIcon, Button, Card, GradeMedal, SkeletonCard, Tag } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -56,6 +56,7 @@ export default function PilotScreen() {
   const [reporting, setReporting] = useState(false);
   const [reported, setReported] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const [showAllHistory, setShowAllHistory] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -129,12 +130,17 @@ export default function PilotScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" style={styles.back}>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Retour"
+          hitSlop={10}
+          style={styles.back}>
           <Muted>←</Muted>
         </Pressable>
 
         {!pilot || !grade ? (
-          <Muted>…</Muted>
+          <SkeletonCard />
         ) : blocked ? (
           <Muted>{t.friends.blocked}</Muted>
         ) : (
@@ -265,7 +271,7 @@ export default function PilotScreen() {
                 ) : (
                   <View style={styles.historySection}>
                     <Label>{t.profile.historyOther}</Label>
-                    {history.map((h, i) => (
+                    {(showAllHistory ? history : history.slice(0, 10)).map((h, i) => (
                       <Pressable
                         key={`${h.raceId}-${i}`}
                         onPress={() => h.raceId && router.push(`/race/${h.raceId}`)}
@@ -288,6 +294,13 @@ export default function PilotScreen() {
                         </Card>
                       </Pressable>
                     ))}
+                    {history.length > 10 && !showAllHistory ? (
+                      <Button
+                        label={t.profile.historySeeAll.replace('%n', String(history.length))}
+                        variant="ghost"
+                        onPress={() => setShowAllHistory(true)}
+                      />
+                    ) : null}
                   </View>
                 )}
               </>

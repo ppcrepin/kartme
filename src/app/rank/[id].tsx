@@ -112,7 +112,12 @@ export default function RankScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} scrollEnabled={!dragging}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" style={styles.back}>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Retour"
+          hitSlop={10}
+          style={styles.back}>
           <Muted>←</Muted>
         </Pressable>
 

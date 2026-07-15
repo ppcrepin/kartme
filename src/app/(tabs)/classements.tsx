@@ -41,6 +41,9 @@ export default function ClassementsScreen() {
   const [moreFailed, setMoreFailed] = useState(false);
   // Un seul chargement en vol par portée (ref : pas besoin de re-rendu).
   const inFlight = useRef<Partial<Record<LeaderboardScope, boolean>>>({});
+  // Bascule auto vers « Global » une seule fois si l'onglet Amis est vide
+  // (un nouveau sans amis verrait sinon un classement désert).
+  const autoSwitched = useRef(false);
 
   const load = useCallback((sc: LeaderboardScope) => {
     if (inFlight.current[sc]) return;
@@ -52,6 +55,10 @@ export default function ClassementsScreen() {
           [sc]: { rows, myRank, mayHaveMore: rows.length === LEADERBOARD_PAGE },
         }));
         setFailed((prev) => ({ ...prev, [sc]: false }));
+        if (sc === 'friends' && rows.length === 0 && !autoSwitched.current) {
+          autoSwitched.current = true;
+          setScope('global');
+        }
       })
       .catch(() => {
         setFailed((prev) => ({ ...prev, [sc]: true }));
@@ -105,7 +112,10 @@ export default function ClassementsScreen() {
     setMoreFailed(false);
   }
 
-  const meInList = current?.rows.some((r) => r.isMe) ?? false;
+  const mr = current?.myRank ?? null;
+  // Top X% (portée globale) : ceil pour que le 1er soit « Top 1% », jamais 0.
+  const topPct = mr && mr.total > 0 ? Math.max(1, Math.ceil((mr.rank / mr.total) * 100)) : null;
+  const myGrade = mr ? gradeForElo(mr.elo) : null;
 
   return (
     <Screen title={t.tabs.rankings}>
@@ -121,6 +131,30 @@ export default function ClassementsScreen() {
           onPress={() => switchScope('global')}
         />
       </View>
+
+      {/* Ma position — carte de statut relatif épinglée */}
+      {mr && myGrade ? (
+        <Card style={styles.posCard}>
+          <View style={styles.posRow}>
+            <View>
+              <Muted style={styles.posLabel}>{t.rankings.myPosition}</Muted>
+              <Body style={styles.posRank}>
+                {ordinal(mr.rank)} <Muted style={styles.posTotal}>/ {mr.total}</Muted>
+              </Body>
+            </View>
+            <View style={styles.posRight}>
+              {scope === 'global' && topPct ? (
+                <Body style={[styles.posPct, { color: myGrade.color }]}>
+                  {t.rankings.topPercent.replace('%p', String(topPct))}
+                </Body>
+              ) : null}
+              <Muted style={{ color: myGrade.color }}>
+                {myGrade.name} · {mr.elo}
+              </Muted>
+            </View>
+          </View>
+        </Card>
+      ) : null}
 
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         {showError ? (
@@ -169,19 +203,7 @@ export default function ClassementsScreen() {
             ) : null}
             {moreFailed ? <Muted>{t.rankings.loadError}</Muted> : null}
 
-            {!meInList ? (
-              current.myRank ? (
-                <Card style={styles.meCard}>
-                  <Body>
-                    {t.rankings.myRank
-                      .replace('%r', ordinal(current.myRank.rank))
-                      .replace('%e', String(current.myRank.elo))}
-                  </Body>
-                </Card>
-              ) : (
-                <Muted style={styles.hint}>{t.rankings.notRankedYet}</Muted>
-              )
-            ) : null}
+            {!current.myRank ? <Muted style={styles.hint}>{t.rankings.notRankedYet}</Muted> : null}
           </>
         )}
       </ScrollView>
@@ -198,4 +220,11 @@ const styles = StyleSheet.create({
   meCard: { borderColor: colors.accent },
   hint: { marginTop: spacing.xs },
   center: { gap: spacing.md, alignItems: 'flex-start' },
+  posCard: { borderColor: colors.accent, marginBottom: spacing.xs },
+  posRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  posLabel: { fontSize: 12 },
+  posRank: { fontFamily: fonts.serifBlack, fontSize: 28, color: colors.ink },
+  posTotal: { fontFamily: fonts.serif, fontSize: 16, color: colors.inkDim },
+  posRight: { alignItems: 'flex-end', gap: 2 },
+  posPct: { fontFamily: fonts.serifBlack, fontSize: 20 },
 });

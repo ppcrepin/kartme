@@ -195,6 +195,12 @@ export async function addProfileParticipant(raceId: string, profileId: string): 
   if (error) throw new Error(error.message);
 }
 
+/** Un invité rejoint lui-même une course ouverte (RPC : la RLS réserve l'ajout à l'admin). */
+export async function joinRace(raceId: string): Promise<void> {
+  const { error } = await supabase.rpc('join_race', { p_race_id: raceId });
+  if (error) throw new Error(error.message);
+}
+
 /** (Ré)ajoute le créateur comme pilote de sa course. */
 export async function addSelfParticipant(raceId: string): Promise<void> {
   const { data: auth } = await supabase.auth.getUser();

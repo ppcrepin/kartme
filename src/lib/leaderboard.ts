@@ -22,6 +22,7 @@ export interface MyRank {
   rank: number;
   elo: number;
   races: number;
+  total: number; // nombre total de classés dans la portée (pour le Top X%)
 }
 
 /** Nombre de lignes chargées par page sur l'écran L1. */
@@ -61,6 +62,6 @@ export async function getLeaderboard(
 export async function getMyRank(scope: LeaderboardScope): Promise<MyRank | null> {
   const { data, error } = await supabase.rpc('get_my_rank', { p_scope: scope });
   if (error) throw new Error(error.message);
-  const row = (data as { rank: number; elo: number; races: number }[] | null)?.[0];
-  return row ? { rank: row.rank, elo: row.elo, races: row.races } : null;
+  const row = (data as { rank: number; elo: number; races: number; total: number }[] | null)?.[0];
+  return row ? { rank: row.rank, elo: row.elo, races: row.races, total: row.total } : null;
 }

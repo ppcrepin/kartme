@@ -7,6 +7,7 @@ import { useEffect, useRef } from 'react';
 import { captureReferralFromUrl, logError, track } from '@/lib/analytics';
 import { colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { rememberPendingRoute, takePendingRoute } from '@/lib/pending-route';
 
 // Garde le splash affiché tant que la police d'affichage n'est pas prête.
 SplashScreen.preventAutoHideAsync();
@@ -41,11 +42,19 @@ function RootNavigator() {
     const inOnboarding = group === '(onboarding)';
 
     if (!session) {
-      if (!inAuth) router.replace('/sign-in');
+      if (!inAuth) {
+        rememberPendingRoute(path); // ex. « race/abc » → on y reviendra après connexion
+        router.replace('/sign-in');
+      }
     } else if (hasProfile === false) {
       if (!inOnboarding) router.replace('/username');
     } else if (hasProfile === true) {
-      if (inAuth || inOnboarding) router.replace('/(tabs)');
+      // Consommer la destination mémorisée dès qu'on est connecté+profilé, quel
+      // que soit le groupe : après un retour OAuth (redirection plein écran vers
+      // la racine = groupe (tabs)), on n'est ni dans (auth) ni (onboarding).
+      const pending = takePendingRoute();
+      if (pending) router.replace(`/${pending}`);
+      else if (inAuth || inOnboarding) router.replace('/(tabs)');
     }
   }, [initializing, session, hasProfile, segments, router]);
 

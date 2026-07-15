@@ -59,7 +59,8 @@ export function ShareCard({
         </View>
       </View>
       <Muted style={styles.hint}>{message ? t.races.shareResultsHint : t.races.shareHint}</Muted>
-      <Muted style={styles.url} numberOfLines={1}>
+      {/* Sélectionnable : fallback de copie manuelle sur desktop (ni partage natif ni presse-papier). */}
+      <Muted style={styles.url} selectable>
         {shareUrl}
       </Muted>
       <Button label={copied ? t.races.copied : t.races.copyLink} variant="ghost" onPress={onShare} />

@@ -37,7 +37,7 @@ export default function SignUpScreen() {
   }
 
   return (
-    <AuthShell title={t.auth.signUpTitle}>
+    <AuthShell title={t.auth.signUpTitle} subtitle={t.app.tagline}>
       <Field
         label={t.auth.username}
         value={username}

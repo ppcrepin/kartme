@@ -32,6 +32,8 @@ export default function BadgesScreen() {
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/profil'))}
           accessibilityRole="button"
+          accessibilityLabel="Retour"
+          hitSlop={10}
           style={styles.back}>
           <Muted>←</Muted>
         </Pressable>

@@ -35,7 +35,7 @@ export default function SignInScreen() {
   }
 
   return (
-    <AuthShell title={t.auth.signInTitle}>
+    <AuthShell title={t.auth.signInTitle} subtitle={t.app.tagline}>
       {!isSupabaseConfigured ? <Muted>{t.auth.notConfigured}</Muted> : null}
 
       <Field

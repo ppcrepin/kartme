@@ -8,7 +8,15 @@ import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 
 /** Conteneur commun des écrans d'authentification : marque + titre + formulaire. */
-export function AuthShell({ title, children }: { title: string; children: ReactNode }) {
+export function AuthShell({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+}) {
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
@@ -21,6 +29,7 @@ export function AuthShell({ title, children }: { title: string; children: ReactN
             </View>
             <Muted style={styles.brand}>{t.app.name.toUpperCase()}</Muted>
             <Title>{title}</Title>
+            {subtitle ? <Muted style={styles.subtitle}>{subtitle}</Muted> : null}
           </View>
           <View style={styles.form}>{children}</View>
         </ScrollView>
@@ -36,5 +45,6 @@ const styles = StyleSheet.create({
   header: { gap: spacing.sm },
   rule: { width: 64 },
   brand: { letterSpacing: 3, fontWeight: '800', color: colors.accent },
+  subtitle: { fontSize: 15, lineHeight: 20 },
   form: { gap: spacing.md },
 });

@@ -198,6 +198,9 @@ begin
                    5, 'get_my_rank(global) : 5e');
   perform tests.eq(tests.rows_as(A, $q$ select rank from public.get_my_rank('friends') $q$),
                    2, 'get_my_rank(friends) : 2e');
+  -- total (pour le Top X%) : au moins égal au rang, et cohérent entre portées.
+  perform tests.eq(tests.rows_as(A, $q$ select case when total >= rank then 1 else 0 end from public.get_my_rank('global') $q$),
+                   1, 'get_my_rank(global) : total >= rang');
   perform tests.eq(tests.rows_as(F, $q$ select count(*) from public.get_my_rank('global') $q$),
                    0, 'get_my_rank(global) : aucune ligne si jamais couru');
   perform tests.eq(tests.rows_as(F, $q$ select count(*) from public.get_my_rank('friends') $q$),

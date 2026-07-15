@@ -32,6 +32,7 @@ import {
   addSelfParticipant,
   deleteRace,
   getRace,
+  joinRace,
   listParticipants,
   listResults,
   lockRace,
@@ -98,6 +99,8 @@ export default function RaceDetailScreen() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [rematchError, setRematchError] = useState<string | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [myNewBadges, setMyNewBadges] = useState<BadgeKey[]>([]);
 
   const [editing, setEditing] = useState(false);
@@ -201,8 +204,29 @@ export default function RaceDetailScreen() {
   }
 
   async function onDelete() {
-    await deleteRace(id!);
-    router.replace('/(tabs)');
+    setBusy(true);
+    setJoinError(null);
+    try {
+      await deleteRace(id!);
+      router.replace('/(tabs)');
+    } catch {
+      setJoinError(t.races.deleteError);
+      setConfirmDelete(false);
+      setBusy(false);
+    }
+  }
+
+  async function onJoin() {
+    setBusy(true);
+    setJoinError(null);
+    try {
+      await joinRace(id!);
+      await refresh();
+    } catch (e) {
+      setJoinError(e instanceof Error ? e.message : t.races.joinError);
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onRematch() {
@@ -260,6 +284,8 @@ export default function RaceDetailScreen() {
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
           accessibilityRole="button"
+          accessibilityLabel="Retour"
+          hitSlop={10}
           style={styles.back}>
           <Muted>←</Muted>
         </Pressable>
@@ -491,6 +517,12 @@ export default function RaceDetailScreen() {
                   ) : (
                     <Muted>{t.races.needTwoPilots}</Muted>
                   )
+                ) : !selfParticipating && !locked ? (
+                  /* Invité : rejoindre soi-même une course ouverte */
+                  <View style={styles.section}>
+                    <Button label={t.races.joinRace} onPress={onJoin} disabled={busy} />
+                    {joinError ? <Muted style={styles.rematchErr}>{joinError}</Muted> : null}
+                  </View>
                 ) : (
                   <WaitingFlag />
                 )}
@@ -498,9 +530,20 @@ export default function RaceDetailScreen() {
                 <ShareCard url={shareUrl} />
 
                 {isAdmin ? (
-                  <Pressable onPress={onDelete} accessibilityRole="button" style={styles.deleteBtn}>
-                    <Body style={styles.deleteTxt}>{t.races.delete}</Body>
-                  </Pressable>
+                  confirmDelete ? (
+                    <View style={styles.deleteConfirm}>
+                      <Muted>{t.races.deleteConfirm}</Muted>
+                      <Button label={t.races.deleteConfirmBtn} onPress={onDelete} disabled={busy} />
+                      <Button label={t.common.cancel} variant="ghost" onPress={() => setConfirmDelete(false)} />
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={() => setConfirmDelete(true)}
+                      accessibilityRole="button"
+                      style={styles.deleteBtn}>
+                      <Body style={styles.deleteTxt}>{t.races.delete}</Body>
+                    </Pressable>
+                  )
                 ) : null}
               </>
             )}
@@ -557,6 +600,7 @@ const styles = StyleSheet.create({
   waitingHint: { textAlign: 'center', maxWidth: 280 },
   deleteBtn: { alignItems: 'center', paddingVertical: spacing.md },
   deleteTxt: { color: colors.inkDim2 },
+  deleteConfirm: { gap: spacing.sm, alignItems: 'center', marginTop: spacing.sm },
   rematchErr: { color: colors.accent, textAlign: 'center' },
   actions: { gap: spacing.sm },
   correctBox: { gap: spacing.xs, marginTop: spacing.sm },

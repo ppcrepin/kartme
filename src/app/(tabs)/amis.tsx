@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
-import { Avatar, Card, Field, GradeMedal } from '@/components/ui';
+import { Avatar, Button, Card, Field, GradeMedal } from '@/components/ui';
 import { Body, Label, Muted } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -18,11 +18,14 @@ import {
 } from '@/lib/friends';
 import { gradeForElo } from '@/lib/grade';
 
+const FRIENDS_CAP = 12; // liste d'amis plafonnée par défaut (perf + lisibilité à l'échelle)
+
 export default function AmisScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Pilot[]>([]);
   const [searched, setSearched] = useState(false);
+  const [showAllFriends, setShowAllFriends] = useState(false);
   const [lists, setLists] = useState<FriendLists>({ received: [], sent: [], friends: [] });
 
   const refresh = useCallback(() => {
@@ -167,7 +170,7 @@ export default function AmisScreen() {
               {lists.friends.length === 0 ? (
                 <Muted>{t.friends.listEmpty}</Muted>
               ) : (
-                lists.friends.map((f) => {
+                (showAllFriends ? lists.friends : lists.friends.slice(0, FRIENDS_CAP)).map((f) => {
                   const grade = gradeForElo(f.elo);
                   return (
                     <Pressable key={f.friendshipId} onPress={() => router.push(`/pilot/${f.pilotId}`)} accessibilityRole="button">
@@ -185,6 +188,13 @@ export default function AmisScreen() {
                   );
                 })
               )}
+              {lists.friends.length > FRIENDS_CAP && !showAllFriends ? (
+                <Button
+                  label={t.friends.seeAll.replace('%n', String(lists.friends.length))}
+                  variant="ghost"
+                  onPress={() => setShowAllFriends(true)}
+                />
+              ) : null}
             </View>
           </>
         )}

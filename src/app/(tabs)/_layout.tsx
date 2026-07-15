@@ -19,19 +19,19 @@ export default function TabsLayout() {
       }}>
       <Tabs.Screen
         name="index"
-        options={{ title: t.tabs.races, tabBarIcon: ({ color }) => <TabIcon color={color} /> }}
+        options={{ title: t.tabs.races, tabBarIcon: ({ color }) => <TabIcon name="races" color={color} /> }}
       />
       <Tabs.Screen
         name="classements"
-        options={{ title: t.tabs.rankings, tabBarIcon: ({ color }) => <TabIcon color={color} /> }}
+        options={{ title: t.tabs.rankings, tabBarIcon: ({ color }) => <TabIcon name="rankings" color={color} /> }}
       />
       <Tabs.Screen
         name="amis"
-        options={{ title: t.tabs.friends, tabBarIcon: ({ color }) => <TabIcon color={color} /> }}
+        options={{ title: t.tabs.friends, tabBarIcon: ({ color }) => <TabIcon name="friends" color={color} /> }}
       />
       <Tabs.Screen
         name="profil"
-        options={{ title: t.tabs.profile, tabBarIcon: ({ color }) => <TabIcon color={color} /> }}
+        options={{ title: t.tabs.profile, tabBarIcon: ({ color }) => <TabIcon name="profile" color={color} /> }}
       />
     </Tabs>
   );

@@ -9,14 +9,25 @@ import { colors, spacing } from '@/constants/theme';
 /**
  * Conteneur d'écran commun : fond carbone, marges, filet damier + titre.
  */
-export function Screen({ title, children }: { title: string; children?: ReactNode }) {
+export function Screen({
+  title,
+  headerAction,
+  children,
+}: {
+  title: string;
+  headerAction?: ReactNode;
+  children?: ReactNode;
+}) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.body}>
         <View style={styles.rule}>
           <CheckeredRule cells={10} />
         </View>
-        <Title>{title}</Title>
+        <View style={styles.titleRow}>
+          <Title>{title}</Title>
+          {headerAction}
+        </View>
         {children}
       </View>
     </SafeAreaView>
@@ -30,4 +41,5 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: spacing.md },
   rule: { width: 64 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 });

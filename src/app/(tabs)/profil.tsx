@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { EloCurve } from '@/components/elo-curve';
 import { Screen } from '@/components/screen';
-import { Avatar, BadgeIcon, Button, Card, Gauge, GradeMedal } from '@/components/ui';
+import { Avatar, BadgeIcon, Button, Card, Gauge, GradeMedal, SkeletonCard } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -24,6 +24,7 @@ import {
 
 const fmtDelta = (d: number) => (d > 0 ? `▲ +${d}` : d < 0 ? `▼ ${d}` : '—');
 const deltaColor = (d: number) => (d > 0 ? colors.pos : d < 0 ? colors.accent : colors.inkDim);
+const HISTORY_CAP = 10; // on n'affiche que les 10 dernières courses par défaut (perf + accès au pied de page)
 
 export default function ProfilScreen() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function ProfilScreen() {
   const [profile, setProfile] = useState<MyProfile | null>(null);
   const [curve, setCurve] = useState<EloPoint[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [showAllHistory, setShowAllHistory] = useState(false);
   const [badges, setBadges] = useState<Map<BadgeKey, UnlockedBadge>>(new Map());
 
   useFocusEffect(
@@ -55,7 +57,8 @@ export default function ProfilScreen() {
   if (!profile) {
     return (
       <Screen title={t.tabs.profile}>
-        <Muted>…</Muted>
+        <SkeletonCard />
+        <SkeletonCard />
       </Screen>
     );
   }
@@ -63,8 +66,20 @@ export default function ProfilScreen() {
   const gp = gradeProgress(profile.elo);
   const stats = statsFromHistory(history);
 
+  const shownHistory = showAllHistory ? history : history.slice(0, HISTORY_CAP);
+
   return (
-    <Screen title={t.tabs.profile}>
+    <Screen
+      title={t.tabs.profile}
+      headerAction={
+        <Pressable
+          onPress={() => router.push('/settings')}
+          accessibilityRole="button"
+          accessibilityLabel={t.settings.title}
+          hitSlop={10}>
+          <Body style={styles.gear}>⚙︎</Body>
+        </Pressable>
+      }>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Identité + Elo + grade */}
         <Card>
@@ -147,7 +162,7 @@ export default function ProfilScreen() {
           {history.length === 0 ? (
             <Muted>{t.profile.historyEmpty}</Muted>
           ) : (
-            history.map((h, i) => (
+            shownHistory.map((h, i) => (
               <Pressable
                 key={`${h.raceId}-${i}`}
                 onPress={() => h.raceId && router.push(`/race/${h.raceId}`)}
@@ -170,12 +185,17 @@ export default function ProfilScreen() {
               </Pressable>
             ))
           )}
+          {history.length > HISTORY_CAP && !showAllHistory ? (
+            <Button
+              label={t.profile.historySeeAll.replace('%n', String(history.length))}
+              variant="ghost"
+              onPress={() => setShowAllHistory(true)}
+            />
+          ) : null}
         </View>
 
         {/* Pied de page */}
         <View style={styles.foot}>
-          <Button label={t.settings.title} variant="ghost" onPress={() => router.push('/settings')} />
-          <Button label={t.gallery.open} variant="ghost" onPress={() => router.push('/design-system')} />
           <Button label={t.auth.signOut} variant="ghost" onPress={signOut} />
         </View>
       </ScrollView>
@@ -231,4 +251,5 @@ const styles = StyleSheet.create({
   historyElo: { alignItems: 'flex-end' },
   historyDelta: { fontWeight: '800' },
   foot: { gap: spacing.sm, marginTop: spacing.md, alignItems: 'flex-start' },
+  gear: { fontSize: 22, color: colors.ink },
 });

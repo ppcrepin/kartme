@@ -28,7 +28,12 @@ export default function GradesScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" style={styles.back}>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Retour"
+          hitSlop={10}
+          style={styles.back}>
           <Muted>←</Muted>
         </Pressable>
         <Title>{t.profile.gradesLadder}</Title>
