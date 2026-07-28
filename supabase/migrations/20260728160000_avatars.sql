@@ -267,8 +267,8 @@ begin
         allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp'];
 
   execute $pol$ drop policy if exists avatars_read on storage.objects $pol$;
-  -- Le prédicat vit dans une fonction (voir can_read_avatar plus bas) : la
-  -- policy est la SEULE barrière entre une photo privée et le reste du monde,
+  -- Le prédicat vit dans une fonction (can_read_avatar, définie juste au-dessus) :
+  -- la policy est la SEULE barrière entre une photo privée et le reste du monde,
   -- et le harnais local n'a pas de schéma storage pour la tester. Extraite,
   -- elle se teste comme n'importe quelle fonction.
   execute $pol$
