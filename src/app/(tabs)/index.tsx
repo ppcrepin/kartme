@@ -2,6 +2,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { NotificationBell } from '@/components/notification-bell';
 import { Screen } from '@/components/screen';
 import { Button, Card, Tag } from '@/components/ui';
 import { Body, Heading, Muted } from '@/components/ui/text';
@@ -30,7 +31,7 @@ export default function CoursesScreen() {
   const list = races[tab];
 
   return (
-    <Screen title={t.tabs.races}>
+    <Screen title={t.tabs.races} headerAction={<NotificationBell />}>
       <View style={styles.filters}>
         <Tag label={t.races.upcoming} selected={tab === 'upcoming'} onPress={() => setTab('upcoming')} />
         <Tag label={t.races.past} selected={tab === 'past'} onPress={() => setTab('past')} />

@@ -253,21 +253,22 @@ Issu de **deux sources** : la comparaison front-end/UX avec l'app de Maggie (`pp
 | **A2** | **Inviter un pilote sans être ami** — recherche par pseudo directement dans la course (anti-rebond 300 ms, exclut ceux déjà sur la grille) ; les amis restent en raccourci. *La RLS autorisait déjà l'admin à ajouter tout pilote non bloqué : la limitation était purement dans l'interface.* | retour de test | ✅ **fait** *(front-end seul)* |
 | **A3** | **Calibration des nouveaux** — K **doublé (128)** sur les **5 premières courses** ; K appliqué à un duel = **moyenne des K** des deux pilotes → l'échange reste symétrique, la **somme nulle entre inscrits est préservée** (anti-triche intact). Compteur `profiles.races` maintenu par le moteur (protégé comme l'Elo ; cohérent avec correction 24 h et suppression modération). Libellé **« En calibration »** (grille, classements, « Ma position », profil) à la place d'un grade encore vide de sens. **Badges Push / Kart-astrophe suspendus pendant la calibration** (les gros écarts y sont attendus). | retour de test + barème Maggie | ✅ **fait** *(SQL à coller)* |
 | **A4** | **Circuits en RÉFÉRENTIEL maîtrisé** *(décision PO 2026-07-28 : plus d'ajout libre → fini les doublons ; alimentation par seed/SQL, import « kartings de France » à planifier par ce canal)* + recherche **tolérante** (accents/casse/tirets) sur le **nom ET la ville**, et **« Tes circuits »** (pistes déjà courues, récentes d'abord) proposés avant la saisie. *« Près de moi » (géoloc) reporté : nécessite de géocoder le référentiel.* | retour de test | ✅ **fait** *(SQL à coller)* |
-| **A5** | **Centre de notifications in-app + cloche** — aujourd'hui uniquement du push : notif refusée = information perdue | app Maggie | ⏳ |
+| **A5** | **Centre de notifications in-app + cloche** — boîte de réception persistante (table `notifications`, RLS « les miennes seulement », contenu **immuable** côté client), cloche + pastille « 99+ » en en-tête de l'onglet Courses, tap → écran N1, tout marqué lu à l'ouverture, rétention **90 jours** et purge à la suppression de compte (RGPD). **Point d'injection unique : `enqueue_push`** → tous les déclencheurs existants (invitation, classement, ami, signalement) alimentent la boîte sans être réécrits, et tout futur événement aussi. *Le push restait aveugle sur iOS hors PWA et perdu si refusé ; la boîte, elle, marche partout.* | app Maggie | ✅ **fait** *(SQL à coller)* |
+| **A2b** | **Grille : les trois façons d'ajouter, hiérarchisées** *(décision PO 2026-07-28)* — **1 · Tes amis** (un tap) → **2 · Un autre pilote inscrit** (par pseudo, sans amitié) → **3 · Quelqu'un sans compte**, en retrait et **explicitement annoncé hors Elo** (« il apparaît au classement de la course mais n'échange aucun point ») + incitation à l'inscription. *L'ancien ordre mettait l'invité sans compte en premier : le chemin le plus coûteux pour le produit était le plus facile à prendre.* | retour de test | ✅ **fait** *(front-end seul)* |
 
 ### ⏭️ Ensuite
 
 | # | Amélioration | Origine |
 |---|---|---|
+| **A10** | ✅ **fait** — **Brouillon hors-ligne de la saisie** *(front-end seul)* : l'ordre en cours (présents, mode glisser/tap, classement) est enregistré localement à chaque geste et restauré au retour, avec bandeau « Saisie reprise » + bouton « Repartir de zéro ». Rejeté automatiquement si la grille a changé (un ordre bâti sur un autre plateau donnerait un classement faux) ou après 24 h ; effacé dès que le classement part en base. La **correction** ne se brouillonne pas — la référence, c'est le classement enregistré. *7 tests unitaires.* | app Maggie |
 | **A6** | **Abandons (DNF)** — classer un pilote « abandon » au lieu de le retirer (sortie de piste, panne) | app Maggie |
 | **A7** | **Photo de profil** (upload) à la place des initiales | app Maggie |
 | **A8** | **Suppression de compte annulable** (délai de grâce) au lieu d'immédiate | app Maggie |
 | **A9** | **Saisie par chronos** — entrer les temps, l'app en déduit le classement | app Maggie |
-| **A10** | **Brouillon hors-ligne** de la saisie (coupure réseau au circuit) | app Maggie |
 
 ### 📋 Notes du vérificateur (mineurs assumés, à reprendre plus tard)
 - **Plancher Elo 100** : un duel contre un pilote au plancher peut laisser un léger résidu de somme (préexistant, amplifié en calibration) — rare, à documenter ou redistribuer un jour.
-- **Fiche pilote publique** : n'affiche pas encore « En calibration » (get_pilot ne renvoie pas le compteur) — incohérence bénigne entre écrans.
+- ~~**Fiche pilote publique** : n'affiche pas « En calibration »~~ → **corrigé** : `get_pilot` et `search_pilots` renvoient désormais `races`, la fiche affiche « En calibration » et masque la médaille de grade sous 5 courses.
 - **`races_delete_admin`** : l'API permet à un admin de supprimer une course terminée (l'UI le cache) — un garde `status='upcoming'` serait sain.
 - Les invités figurent sur le podium avec l'étiquette « Invité » (sans delta) : comportement voulu — ils ont bien couru.
 

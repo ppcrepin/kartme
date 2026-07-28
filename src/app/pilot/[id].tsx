@@ -32,7 +32,7 @@ import {
   type Pilot,
   type ReportCategory,
 } from '@/lib/friends';
-import { gradeForElo } from '@/lib/grade';
+import { gradeForElo, isCalibrating } from '@/lib/grade';
 
 const REPORT_CATEGORIES: ReportCategory[] = [
   'comportement',
@@ -126,6 +126,7 @@ export default function PilotScreen() {
   }
 
   const grade = pilot ? gradeForElo(pilot.elo) : null;
+  const calibrating = pilot ? isCalibrating(pilot.races) : false;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -151,12 +152,22 @@ export default function PilotScreen() {
                 <Avatar name={pilot.username} size={52} />
                 <View style={styles.flex}>
                   <Title style={styles.username}>{pilot.username}</Title>
-                  <Muted style={{ color: grade.color }}>
-                    {grade.name}
-                    {pilot.eloExact ? ` · ${pilot.elo}` : ''}
-                  </Muted>
+                  {/* Sous 5 courses, le grade ne veut encore rien dire : on
+                      annonce la calibration, comme sur la grille et les
+                      classements (sinon deux écrans se contredisent). */}
+                  {calibrating ? (
+                    <Muted>
+                      {t.profile.calibrating}
+                      {pilot.eloExact ? ` · ${pilot.elo}` : ''}
+                    </Muted>
+                  ) : (
+                    <Muted style={{ color: grade.color }}>
+                      {grade.name}
+                      {pilot.eloExact ? ` · ${pilot.elo}` : ''}
+                    </Muted>
+                  )}
                 </View>
-                <GradeMedal grade={grade} size={46} />
+                {calibrating ? null : <GradeMedal grade={grade} size={46} />}
               </View>
               {pilot.isPrivate && !pilot.eloExact ? (
                 <Muted style={styles.privateNote}>{t.friends.privateProfile}</Muted>

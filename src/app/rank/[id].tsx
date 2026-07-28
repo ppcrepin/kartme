@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DragList } from '@/components/drag-list';
-import { Avatar, Button, Card } from '@/components/ui';
+import { Avatar, Banner, Button, Card } from '@/components/ui';
 import { Body, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -17,6 +17,7 @@ import {
   submitRaceResults,
   type Participant,
 } from '@/lib/races';
+import { clearDraft, isMeaningful, loadDraft, saveDraft } from '@/lib/rank-draft';
 
 type Step = 'presents' | 'order';
 type Mode = 'drag' | 'tap';
@@ -38,16 +39,33 @@ export default function RankScreen() {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [restored, setRestored] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       listParticipants(id!, session?.user.id)
         .then(async (parts) => {
           setParticipants(parts);
+          const byId = new Map(parts.map((p) => [p.id, p]));
+
+          // Brouillon local (A10) : au circuit, une coupure réseau ou un
+          // rechargement ne doit pas effacer un ordre saisi à la main. En
+          // correction, on repart TOUJOURS du classement enregistré — c'est
+          // lui la référence, pas un brouillon oublié.
+          const draft = isCorrect ? null : loadDraft(id!, parts.map((p) => p.id));
+          if (draft && isMeaningful(draft)) {
+            setAbsents(new Set(draft.absentIds));
+            setOrdered(draft.orderedIds.map((pid) => byId.get(pid)!).filter(Boolean));
+            setTapOrder(draft.tapOrder);
+            setMode(draft.mode);
+            setStep(draft.step);
+            setRestored(true);
+            return;
+          }
+
           if (isCorrect) {
             // Correction : pré-remplir dans l'ordre du classement enregistré.
             const order = await resultOrder(id!).catch(() => [] as string[]);
-            const byId = new Map(parts.map((p) => [p.id, p]));
             const ord = order.map((pid) => byId.get(pid)).filter(Boolean) as Participant[];
             setOrdered(ord.length ? ord : parts);
           } else if (isLocked) {
@@ -59,13 +77,32 @@ export default function RankScreen() {
     }, [id, session?.user.id, isCorrect, isLocked]),
   );
 
+  /**
+   * Enregistre le brouillon à chaque modification. Appelé depuis les gestes
+   * (et non depuis un effet) : l'état à écrire est celui qu'on vient de
+   * calculer, sans passer par un rendu intermédiaire.
+   */
+  const persist = useCallback(
+    (patch: Partial<{ step: Step; mode: Mode; absentIds: string[]; orderedIds: string[]; tapOrder: string[] }>) => {
+      if (isCorrect || !id) return; // la correction ne se brouillonne pas
+      saveDraft(id, {
+        step,
+        mode,
+        absentIds: [...absents],
+        orderedIds: ordered.map((p) => p.id),
+        tapOrder,
+        ...patch,
+      });
+    },
+    [id, isCorrect, step, mode, absents, ordered, tapOrder],
+  );
+
   function toggleAbsent(pid: string) {
-    setAbsents((prev) => {
-      const next = new Set(prev);
-      if (next.has(pid)) next.delete(pid);
-      else next.add(pid);
-      return next;
-    });
+    const next = new Set(absents);
+    if (next.has(pid)) next.delete(pid);
+    else next.add(pid);
+    setAbsents(next);
+    persist({ absentIds: [...next] });
   }
 
   function onConfirmPresents() {
@@ -75,10 +112,33 @@ export default function RankScreen() {
     setOrdered(present);
     setTapOrder([]);
     setStep('order');
+    persist({ step: 'order', orderedIds: present.map((p) => p.id), tapOrder: [] });
+  }
+
+  /** Repartir d'une feuille blanche (le brouillon repris n'était pas le bon). */
+  function onDiscardDraft() {
+    clearDraft(id!);
+    setRestored(false);
+    setAbsents(new Set());
+    setTapOrder([]);
+    setOrdered(rosterFinal ? participants : []);
+    setStep(rosterFinal ? 'order' : 'presents');
+  }
+
+  function onReorder(next: Participant[]) {
+    setOrdered(next);
+    persist({ orderedIds: next.map((p) => p.id) });
+  }
+
+  function onSetMode(next: Mode) {
+    setMode(next);
+    persist({ mode: next });
   }
 
   function toggleTap(pid: string) {
-    setTapOrder((prev) => (prev.includes(pid) ? prev.filter((x) => x !== pid) : [...prev, pid]));
+    const next = tapOrder.includes(pid) ? tapOrder.filter((x) => x !== pid) : [...tapOrder, pid];
+    setTapOrder(next);
+    persist({ tapOrder: next });
   }
 
   async function onValidate() {
@@ -97,6 +157,8 @@ export default function RankScreen() {
         }
         await submitRaceResults(id!, order);
       }
+      // Le classement est en base : le brouillon n'a plus de raison d'être.
+      clearDraft(id!);
       router.replace(`/race/${id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur');
@@ -120,6 +182,15 @@ export default function RankScreen() {
           style={styles.back}>
           <Muted>←</Muted>
         </Pressable>
+
+        {/* Brouillon repris : on le DIT, sinon l'admin croit que l'app a
+            inventé un ordre — et il peut toujours repartir de zéro. */}
+        {restored ? (
+          <View style={styles.draft}>
+            <Banner kind="info" title={t.races.draftRestored} message={t.races.draftRestoredHint} />
+            <Button label={t.races.draftDiscard} variant="ghost" onPress={onDiscardDraft} />
+          </View>
+        ) : null}
 
         {step === 'presents' ? (
           <>
@@ -167,7 +238,7 @@ export default function RankScreen() {
               <DragList
                 items={ordered}
                 keyOf={(p) => p.id}
-                onReorder={setOrdered}
+                onReorder={onReorder}
                 onDraggingChange={setDragging}
                 renderItem={(p, index) => (
                   <View style={styles.dragRow}>
@@ -208,7 +279,7 @@ export default function RankScreen() {
             )}
 
             <Pressable
-              onPress={() => setMode((m) => (m === 'drag' ? 'tap' : 'drag'))}
+              onPress={() => onSetMode(mode === 'drag' ? 'tap' : 'drag')}
               accessibilityRole="button"
               style={styles.modeSwitch}>
               <Muted style={styles.modeSwitchTxt}>
@@ -220,7 +291,10 @@ export default function RankScreen() {
 
             <View style={styles.actions}>
               {mode === 'tap' && tapOrder.length > 0 ? (
-                <Button label={t.races.reset} variant="ghost" onPress={() => setTapOrder([])} />
+                <Button label={t.races.reset} variant="ghost" onPress={() => {
+                    setTapOrder([]);
+                    persist({ tapOrder: [] });
+                  }} />
               ) : null}
               <Button
                 label={isCorrect ? t.races.confirmCorrection : t.races.validateRanking}
@@ -236,6 +310,7 @@ export default function RankScreen() {
 }
 
 const styles = StyleSheet.create({
+  draft: { gap: spacing.xs },
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl * 2 },
   back: { alignSelf: 'flex-start', paddingVertical: spacing.xs },

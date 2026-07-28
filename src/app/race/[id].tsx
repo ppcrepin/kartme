@@ -418,6 +418,11 @@ export default function RaceDetailScreen() {
       )
     : [];
 
+  // Amis pas encore sur la grille — la 1re marche du bloc « ajouter ».
+  const addableFriends = friends.filter(
+    (f) => !participants.some((p) => p.profileId === f.pilotId),
+  );
+
   const shareUrl = `${appBaseUrl()}race/${id}`;
 
   // Résumé texte des résultats (podium) pour le partage.
@@ -702,23 +707,48 @@ export default function RaceDetailScreen() {
 
                   {isAdmin && !locked ? (
                     <>
-                      <View style={styles.addRow}>
-                        <View style={styles.flex}>
-                          <Field
-                            label={t.races.pilotName}
-                            value={name}
-                            onChangeText={setName}
-                            error={nameError}
-                            autoCapitalize="words"
-                          />
-                        </View>
-                      </View>
-                      <Button label={t.races.add} onPress={onAddPilot} disabled={busy} />
+                      {/* ── Remplir la grille, en trois marches ──────────────
+                          L'ordre n'est pas cosmétique : chaque marche est plus
+                          coûteuse et moins « bonne » que la précédente.
+                          1. Mes amis, en un tap — zéro friction, Elo réel.
+                          2. Un inscrit par pseudo — l'amitié n'est pas requise
+                             (la RLS autorise déjà l'admin à ajouter tout pilote
+                             non bloqué), mais il faut connaître le pseudo.
+                          3. Un invité sans compte — dernier recours : il court,
+                             mais n'échange aucun point. On le DIT, sinon
+                             l'admin croit avoir inscrit un vrai pilote. */}
 
-                      {/* Inviter un pilote inscrit — par pseudo, SANS exiger l'amitié.
-                          (La RLS autorise déjà l'admin à ajouter tout pilote non bloqué.) */}
-                      <View style={styles.friendPick}>
-                        <Label>{t.races.invitePilot}</Label>
+                      {/* 1 · Mes amis */}
+                      <View style={styles.addStep}>
+                        <Label>{t.races.addStep1}</Label>
+                        {addableFriends.length > 0 ? (
+                          <>
+                            <Muted>{t.races.addStep1Hint}</Muted>
+                            <View style={styles.friendChips}>
+                              {addableFriends.map((f) => (
+                                <Pressable
+                                  key={f.pilotId}
+                                  onPress={() => onAddFriend(f.pilotId)}
+                                  accessibilityRole="button"
+                                  disabled={busy}
+                                  style={styles.friendChip}>
+                                  <Avatar name={f.username} size={24} />
+                                  <Body style={styles.friendChipTxt}>+ {f.username}</Body>
+                                </Pressable>
+                              ))}
+                            </View>
+                          </>
+                        ) : (
+                          <Muted>
+                            {friends.length > 0 ? t.races.addStep1Empty : t.friends.listEmpty}
+                          </Muted>
+                        )}
+                      </View>
+
+                      {/* 2 · Un autre pilote inscrit, par pseudo */}
+                      <View style={styles.addStep}>
+                        <Label>{t.races.addStep2}</Label>
+                        <Muted>{t.races.invitePilotHint}</Muted>
                         <Field
                           label={t.races.invitePilotLabel}
                           value={pilotQuery}
@@ -745,32 +775,26 @@ export default function RaceDetailScreen() {
                             ))}
                           </View>
                         ) : null}
+                      </View>
 
-                        {/* Raccourci : mes amis, en un tap */}
-                        {(() => {
-                          const addable = friends.filter(
-                            (f) => !participants.some((p) => p.profileId === f.pilotId),
-                          );
-                          if (addable.length === 0) return null;
-                          return (
-                            <>
-                              <Label style={styles.friendsShortcut}>{t.friends.addToRace}</Label>
-                              <View style={styles.friendChips}>
-                                {addable.map((f) => (
-                                  <Pressable
-                                    key={f.pilotId}
-                                    onPress={() => onAddFriend(f.pilotId)}
-                                    accessibilityRole="button"
-                                    disabled={busy}
-                                    style={styles.friendChip}>
-                                    <Avatar name={f.username} size={24} />
-                                    <Body style={styles.friendChipTxt}>+ {f.username}</Body>
-                                  </Pressable>
-                                ))}
-                              </View>
-                            </>
-                          );
-                        })()}
+                      {/* 3 · Un invité sans compte (hors Elo) */}
+                      <View style={[styles.addStep, styles.guestStep]}>
+                        <Label>{t.races.addStep3}</Label>
+                        <Muted>{t.races.guestHint}</Muted>
+                        <Field
+                          label={t.races.guestName}
+                          value={name}
+                          onChangeText={setName}
+                          error={nameError}
+                          autoCapitalize="words"
+                        />
+                        <Button
+                          label={t.races.addGuest}
+                          variant="ghost"
+                          onPress={onAddPilot}
+                          disabled={busy}
+                        />
+                        <Muted style={styles.guestNudge}>{t.races.guestNudge}</Muted>
                       </View>
 
                       {!selfParticipating ? (
@@ -869,9 +893,19 @@ const styles = StyleSheet.create({
   section: { gap: spacing.sm },
   pilotRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   remove: { color: colors.inkDim2 },
-  addRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
-  friendPick: { gap: spacing.sm, marginTop: spacing.sm },
-  friendsShortcut: { marginTop: spacing.sm },
+  // Une « marche » du bloc d'ajout : léger encart pour que les trois options
+  // se lisent comme une descente d'escalier, pas comme trois champs en vrac.
+  addStep: {
+    gap: spacing.xs,
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  // La 3e marche (invité, hors Elo) est visuellement en retrait : c'est un
+  // dernier recours, pas l'option par défaut.
+  guestStep: { opacity: 0.9 },
+  guestNudge: { fontStyle: 'italic' },
   friendChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   friendChip: {
     flexDirection: 'row',

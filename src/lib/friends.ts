@@ -12,6 +12,8 @@ export interface Pilot {
   elo: number;
   eloExact: boolean;
   isPrivate: boolean;
+  /** Courses déjà jouées — sert à afficher « En calibration » sous 5 courses. */
+  races: number;
 }
 
 export type FriendshipStatus = 'none' | 'pending_sent' | 'pending_received' | 'accepted';
@@ -42,7 +44,14 @@ export interface FaceToFace {
   theirWins: number;
 }
 
-type RawPilot = { id: string; username: string; elo: number; elo_exact: boolean; is_private: boolean };
+type RawPilot = {
+  id: string;
+  username: string;
+  elo: number;
+  elo_exact: boolean;
+  is_private: boolean;
+  races: number | null;
+};
 
 const toPilot = (r: RawPilot): Pilot => ({
   id: r.id,
@@ -50,6 +59,9 @@ const toPilot = (r: RawPilot): Pilot => ({
   elo: r.elo,
   eloExact: r.elo_exact,
   isPrivate: r.is_private,
+  // Tolérant : si le serveur n'a pas encore la migration, on suppose un pilote
+  // installé plutôt que d'afficher « En calibration » à tout le monde.
+  races: r.races ?? 99,
 });
 
 export async function searchPilots(query: string): Promise<Pilot[]> {
