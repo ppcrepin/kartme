@@ -35,6 +35,15 @@ export const GRADES: Grade[] = [
 /** Plancher d'Elo (cahier §5.1) : l'Elo ne descend jamais sous 100. */
 export const ELO_FLOOR = 100;
 
+/** Nombre de courses de calibration : en dessous, le K est doublé et l'app
+ * affiche « En calibration » plutôt qu'un grade encore peu significatif. */
+export const CALIBRATION_RACES = 5;
+
+/** Vrai tant que le pilote n'a pas fini sa période de calibration. */
+export function isCalibrating(races: number): boolean {
+  return races < CALIBRATION_RACES;
+}
+
 /** Renvoie le grade correspondant à un Elo donné. */
 export function gradeForElo(elo: number): Grade {
   const clamped = Math.max(ELO_FLOOR, Math.round(elo));

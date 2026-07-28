@@ -73,9 +73,10 @@ export const fr = {
     newRace: 'Nouvelle course',
     circuit: 'Circuit',
     circuitSearch: 'Rechercher un karting…',
-    circuitAdd: 'Ajouter « %s »',
-    circuitBanned: 'Ce nom de circuit n’est pas autorisé.',
-    circuitAddError: 'Impossible d’ajouter ce circuit.',
+    // Référentiel de circuits maîtrisé (pas d'ajout libre) : sections du sélecteur.
+    circuitRecents: 'Tes circuits',
+    circuitAll: 'Tous les circuits',
+    circuitEmpty: 'Aucun circuit trouvé. Cherche par nom ou par ville — et signale-nous une piste manquante !',
     date: 'Date',
     time: 'Heure',
     dateHint: 'JJ/MM/AAAA',
@@ -89,11 +90,16 @@ export const fr = {
     // Invité sans compte : son Elo est gelé et exclu des classements — on
     // n'affiche donc aucun score, qui laisserait croire à un vrai classement.
     guest: 'Invité · hors classement',
+    guestShort: 'Invité',
+    privatePilot: 'Pilote privé',
+    privateProfileHint: 'Profil privé',
     // Invitation d'un pilote inscrit par pseudo (sans exiger l'amitié).
     invitePilot: 'Inviter un pilote inscrit',
     invitePilotLabel: 'Chercher par pseudo',
     invitePilotPlaceholder: 'Pseudo du pilote…',
     invitePilotNone: 'Aucun pilote trouvé avec ce pseudo.',
+    leaveRace: 'Quitter la course',
+    actionError: 'Action impossible pour le moment.',
     remove: 'Retirer',
     rejoin: 'Je participe',
     share: 'Partager la course',
@@ -197,8 +203,6 @@ export const fr = {
     faceToFaceEmpty: 'Aucune course commune pour l’instant.',
     you: 'Toi',
     addToRace: 'Ajouter un ami à la course',
-    noFriendsYet: 'Tes amis apparaîtront ici — va en ajouter depuis l’onglet Amis.',
-    allFriendsAdded: 'Tous tes amis sont déjà dans la course.',
   },
   rankings: {
     scopeFriends: 'Amis',
@@ -218,6 +222,9 @@ export const fr = {
     eloLabel: 'Elo',
     nextGrade: 'plus que %n → %g',
     maxGrade: 'Grade maximal atteint 🏆',
+    // Période de calibration : les 5 premières courses, le niveau se règle vite.
+    calibrating: 'En calibration',
+    calibratingHint: 'En calibration : ton niveau se règle plus vite (encore %n course(s)).',
     stats: 'Statistiques',
     races: 'Courses',
     wins: 'Victoires',

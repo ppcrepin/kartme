@@ -8,7 +8,8 @@ grant usage on schema tests to authenticated;
 create function tests.mk_user(p uuid, e int) returns void language plpgsql as $$
 begin
   insert into auth.users (id, email) values (p, p::text || '@t');
-  insert into public.profiles (id, username, elo) values (p, 'U' || substr(replace(p::text,'-',''),1,6), e);
+  -- races=100 : pilotes SORTIS de calibration (K standard 64, badges non filtrés)
+  insert into public.profiles (id, username, elo, races) values (p, 'U' || substr(replace(p::text,'-',''),1,6), e, 100);
 end $$;
 
 create function tests.as_user(p uuid) returns void language plpgsql as $$

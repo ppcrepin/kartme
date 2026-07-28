@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { Avatar } from '@/components/ui';
 import { Body, Muted } from '@/components/ui/text';
 import { colors, fonts, gradeColors, spacing } from '@/constants/theme';
+import { t } from '@/i18n';
 import type { RaceResult } from '@/lib/races';
 
 /** Podium des 3 premiers (2e · 1er · 3e), marches colorées or/argent/bronze. */
@@ -39,9 +40,14 @@ function Step({
       <Body style={styles.name} numberOfLines={1}>
         {result.name}
       </Body>
-      <Muted style={{ color: flat ? colors.inkDim : up ? colors.pos : colors.accent, fontWeight: '800' }}>
-        {flat ? '—' : `${up ? '▲ +' : '▼ '}${result.eloDelta}`}
-      </Muted>
+      {result.isGuest ? (
+        /* Invité : Elo gelé — « — » laisserait croire à un score de 0. */
+        <Muted style={{ fontWeight: '800' }}>{t.races.guestShort}</Muted>
+      ) : (
+        <Muted style={{ color: flat ? colors.inkDim : up ? colors.pos : colors.accent, fontWeight: '800' }}>
+          {flat ? '—' : `${up ? '▲ +' : '▼ '}${result.eloDelta}`}
+        </Muted>
+      )}
       <View style={[styles.step, { height, backgroundColor: color }]}>
         <Body style={styles.pos}>{result.position}</Body>
       </View>

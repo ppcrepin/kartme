@@ -7,7 +7,7 @@ import { Avatar, Button, Card, GradeMedal, Tag } from '@/components/ui';
 import { Body, Muted } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
-import { gradeForElo } from '@/lib/grade';
+import { gradeForElo, isCalibrating } from '@/lib/grade';
 import {
   getLeaderboard,
   getMyRank,
@@ -148,9 +148,15 @@ export default function ClassementsScreen() {
                   {t.rankings.topPercent.replace('%p', String(topPct))}
                 </Body>
               ) : null}
-              <Muted style={{ color: myGrade.color }}>
-                {myGrade.name} · {mr.elo}
-              </Muted>
+              {isCalibrating(mr.races) ? (
+                <Muted>
+                  {t.profile.calibrating} · {mr.elo}
+                </Muted>
+              ) : (
+                <Muted style={{ color: myGrade.color }}>
+                  {myGrade.name} · {mr.elo}
+                </Muted>
+              )}
             </View>
           </View>
         </Card>
@@ -176,6 +182,8 @@ export default function ClassementsScreen() {
           <>
             {current.rows.map((row) => {
               const grade = gradeForElo(row.elo);
+              // Nouveau pilote : niveau en calibration → pas de grade figé.
+              const calibrating = isCalibrating(row.races);
               return (
                 <Pressable key={rowKey(row)} onPress={() => openPilot(row)} accessibilityRole="button">
                   <Card style={row.isMe ? styles.meCard : undefined}>
@@ -187,11 +195,17 @@ export default function ClassementsScreen() {
                           {row.username}
                           {row.isMe ? ` ${t.rankings.me}` : ''}
                         </Body>
-                        <Muted style={{ color: grade.color }}>
-                          {grade.name} · {row.elo}
-                        </Muted>
+                        {calibrating ? (
+                          <Muted>
+                            {t.profile.calibrating} · {row.elo}
+                          </Muted>
+                        ) : (
+                          <Muted style={{ color: grade.color }}>
+                            {grade.name} · {row.elo}
+                          </Muted>
+                        )}
                       </View>
-                      <GradeMedal grade={grade} size={28} />
+                      {!calibrating ? <GradeMedal grade={grade} size={28} /> : null}
                     </View>
                   </Card>
                 </Pressable>

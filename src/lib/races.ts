@@ -44,26 +44,25 @@ export interface Participant {
   name: string;
   isSelf: boolean;
   elo: number;
+  /** Nombre de courses jouées (0 pour un invité) — sert au libellé « En calibration ». */
+  races: number;
+  /** Compte inscrit dont le profil est illisible (privé non-ami, retiré…) : ne rien inventer. */
+  hiddenProfile: boolean;
 }
 
-// ── Circuits ───────────────────────────────────────────────────────────────
+// ── Circuits (référentiel maîtrisé : pas d'ajout client) ──────────────────
+/** Recherche tolérante (accents/casse) sur le nom ET la ville. Vide → top 20. */
 export async function searchCircuits(query: string): Promise<Circuit[]> {
-  let q = supabase.from('circuits').select('id, name, city, is_official').limit(20);
-  if (query.trim()) q = q.ilike('name', `%${query.trim()}%`);
-  const { data, error } = await q.order('is_official', { ascending: false }).order('name');
+  const { data, error } = await supabase.rpc('search_circuits', { q: query.trim() });
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as Circuit[];
 }
 
-export async function createCircuit(name: string, city?: string): Promise<Circuit> {
-  const { data: auth } = await supabase.auth.getUser();
-  const { data, error } = await supabase
-    .from('circuits')
-    .insert({ name: name.trim(), city: city?.trim() || null, created_by: auth.user?.id })
-    .select('id, name, city, is_official')
-    .single();
+/** Les circuits où J'AI déjà couru, du plus récent au plus ancien. */
+export async function listRecentCircuits(): Promise<Circuit[]> {
+  const { data, error } = await supabase.rpc('my_recent_circuits');
   if (error) throw new Error(error.message);
-  return data;
+  return (data ?? []) as Circuit[];
 }
 
 // ── Courses ────────────────────────────────────────────────────────────────
@@ -151,25 +150,32 @@ type RawParticipation = {
   id: string;
   profile_id: string | null;
   ghost_id: string | null;
-  profile: { username: string; elo: number } | null;
+  profile: { username: string; elo: number; races: number } | null;
   ghost: { display_name: string; elo: number } | null;
 };
 
 export async function listParticipants(raceId: string, selfId?: string): Promise<Participant[]> {
   const { data, error } = await supabase
     .from('participations')
-    .select('id, profile_id, ghost_id, profile:profiles(username, elo), ghost:ghost_profiles(display_name, elo)')
+    .select('id, profile_id, ghost_id, profile:profiles(username, elo, races), ghost:ghost_profiles(display_name, elo)')
     .eq('race_id', raceId)
     .order('created_at');
   if (error) throw new Error(error.message);
-  return ((data ?? []) as unknown as RawParticipation[]).map((p) => ({
-    id: p.id,
-    profileId: p.profile_id,
-    ghostId: p.ghost_id,
-    name: p.profile?.username ?? p.ghost?.display_name ?? '—',
-    isSelf: !!selfId && p.profile_id === selfId,
-    elo: p.profile?.elo ?? p.ghost?.elo ?? 1000,
-  }));
+  return ((data ?? []) as unknown as RawParticipation[]).map((p) => {
+    // Inscrit dont la RLS masque le profil (privé non-ami, amitié retirée…) :
+    // on l'affiche comme « Pilote privé », sans jamais inventer un Elo.
+    const hiddenProfile = !!p.profile_id && !p.profile;
+    return {
+      id: p.id,
+      profileId: p.profile_id,
+      ghostId: p.ghost_id,
+      name: p.profile?.username ?? p.ghost?.display_name ?? '—',
+      isSelf: !!selfId && p.profile_id === selfId,
+      elo: p.profile?.elo ?? p.ghost?.elo ?? 1000,
+      races: p.profile?.races ?? 0,
+      hiddenProfile,
+    };
+  });
 }
 
 /** Ajoute un invité (nom libre) : crée un profil fantôme puis la participation. */
@@ -223,6 +229,8 @@ export interface RaceResult {
   isSelf: boolean;
   /** Invité sans compte : Elo gelé et hors classement → on n'affiche pas de score. */
   isGuest: boolean;
+  /** Compte inscrit au profil illisible (privé non-ami…) : nom masqué. */
+  hiddenProfile: boolean;
   eloBefore: number;
   eloAfter: number;
   eloDelta: number;
@@ -301,6 +309,7 @@ export async function listResults(raceId: string, selfId?: string): Promise<Race
     name: r.participation?.profile?.username ?? r.participation?.ghost?.display_name ?? '—',
     isSelf: !!selfId && r.participation?.profile_id === selfId,
     isGuest: !r.participation?.profile_id,
+    hiddenProfile: !!r.participation?.profile_id && !r.participation?.profile,
     eloBefore: r.elo_before,
     eloAfter: r.elo_after,
     eloDelta: r.elo_delta,

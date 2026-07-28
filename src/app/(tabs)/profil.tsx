@@ -11,7 +11,7 @@ import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
 import { BADGE_KEYS, listBadges, type BadgeKey, type UnlockedBadge } from '@/lib/badges';
 import { formatRaceDate } from '@/lib/datetime';
-import { gradeProgress } from '@/lib/grade';
+import { CALIBRATION_RACES, gradeProgress, isCalibrating } from '@/lib/grade';
 import {
   getEloCurve,
   getMyProfile,
@@ -105,6 +105,14 @@ export default function ProfilScreen() {
                   ? t.profile.nextGrade.replace('%n', String(gp.remaining)).replace('%g', gp.next.name)
                   : t.profile.maxGrade}
               </Muted>
+              {isCalibrating(stats.races) ? (
+                <Muted style={styles.nextGrade}>
+                  {t.profile.calibratingHint.replace(
+                    '%n',
+                    String(CALIBRATION_RACES - stats.races),
+                  )}
+                </Muted>
+              ) : null}
             </View>
           </View>
         </Card>

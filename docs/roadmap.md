@@ -251,8 +251,8 @@ Issu de **deux sources** : la comparaison front-end/UX avec l'app de Maggie (`pp
 |---|---|---|---|
 | **A1** | **Invités sans Elo affiché** — « Invité · hors classement » au lieu de « Rookie · 1000 » (grille, résultats, médaille de grade masquée) ; les invités sont aussi **exclus du détail des duels**, puisqu'aucun point ne s'échange avec eux | retour de test | ✅ **fait** *(front-end seul)* |
 | **A2** | **Inviter un pilote sans être ami** — recherche par pseudo directement dans la course (anti-rebond 300 ms, exclut ceux déjà sur la grille) ; les amis restent en raccourci. *La RLS autorisait déjà l'admin à ajouter tout pilote non bloqué : la limitation était purement dans l'interface.* | retour de test | ✅ **fait** *(front-end seul)* |
-| **A3** | **Calibration des nouveaux** — facteur K élevé sur les premières courses (inspiré de Maggie : débutant 40 / standard 20 / élite 10) → vrai niveau atteint en 3-4 courses au lieu de 20 ; libellé « En calibration » | retour de test | ⏳ |
-| **A4** | **Recherche de circuit à l'échelle France** — circuits récents en tête, « près de moi » (géoloc), recherche par ville, tolérante aux accents/fautes | retour de test | ⏳ |
+| **A3** | **Calibration des nouveaux** — K **doublé (128)** sur les **5 premières courses** ; K appliqué à un duel = **moyenne des K** des deux pilotes → l'échange reste symétrique, la **somme nulle entre inscrits est préservée** (anti-triche intact). Compteur `profiles.races` maintenu par le moteur (protégé comme l'Elo ; cohérent avec correction 24 h et suppression modération). Libellé **« En calibration »** (grille, classements, « Ma position », profil) à la place d'un grade encore vide de sens. **Badges Push / Kart-astrophe suspendus pendant la calibration** (les gros écarts y sont attendus). | retour de test + barème Maggie | ✅ **fait** *(SQL à coller)* |
+| **A4** | **Circuits en RÉFÉRENTIEL maîtrisé** *(décision PO 2026-07-28 : plus d'ajout libre → fini les doublons ; alimentation par seed/SQL, import « kartings de France » à planifier par ce canal)* + recherche **tolérante** (accents/casse/tirets) sur le **nom ET la ville**, et **« Tes circuits »** (pistes déjà courues, récentes d'abord) proposés avant la saisie. *« Près de moi » (géoloc) reporté : nécessite de géocoder le référentiel.* | retour de test | ✅ **fait** *(SQL à coller)* |
 | **A5** | **Centre de notifications in-app + cloche** — aujourd'hui uniquement du push : notif refusée = information perdue | app Maggie | ⏳ |
 
 ### ⏭️ Ensuite
@@ -264,6 +264,12 @@ Issu de **deux sources** : la comparaison front-end/UX avec l'app de Maggie (`pp
 | **A8** | **Suppression de compte annulable** (délai de grâce) au lieu d'immédiate | app Maggie |
 | **A9** | **Saisie par chronos** — entrer les temps, l'app en déduit le classement | app Maggie |
 | **A10** | **Brouillon hors-ligne** de la saisie (coupure réseau au circuit) | app Maggie |
+
+### 📋 Notes du vérificateur (mineurs assumés, à reprendre plus tard)
+- **Plancher Elo 100** : un duel contre un pilote au plancher peut laisser un léger résidu de somme (préexistant, amplifié en calibration) — rare, à documenter ou redistribuer un jour.
+- **Fiche pilote publique** : n'affiche pas encore « En calibration » (get_pilot ne renvoie pas le compteur) — incohérence bénigne entre écrans.
+- **`races_delete_admin`** : l'API permet à un admin de supprimer une course terminée (l'UI le cache) — un garde `status='upcoming'` serait sain.
+- Les invités figurent sur le podium avec l'étiquette « Invité » (sans delta) : comportement voulu — ils ont bien couru.
 
 ### 💡 À l'étude
 

@@ -125,8 +125,8 @@ begin
   perform tests.expect_denied(B,
     'insert into profiles (id, username) values (''44444444-4444-4444-4444-444444444444'', ''Faux'')');
 
-  -- Circuit : ajout libre autorisé, mais pas en "officiel".
-  perform tests.expect_allowed(B,
+  -- Circuit : référentiel MAÎTRISÉ (décision PO 2026-07-28) — aucun ajout client.
+  perform tests.expect_denied(B,
     'insert into circuits (name, created_by) values (''Mon Karting'', ''22222222-2222-2222-2222-222222222222'')');
   perform tests.expect_denied(B,
     'insert into circuits (name, created_by, is_official) values (''Faux Officiel'', ''22222222-2222-2222-2222-222222222222'', true)');

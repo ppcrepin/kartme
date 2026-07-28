@@ -26,7 +26,7 @@ import { formatRaceDate } from '@/lib/datetime';
 import { pairwiseBreakdown } from '@/lib/elo';
 import { formatLap, parseLap } from '@/lib/laptime';
 import { listFriends, searchPilots, type FriendEntry, type Pilot } from '@/lib/friends';
-import { gradeForElo } from '@/lib/grade';
+import { gradeForElo, isCalibrating } from '@/lib/grade';
 import {
   addGhostParticipant,
   addProfileParticipant,
@@ -62,6 +62,8 @@ const lapSort = (a: RaceResult, b: RaceResult) => {
   return a.bestLapMs - b.bestLapMs;
 };
 const fmtDelta = (d: number) => (d > 0 ? `▲ +${d}` : d < 0 ? `▼ ${d}` : '—');
+// Nom affichable d'un résultat : jamais « — » cryptique pour un profil masqué.
+const displayName = (r: RaceResult) => (r.hiddenProfile ? t.races.privatePilot : r.name);
 const deltaColor = (d: number) => (d > 0 ? colors.pos : d < 0 ? colors.accent : colors.inkDim);
 
 /** Drapeau d'attente, pulsation douce (statique si « réduire les animations »). */
@@ -114,6 +116,10 @@ export default function RaceDetailScreen() {
   const [myNewBadges, setMyNewBadges] = useState<BadgeKey[]>([]);
   const [pilotQuery, setPilotQuery] = useState('');
   const [pilotResults, setPilotResults] = useState<Pilot[]>([]);
+  // Saisie à laquelle correspondent les résultats : évite d'afficher une liste
+  // périmée (ou « aucun pilote » à tort) pendant l'anti-rebond / le réseau.
+  const [pilotResultsFor, setPilotResultsFor] = useState('');
+  const [actionError, setActionError] = useState<string | null>(null);
   const [circuitRecord, setCircuitRecord] = useState<{ ms: number; holder: string } | null>(null);
   const [lapEditId, setLapEditId] = useState<string | null>(null);
   const [lapInput, setLapInput] = useState('');
@@ -155,23 +161,31 @@ export default function RaceDetailScreen() {
   const selfParticipating = participants.some((p) => p.isSelf);
 
   // Recherche de pilote par pseudo (anti-rebond 300 ms, min 2 caractères).
-  // Exclut ceux déjà sur la grille. Aucune amitié requise.
+  // Aucune amitié requise. Ne dépend QUE de la saisie : le filtrage (déjà sur
+  // la grille, profil illisible) se fait au rendu — pas de RPC superflue à
+  // chaque événement temps réel, pas de résultats périmés affichés.
   useEffect(() => {
-    if (pilotQuery.trim().length < 2) return; // résultats masqués à l'affichage (voir visiblePilots)
+    const q = pilotQuery.trim();
+    if (q.length < 2) return; // rien à chercher ; l'affichage masque (voir visiblePilots)
     let active = true;
     const timer = setTimeout(() => {
-      searchPilots(pilotQuery)
+      searchPilots(q)
         .then((rows) => {
           if (!active) return;
-          setPilotResults(rows.filter((r) => !participants.some((p) => p.profileId === r.id)));
+          setPilotResults(rows);
+          setPilotResultsFor(q);
         })
-        .catch(() => active && setPilotResults([]));
+        .catch(() => {
+          if (!active) return;
+          setPilotResults([]);
+          setPilotResultsFor(q);
+        });
     }, 300);
     return () => {
       active = false;
       clearTimeout(timer);
     };
-  }, [pilotQuery, participants]);
+  }, [pilotQuery]);
 
   // Record du circuit (temps au tour) — chargé une fois la course terminée.
   useEffect(() => {
@@ -215,15 +229,23 @@ export default function RaceDetailScreen() {
   }
 
   async function onRemove(participationId: string) {
-    await removeParticipant(participationId);
-    await refresh();
+    setActionError(null);
+    try {
+      await removeParticipant(participationId);
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : t.races.actionError);
+    }
   }
 
   async function onAddFriend(profileId: string) {
     setBusy(true);
+    setActionError(null);
     try {
       await addProfileParticipant(id!, profileId);
       await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : t.races.actionError);
     } finally {
       setBusy(false);
     }
@@ -232,21 +254,47 @@ export default function RaceDetailScreen() {
   /** Ajoute un pilote trouvé par pseudo (aucune amitié requise). */
   async function onAddPilotById(profileId: string) {
     setBusy(true);
+    setActionError(null);
     try {
       await addProfileParticipant(id!, profileId);
       setPilotQuery('');
       setPilotResults([]);
+      setPilotResultsFor('');
       await refresh();
+    } catch (e) {
+      // Cas réels : blocage apparu entre-temps, compte suspendu, grille figée
+      // par le temps réel… L'échec doit se voir, pas rester muet.
+      setActionError(e instanceof Error ? e.message : t.races.actionError);
     } finally {
       setBusy(false);
     }
   }
 
   async function onToggleSelf() {
-    const mine = participants.find((p) => p.isSelf);
-    if (mine) await removeParticipant(mine.id);
-    else await addSelfParticipant(id!);
-    await refresh();
+    setActionError(null);
+    try {
+      const mine = participants.find((p) => p.isSelf);
+      if (mine) await removeParticipant(mine.id);
+      else await addSelfParticipant(id!);
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : t.races.actionError);
+    }
+  }
+
+  /** Un pilote inscrit d'office quitte la course lui-même (non-admin). */
+  async function onLeave() {
+    setBusy(true);
+    setJoinError(null);
+    try {
+      const mine = participants.find((p) => p.isSelf);
+      if (mine) await removeParticipant(mine.id);
+      await refresh();
+    } catch (e) {
+      setJoinError(e instanceof Error ? e.message : t.races.actionError);
+    } finally {
+      setBusy(false);
+    }
   }
 
   function startEdit() {
@@ -258,9 +306,14 @@ export default function RaceDetailScreen() {
 
   async function onSaveEdit() {
     if (!editCircuit) return;
-    await updateRace(id!, editCircuit.id, editWhen);
-    setEditing(false);
-    await refresh();
+    setActionError(null);
+    try {
+      await updateRace(id!, editCircuit.id, editWhen);
+      setEditing(false);
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : t.races.actionError);
+    }
   }
 
   async function onDelete() {
@@ -351,10 +404,19 @@ export default function RaceDetailScreen() {
     }
   }
 
-  // Résultats de recherche dérivés : masqués tant que la saisie est trop courte
-  // (évite de vider l'état dans l'effet, et donc un rendu en cascade).
+  // Résultats de recherche dérivés, calculés au rendu :
+  //  · masqués tant que la saisie est trop courte ou que la réponse ne
+  //    correspond pas à la saisie courante (fraîcheur garantie) ;
+  //  · sans les pilotes déjà sur la grille ;
+  //  · sans les profils PRIVÉS illisibles (eloExact faux) : la RLS masquerait
+  //    leur ligne une fois ajoutés → l'écran fabriquerait un faux « Rookie ».
   const searchingPilot = pilotQuery.trim().length >= 2;
-  const visiblePilots = searchingPilot ? pilotResults : [];
+  const pilotSearchReady = searchingPilot && pilotResultsFor === pilotQuery.trim();
+  const visiblePilots = pilotSearchReady
+    ? pilotResults.filter(
+        (r) => r.eloExact && !participants.some((p) => p.profileId === r.id),
+      )
+    : [];
 
   const shareUrl = `${appBaseUrl()}race/${id}`;
 
@@ -364,7 +426,12 @@ export default function RaceDetailScreen() {
         `🏁 ${race?.circuit?.name ?? t.races.noCircuit} · ${formatRaceDate(race!.scheduled_at)}`,
         results
           .slice(0, 3)
-          .map((r) => `${MEDALS[r.position - 1] ?? r.position} ${r.name} ${r.eloDelta > 0 ? '+' : ''}${r.eloDelta}`)
+          // Invité : pas de delta partagé (son Elo est gelé, « 0 » serait trompeur).
+          .map((r) =>
+            r.isGuest
+              ? `${MEDALS[r.position - 1] ?? r.position} ${displayName(r)}`
+              : `${MEDALS[r.position - 1] ?? r.position} ${displayName(r)} ${r.eloDelta > 0 ? '+' : ''}${r.eloDelta}`,
+          )
           .join(' · '),
       ].join('\n')
     : undefined;
@@ -395,6 +462,7 @@ export default function RaceDetailScreen() {
             <Title>{t.races.edit}</Title>
             <CircuitPicker value={editCircuit} onChange={setEditCircuit} />
             <DateTimeField label={t.races.date} value={editWhen} onChange={setEditWhen} />
+            {actionError ? <Muted style={styles.rematchErr}>{actionError}</Muted> : null}
             <Button label={t.races.save} onPress={onSaveEdit} />
             <Button label={t.common.cancel} variant="ghost" onPress={() => setEditing(false)} />
           </View>
@@ -430,21 +498,24 @@ export default function RaceDetailScreen() {
 
                 {results.map((r) => {
                   const grade = gradeForElo(r.eloAfter);
-                  const isOpen = expanded === r.position;
+                  // Invité : aucun duel (Elo gelé) → ligne non dépliable, pas de
+                  // panneau vide « d'où viennent tes points ».
+                  const isOpen = expanded === r.position && !r.isGuest;
                   const self = pairInputs.find((p) => p.position === r.position);
                   const duels = isOpen && self ? pairwiseBreakdown(self, pairInputs) : [];
                   return (
                     <Pressable
                       key={r.position}
                       onPress={() => setExpanded(isOpen ? null : r.position)}
+                      disabled={r.isGuest}
                       accessibilityRole="button">
                       <Card style={isOpen ? styles.cardOpen : undefined}>
                         <View style={styles.resultRow}>
                           <Body style={styles.posNum}>{r.position}</Body>
-                          <Avatar name={r.name} size={34} />
+                          <Avatar name={r.hiddenProfile ? '?' : r.name} size={34} />
                           <View style={styles.flex}>
                             <Body>
-                              {r.name}
+                              {r.hiddenProfile ? t.races.privatePilot : r.name}
                               {r.isSelf ? <Muted> ({t.races.you})</Muted> : null}
                             </Body>
                             {r.isGuest ? (
@@ -502,7 +573,7 @@ export default function RaceDetailScreen() {
                       <Card key={r.participationId}>
                         <View style={styles.lapRow}>
                           <Body style={styles.flex}>
-                            {r.name}
+                            {displayName(r)}
                             {r.isSelf ? <Muted> ({t.races.you})</Muted> : null}
                           </Body>
                           {!editing ? (
@@ -587,24 +658,36 @@ export default function RaceDetailScreen() {
                     const grade = gradeForElo(p.elo);
                     // Invité (sans compte) : Elo gelé et hors classement → pas de score affiché.
                     const isGuest = !p.profileId;
+                    // Profil illisible (privé non-ami…) : ne rien inventer.
+                    const hidden = p.hiddenProfile;
+                    // Nouveau pilote : niveau encore en calibration, pas de grade figé.
+                    const calibrating = !isGuest && !hidden && isCalibrating(p.races);
                     return (
                       <Card key={p.id}>
                         <View style={styles.pilotRow}>
-                          <Avatar name={p.name} size={36} />
+                          <Avatar name={hidden ? '?' : p.name} size={36} />
                           <View style={styles.flex}>
                             <Body>
-                              {p.name}
+                              {hidden ? t.races.privatePilot : p.name}
                               {p.isSelf ? <Muted> ({t.races.you})</Muted> : null}
                             </Body>
                             {isGuest ? (
                               <Muted>{t.races.guest}</Muted>
+                            ) : hidden ? (
+                              <Muted>{t.races.privateProfileHint}</Muted>
+                            ) : calibrating ? (
+                              <Muted>
+                                {t.profile.calibrating} · {p.elo}
+                              </Muted>
                             ) : (
                               <Muted style={{ color: grade.color }}>
                                 {grade.name} · {p.elo}
                               </Muted>
                             )}
                           </View>
-                          {!isGuest ? <GradeMedal grade={grade} size={30} /> : null}
+                          {!isGuest && !hidden && !calibrating ? (
+                            <GradeMedal grade={grade} size={30} />
+                          ) : null}
                           {isAdmin && !locked ? (
                             <Pressable onPress={() => onRemove(p.id)} accessibilityRole="button">
                               <Muted style={styles.remove}>{t.races.remove}</Muted>
@@ -643,7 +726,8 @@ export default function RaceDetailScreen() {
                           autoCapitalize="none"
                           placeholder={t.races.invitePilotPlaceholder}
                         />
-                        {searchingPilot && visiblePilots.length === 0 ? (
+                        {searchingPilot && !pilotSearchReady ? <Muted>…</Muted> : null}
+                        {pilotSearchReady && visiblePilots.length === 0 ? (
                           <Muted>{t.races.invitePilotNone}</Muted>
                         ) : null}
                         {visiblePilots.length > 0 ? (
@@ -694,6 +778,9 @@ export default function RaceDetailScreen() {
                       ) : null}
                     </>
                   ) : null}
+
+                  {/* Échec d'une action sur la grille : toujours visible. */}
+                  {actionError ? <Muted style={styles.rematchErr}>{actionError}</Muted> : null}
                 </View>
 
                 {isAdmin ? (
@@ -729,7 +816,20 @@ export default function RaceDetailScreen() {
                     {joinError ? <Muted style={styles.rematchErr}>{joinError}</Muted> : null}
                   </View>
                 ) : (
-                  <WaitingFlag />
+                  <View style={styles.section}>
+                    <WaitingFlag />
+                    {/* Inscrit d'office ? Tant que la grille est ouverte, chacun
+                        peut se retirer lui-même (consentement, Reviewer A2). */}
+                    {selfParticipating && !locked ? (
+                      <Button
+                        label={t.races.leaveRace}
+                        variant="ghost"
+                        onPress={onLeave}
+                        disabled={busy}
+                      />
+                    ) : null}
+                    {joinError ? <Muted style={styles.rematchErr}>{joinError}</Muted> : null}
+                  </View>
                 )}
 
                 <ShareCard url={shareUrl} />
