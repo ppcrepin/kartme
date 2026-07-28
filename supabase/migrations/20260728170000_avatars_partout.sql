@@ -32,10 +32,15 @@ begin
   with pilots as (
     select p.id as profile_id, null::uuid as ghost_id, p.username, p.elo,
            h.races, (p.id = auth.uid()) as is_me,
-           -- Pas de masquage à faire ici : la clause du dessous ne laisse
-           -- passer un profil privé que si c'est moi ou un ami — exactement
-           -- les cas où la photo est lisible. Une photo retirée par la
-           -- modération a déjà `avatar_path` à null.
+           -- La clause du dessous ne laisse passer un profil privé que si
+           -- c'est moi ou un ami : le chemin suit donc la visibilité de la
+           -- ligne, et une photo retirée par la modération a déjà son chemin
+           -- à null. Attention, l'équivalence avec can_read_avatar n'est PAS
+           -- totale : cette fonction ne filtre ni `suspended_at` ni
+           -- `deleted_at` (elle ne l'a jamais fait, c'est le comportement du
+           -- classement depuis le lot 2.2). Un suspendu public y figure donc
+           -- avec un chemin que la signature refusera — inoffensif (initiales
+           -- affichées), mais à ne pas prendre pour un invariant.
            p.avatar_path
     from profiles p
     join lateral (

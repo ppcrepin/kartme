@@ -7,7 +7,7 @@ import { Avatar, Button, Card, GradeMedal, Tag } from '@/components/ui';
 import { Body, Muted } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
-import { signedAvatarUrls } from '@/lib/avatar';
+import { SIGNED_TTL_S, signedAvatarUrls } from '@/lib/avatar';
 import { gradeForElo, isCalibrating } from '@/lib/grade';
 import {
   getLeaderboard,
@@ -28,6 +28,9 @@ type Loaded = {
 /** Clé stable d'une ligne (pilote inscrit ou fantôme). */
 const rowKey = (r: LeaderboardRow) => r.pilotId ?? '';
 
+/** Un lien signé est renouvelé une minute avant d'expirer (marge réseau). */
+const AVATAR_STALE_MS = (SIGNED_TTL_S - 60) * 1000;
+
 /** Ordinal français court : 1ᵉʳ, 2ᵉ, 3ᵉ… */
 const ordinal = (n: number) => (n === 1 ? '1ᵉʳ' : `${n}ᵉ`);
 
@@ -40,21 +43,30 @@ export default function ClassementsScreen() {
   const [failed, setFailed] = useState<Partial<Record<LeaderboardScope, boolean>>>({});
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreFailed, setMoreFailed] = useState(false);
-  // Liens signés des photos, cumulés au fil des pages : on ne re-signe jamais
-  // ce qu'on a déjà, et une page de plus ne coûte qu'une requête.
+  // Liens signés des photos, cumulés au fil des pages.
   const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
+  // Date de signature de chaque chemin. Indispensable ici et nulle part
+  // ailleurs : un lien signé expire (SIGNED_TTL_S), et les autres écrans
+  // re-signent tout à chaque retour dessus. Celui-ci cumule les pages, donc
+  // sans cette date un onglet resté monté garderait éternellement des URI
+  // mortes — l'écran retomberait aux initiales au bout de cinq minutes.
+  const signedAt = useRef<Map<string, number>>(new Map());
 
-  /** Signe les chemins encore inconnus et fusionne — jamais deux fois le même. */
+  /** Signe ce qui manque ou a vieilli, puis fusionne. Une requête au plus. */
   const mergeAvatars = useCallback(async (rows: { avatarPath: string | null }[]) => {
-    setAvatars((prev) => {
-      const missing = rows.map((r) => r.avatarPath).filter((p2): p2 is string => !!p2 && !prev.has(p2));
-      if (missing.length > 0) {
-        void signedAvatarUrls(missing).then((got) => {
-          if (got.size > 0) setAvatars((cur) => new Map([...cur, ...got]));
-        });
-      }
-      return prev;
-    });
+    const now = Date.now();
+    const todo = new Set<string>();
+    for (const r of rows) {
+      const at = r.avatarPath ? signedAt.current.get(r.avatarPath) : 0;
+      if (r.avatarPath && (at === undefined || now - at > AVATAR_STALE_MS)) todo.add(r.avatarPath);
+    }
+    if (todo.size === 0) return;
+    const got = await signedAvatarUrls([...todo]);
+    // Seuls les chemins réellement signés sont datés : un refus (photo
+    // retirée, pilote suspendu) sera retenté au prochain retour sur l'écran
+    // plutôt que figé pour la durée de la session.
+    for (const path of got.keys()) signedAt.current.set(path, now);
+    if (got.size > 0) setAvatars((cur) => new Map([...cur, ...got]));
   }, []);
   // Un seul chargement en vol par portée (ref : pas besoin de re-rendu).
   const inFlight = useRef<Partial<Record<LeaderboardScope, boolean>>>({});
@@ -105,7 +117,9 @@ export default function ClassementsScreen() {
       // réapparaître dans la fenêtre suivante — on garde sa première ligne.
       const seen = new Set(current.rows.map(rowKey));
       const fresh = next.filter((r) => !seen.has(rowKey(r)));
-      void mergeAvatars(fresh);
+      // Toutes les lignes, pas seulement les nouvelles : la page 1 peut avoir
+      // vieilli pendant qu'on faisait défiler.
+      void mergeAvatars([...current.rows, ...fresh]);
       setLoaded((prev) => ({
         ...prev,
         [scope]: {

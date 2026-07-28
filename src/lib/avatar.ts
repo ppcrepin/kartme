@@ -27,7 +27,7 @@ const QUALITY = 0.82;
  * quelqu'un — exposés pendant tout ce temps. L'app re-signe à chaque retour
  * sur l'écran de toute façon : le TTL long n'apportait rien.
  */
-const SIGNED_TTL_S = 5 * 60;
+export const SIGNED_TTL_S = 5 * 60;
 /** Au-delà, on refuse AVANT de décoder : décoder 100 Mpx tue l'onglet. */
 const MAX_INPUT_BYTES = 20 * 1024 * 1024;
 

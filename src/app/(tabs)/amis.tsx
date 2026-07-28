@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
@@ -30,25 +30,34 @@ export default function AmisScreen() {
   const [lists, setLists] = useState<FriendLists>({ received: [], sent: [], friends: [] });
   const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
 
+  // Miroir des résultats de recherche, lisible depuis `refresh` sans le faire
+  // dépendre de `results` (ce qui relancerait un refresh à chaque frappe).
+  const resultsRef = useRef<Pilot[]>([]);
+
   const refresh = useCallback(() => {
+    let alive = true;
     listFriendships()
       .then(async (l) => {
+        if (!alive) return;
         setLists(l);
-        // UNE signature pour les trois listes réunies.
-        setAvatars(
-          await signedAvatarUrls(
-            [...l.received, ...l.sent, ...l.friends].map((f) => f.avatarPath),
-          ),
-        );
+        // UNE signature pour les trois listes ET les résultats de recherche
+        // encore affichés : les remplacer sans eux effaçait leurs photos au
+        // simple retour sur l'écran, et un lien signé expire de toute façon.
+        const got = await signedAvatarUrls([
+          ...[...l.received, ...l.sent, ...l.friends].map((f) => f.avatarPath),
+          ...resultsRef.current.map((r) => r.avatarPath),
+        ]);
+        if (alive) setAvatars(got);
       })
       .catch(() => {});
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      refresh();
-    }, [refresh]),
-  );
+  // On rend la fonction d'annulation : deux allers-retours rapprochés ne
+  // peuvent plus faire arriver l'ancienne réponse après la récente.
+  useFocusEffect(useCallback(() => refresh(), [refresh]));
 
   // Recherche avec un léger débounce (les setState vivent dans le timeout).
   useEffect(() => {
@@ -57,6 +66,7 @@ export default function AmisScreen() {
       if (!active) return;
       if (query.trim().length < 2) {
         setResults([]);
+        resultsRef.current = [];
         setSearched(false);
         return;
       }
@@ -64,6 +74,7 @@ export default function AmisScreen() {
         const rows = await searchPilots(query);
         if (active) {
           setResults(rows);
+          resultsRef.current = rows;
           setSearched(true);
           const got = await signedAvatarUrls(rows.map((r) => r.avatarPath));
           if (active && got.size > 0) setAvatars((cur) => new Map([...cur, ...got]));

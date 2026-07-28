@@ -48,10 +48,17 @@ export default function RankScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      // `alive` : deux entrées rapprochées sur l'écran (retour arrière rapide
+      // au bord de la piste) ne doivent pas laisser l'ancienne réponse écraser
+      // la récente — `setAvatars` remplace la table entière.
+      let alive = true;
       listParticipants(id!, session?.user.id)
         .then(async (parts) => {
+          if (!alive) return;
           setParticipants(parts);
-          void signedAvatarUrls(parts.map((x) => x.avatarPath)).then(setAvatars);
+          void signedAvatarUrls(parts.map((x) => x.avatarPath)).then((got) => {
+            if (alive) setAvatars(got);
+          });
           const byId = new Map(parts.map((p) => [p.id, p]));
 
           // Brouillon local (A10) : au circuit, une coupure réseau ou un
@@ -83,6 +90,9 @@ export default function RankScreen() {
           }
         })
         .catch(() => {});
+      return () => {
+        alive = false;
+      };
     }, [id, session?.user.id, isCorrect, isLocked]),
   );
 

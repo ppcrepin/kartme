@@ -45,7 +45,11 @@ export function Avatar({
    */
   cacheKey?: string | null;
 }) {
-  const [failed, setFailed] = useState(false);
+  // On mémorise QUEL lien a échoué, pas seulement qu'un échec a eu lieu : un
+  // booléen restait armé après une re-signature, donc un lien expiré condamnait
+  // l'avatar aux initiales pour toute la durée de la session.
+  const [failedUri, setFailedUri] = useState<string | null>(null);
+  const failed = !!uri && failedUri === uri;
   const dim = { width: size, height: size, borderRadius: size / 2 };
 
   // Les initiales sont TOUJOURS rendues, la photo se superpose. Un lien
@@ -64,7 +68,7 @@ export function Avatar({
           style={[StyleSheet.absoluteFill, { borderRadius: size / 2 }]}
           contentFit="cover"
           transition={150}
-          onError={() => setFailed(true)}
+          onError={() => setFailedUri(uri)}
         />
       ) : null}
     </View>

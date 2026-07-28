@@ -282,19 +282,81 @@ begin
   -- Un pilote n'entre au classement qu'avec au moins une course jouée.
   insert into elo_history (profile_id, elo, delta) values (A, 1000, 0), (B, 1000, 0);
 
+  -- Aucune amitié A–B à ce stade : B ne sort en Global QUE parce qu'il est
+  -- public. L'assertion perdrait son sens si un scénario amont les liait, d'où
+  -- la vérification explicite.
+  perform tests.eq((select count(*) from friendships
+                    where (requester_id, addressee_id) in ((A, B), (B, A))), 0,
+                   'préalable : A et B ne sont pas amis');
+
   perform tests.as_uid(A);
   perform tests.eq((select count(*) from get_leaderboard('global')
                     where profile_id = B and avatar_path = B::text || '/photo3.jpg'),
                    1, 'get_leaderboard renvoie le chemin');
 
+  -- Portée « Amis » : c'est celle par défaut de l'écran, donc celle que le PO
+  -- voit en premier. Un non-ami n'y figure pas, un ami y figure AVEC sa photo.
+  perform tests.eq((select count(*) from get_leaderboard('friends') where profile_id = B), 0,
+                   'portée amis : un non-ami ne figure pas');
+  insert into friendships (requester_id, addressee_id, status) values (A, B, 'accepted');
+  perform tests.as_uid(A);
+  perform tests.eq((select count(*) from get_leaderboard('friends')
+                    where profile_id = B and avatar_path is not null),
+                   1, 'portée amis : un ami figure avec sa photo');
+
   -- Et il reste sous la même clause de visibilité que le reste de la ligne :
   -- un profil privé non-ami ne figure pas au classement du tout, donc son
   -- chemin n'en sort pas non plus.
+  delete from friendships where requester_id = A and addressee_id = B;
   update profiles set is_private = true where id = B;
+  perform tests.as_uid(A);
   perform tests.eq((select count(*) from get_leaderboard('global') where profile_id = B), 0,
                    'profil privé non-ami : ni ligne ni chemin');
-
   update profiles set is_private = false where id = B;
+
+  -- Bloqué : ni ligne ni chemin, dans les deux sens (is_blocked est
+  -- symétrique — sinon bloquer quelqu'un le laisserait dans mon classement).
+  insert into blocks (blocker_id, blocked_id) values (A, B);
+  perform tests.as_uid(A);
+  perform tests.eq((select count(*) from get_leaderboard('global') where profile_id = B), 0,
+                   'pilote que j''ai bloqué : hors classement');
+  delete from blocks where blocker_id = A and blocked_id = B;
+  insert into blocks (blocker_id, blocked_id) values (B, A);
+  perform tests.as_uid(A);
+  perform tests.eq((select count(*) from get_leaderboard('global') where profile_id = B), 0,
+                   'pilote qui m''a bloqué : hors classement');
+  delete from blocks where blocker_id = B and blocked_id = A;
+
+  -- Suspendu : le classement ne l'a JAMAIS filtré (comportement du lot 2.2,
+  -- inchangé ici). On fige donc l'état réel — la ligne sort, le chemin aussi,
+  -- mais can_read_avatar refusera de le signer : l'écran montre les initiales.
+  -- Le jour où l'on voudra sortir les suspendus du classement, ce test dira
+  -- exactement ce qui change.
+  perform set_config('kartsquad.moderate_suspend', '1', true);
+  update profiles set suspended_at = now() where id = B;
+  perform set_config('kartsquad.moderate_suspend', '', true);
+  perform tests.as_uid(A);
+  perform tests.eq((select count(*) from get_leaderboard('global') where profile_id = B), 1,
+                   'suspendu : encore au classement (comportement historique)');
+  if public.can_read_avatar(B::text || '/photo3.jpg') then
+    raise exception 'ÉCHEC : la photo d''un suspendu serait signée';
+  end if;
+  perform set_config('kartsquad.moderate_suspend', '1', true);
+  update profiles set suspended_at = null where id = B;
+  perform set_config('kartsquad.moderate_suspend', '', true);
+
+  -- Fantômes : la règle anti-triche du 2026-07-13 les sort du Global. Ce lot
+  -- rouvre la fonction, c'est ici la régression la plus coûteuse.
+  insert into ghost_profiles (id, display_name, elo, created_by)
+    values ('ff000000-0000-0000-0000-0000000000f1', 'Fantôme', 1400, A);
+  insert into elo_history (ghost_id, elo, delta)
+    values ('ff000000-0000-0000-0000-0000000000f1', 1400, 0);
+  perform tests.as_uid(A);
+  perform tests.eq((select count(*) from get_leaderboard('global') where ghost_id is not null), 0,
+                   'fantômes toujours hors du classement Global');
+  delete from elo_history where ghost_id = 'ff000000-0000-0000-0000-0000000000f1';
+  delete from ghost_profiles where id = 'ff000000-0000-0000-0000-0000000000f1';
+
   delete from elo_history where profile_id in (A, B);
   update profiles set avatar_path = null where id = B;
   raise notice 'Scénario 4bis (photo au classement) ✔';

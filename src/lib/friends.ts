@@ -153,7 +153,11 @@ export async function listFriendships(): Promise<FriendLists> {
   if (error) throw new Error(error.message);
 
   const rows = (data ?? []) as unknown as RawFriendship[];
-  const entry = (r: RawFriendship): FriendEntry => {
+  // `withPhoto` : la policy de lecture des photos exige une amitié ACCEPTÉE,
+  // alors que la policy de lecture des profils s'ouvre dès la demande en
+  // attente. Garder le chemin sur une demande, c'est demander un lien signé
+  // qui sera refusé — et révéler au passage qu'un profil privé a une photo.
+  const entry = (r: RawFriendship, withPhoto: boolean): FriendEntry => {
     const otherIsRequester = r.requester_id !== me;
     const other = otherIsRequester ? r.requester : r.addressee;
     return {
@@ -161,14 +165,18 @@ export async function listFriendships(): Promise<FriendLists> {
       pilotId: otherIsRequester ? r.requester_id : r.addressee_id,
       username: other?.username ?? '—',
       elo: other?.elo ?? 1000,
-      avatarPath: other?.avatar_path ?? null,
+      avatarPath: withPhoto ? (other?.avatar_path ?? null) : null,
     };
   };
 
   return {
-    received: rows.filter((r) => r.status === 'pending' && r.addressee_id === me).map(entry),
-    sent: rows.filter((r) => r.status === 'pending' && r.requester_id === me).map(entry),
-    friends: rows.filter((r) => r.status === 'accepted').map(entry),
+    received: rows
+      .filter((r) => r.status === 'pending' && r.addressee_id === me)
+      .map((r) => entry(r, false)),
+    sent: rows
+      .filter((r) => r.status === 'pending' && r.requester_id === me)
+      .map((r) => entry(r, false)),
+    friends: rows.filter((r) => r.status === 'accepted').map((r) => entry(r, true)),
   };
 }
 
