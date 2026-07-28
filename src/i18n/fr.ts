@@ -95,21 +95,21 @@ export const fr = {
     // moins souhaitable. L'ordre est délibéré (décision PO) : on pousse d'abord
     // vers des pilotes INSCRITS (qui font vivre l'Elo), l'invité sans compte
     // n'arrive qu'en dernier recours et s'annonce comme tel.
-    addStep1: '1 · Tes amis',
+    addStep1: 'Tes amis',
     addStep1Hint: 'Un tap : ils sont ajoutés à la grille.',
     addStep1Empty: 'Aucun ami disponible — ils sont déjà tous sur la grille.',
-    addStep2: '2 · Un autre pilote inscrit',
-    addStep3: '3 · Quelqu’un sans compte',
+    addStep2: 'Un autre pilote inscrit',
+    addStep3: 'Quelqu’un sans compte',
     // Invitation d'un pilote inscrit par pseudo (sans exiger l'amitié).
     invitePilotLabel: 'Chercher par pseudo',
     invitePilotPlaceholder: 'Pseudo du pilote…',
     invitePilotNone: 'Aucun pilote trouvé avec ce pseudo.',
+    invitePilotAlready: 'Ce pilote est déjà sur la grille.',
     invitePilotHint: 'Pas besoin d’être amis : tape son pseudo exact.',
     // Invité (fantôme) : on dit franchement ce qu'il ne fait PAS, sinon
     // l'admin croit inscrire un vrai pilote et s'étonne que l'Elo ne bouge pas.
     guestName: 'Prénom ou surnom',
-    guestHint:
-      'Il apparaît dans le classement de la course, mais n’échange aucun point Elo (personne n’en gagne ni n’en perd face à lui).',
+    guestHint: 'Il court et figure au classement, mais aucun point Elo n’est échangé avec lui.',
     guestNudge: 'Invite-le à s’inscrire : ses prochaines courses compteront vraiment.',
     addGuest: 'Ajouter cet invité',
     leaveRace: 'Quitter la course',
@@ -287,12 +287,17 @@ export const fr = {
   // Centre de notifications in-app (A5) : la boîte de réception, indépendante
   // du push (qui n'arrive pas partout et ne se rattrape pas).
   inbox: {
-    title: 'Notifications',
+    // Titre distinct de l'écran de RÉGLAGES « Notifications » : les deux
+    // écrans existent, ils ne doivent pas porter le même mot en gros.
+    title: 'Ta boîte',
     now: 'à l’instant',
     emptyTitle: 'Rien de neuf',
     emptyBody:
-      'Les invitations à une course, les classements et les demandes d’amis atterriront ici.',
-    error: 'Impossible de charger tes notifications. Réessaie dans un instant.',
+      'Les invitations à une course, les classements et les demandes d’amis atterriront ici — même si tu as coupé les alertes push.',
+    error: 'Impossible de charger tes notifications.',
+    retry: 'Réessayer',
+    more: 'Voir plus ancien',
+    loading: 'Chargement…',
   },
   settings: {
     title: 'Réglages',
@@ -433,6 +438,11 @@ export const fr = {
     test: 'Envoyer une notification de test',
     testSent: 'Regarde tes notifications 🏁',
     types: 'Ce que tu reçois',
+    // Depuis A5, couper un type n'empêche plus la ligne d'apparaître dans la
+    // boîte de réception : le réglage gouverne l'INTRUSION (alerte poussée),
+    // pas la consultation. Sans cette phrase, un pilote qui a coupé les
+    // résultats et voit sa cloche s'allumer conclut que le réglage est cassé.
+    typesSub: 'Ces réglages concernent les alertes poussées sur ton écran. Tout reste consultable dans ta boîte, même désactivé ici.',
     invites: 'Invitation à une course',
     invitesSub: 'Quand un pilote t’ajoute à sa course.',
     results: 'Résultat de course',

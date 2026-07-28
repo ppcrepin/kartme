@@ -53,7 +53,10 @@ function RootNavigator() {
       // que soit le groupe : après un retour OAuth (redirection plein écran vers
       // la racine = groupe (tabs)), on n'est ni dans (auth) ni (onboarding).
       const pending = takePendingRoute();
-      if (pending) router.replace(`/${pending}`);
+      // Destination reconstruite à l'exécution (localStorage) : les routes
+      // typées d'expo-router ne peuvent pas la vérifier. `rememberPendingRoute`
+      // filtre déjà sur `race/` et `pilot/`, seules formes acceptées.
+      if (pending) router.replace(`/${pending}` as Parameters<typeof router.replace>[0]);
       else if (inAuth || inOnboarding) router.replace('/(tabs)');
     }
   }, [initializing, session, hasProfile, segments, router]);

@@ -8,9 +8,15 @@
  * Alimentée côté serveur par enqueue_push() : tout événement notifiable y
  * atterrit, sans qu'un déclencheur ait à le savoir.
  */
+import { router } from 'expo-router';
+
 import { supabase } from '@/lib/supabase';
 
-export type NotificationType = 'invite' | 'result' | 'friend_request' | 'report' | string;
+/** Destination acceptée par expo-router (routes typées). */
+type Route = Parameters<typeof router.push>[0];
+
+/** Types émis par le serveur. Ouvert : un futur déclencheur ne doit pas casser la boîte. */
+export type NotificationType = string;
 
 export interface AppNotification {
   id: string;
@@ -33,9 +39,13 @@ type Raw = {
   created_at: string;
 };
 
-/** Les 50 dernières notifications (et purge des plus de 90 jours, côté serveur). */
-export async function listNotifications(): Promise<AppNotification[]> {
-  const { data, error } = await supabase.rpc('list_notifications');
+/**
+ * Une page de 50 notifications, récentes d'abord. `before` = `createdAt` de la
+ * dernière ligne déjà reçue (curseur) : sans pagination, l'historique au-delà
+ * de la première page serait définitivement inatteignable.
+ */
+export async function listNotifications(before?: string): Promise<AppNotification[]> {
+  const { data, error } = await supabase.rpc('list_notifications', { p_before: before ?? null });
   if (error) throw new Error(error.message);
   return ((data ?? []) as Raw[]).map((n) => ({
     id: n.id,
@@ -59,9 +69,14 @@ export async function unreadCount(): Promise<number> {
   return typeof data === 'number' ? data : 0;
 }
 
-/** Marque toute la boîte comme lue (à l'ouverture de l'écran). */
-export async function markAllRead(): Promise<void> {
-  const { error } = await supabase.rpc('mark_notifications_read');
+/**
+ * Marque comme lues les notifications DONNÉES — celles que l'écran vient
+ * réellement d'afficher. Un marquage global effacerait aussi les lignes
+ * au-delà du plafond d'affichage : jamais vues, et introuvables ensuite.
+ */
+export async function markRead(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const { error } = await supabase.rpc('mark_notifications_read', { p_ids: ids });
   if (error) throw new Error(error.message);
 }
 
@@ -71,9 +86,12 @@ export async function markAllRead(): Promise<void> {
  * ou à un schéma (défense en profondeur : une notification ne doit jamais
  * pouvoir expédier un pilote hors de l'app).
  */
-export function routeFor(n: AppNotification): string | null {
+export function routeFor(n: AppNotification): Route | null {
   const u = n.url?.trim();
   if (!u) return null;
   if (/^[a-z][a-z0-9+.-]*:/i.test(u) || u.startsWith('//')) return null;
-  return u.startsWith('/') ? u : `/${u}`;
+  // Route construite à l'exécution : les routes typées d'expo-router ne
+  // peuvent pas la vérifier — d'où le filtre ci-dessus, qui garantit au moins
+  // qu'on ne quitte jamais l'app.
+  return (u.startsWith('/') ? u : `/${u}`) as Route;
 }

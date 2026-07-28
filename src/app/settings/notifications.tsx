@@ -118,6 +118,7 @@ export default function NotificationsSettingsScreen() {
                 {prefs ? (
                   <Card>
                     <Label>{t.notifications.types}</Label>
+                    <Muted>{t.notifications.typesSub}</Muted>
                     <PrefRow
                       label={t.notifications.invites}
                       sub={t.notifications.invitesSub}

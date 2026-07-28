@@ -16,7 +16,7 @@ import { DateTimeField } from '@/components/date-time-field';
 import { Podium } from '@/components/podium';
 import { ShareCard } from '@/components/share-card';
 import { Avatar, Banner, Button, Card, Field, GradeMedal } from '@/components/ui';
-import { Body, Label, Muted, Title } from '@/components/ui/text';
+import { Body, Heading, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { track } from '@/lib/analytics';
@@ -218,11 +218,16 @@ export default function RaceDetailScreen() {
       return;
     }
     setNameError(null);
+    setActionError(null);
     setBusy(true);
     try {
       await addGhostParticipant(id!, check.value);
       setName('');
       await refresh();
+    } catch (e) {
+      // Sans ce catch, un refus serveur (grille figée entre-temps, RLS, réseau)
+      // ne produisait AUCUN retour : le champ gardait le nom, rien n'apparaissait.
+      setActionError(e instanceof Error ? e.message : t.races.actionError);
     } finally {
       setBusy(false);
     }
@@ -417,11 +422,24 @@ export default function RaceDetailScreen() {
         (r) => r.eloExact && !participants.some((p) => p.profileId === r.id),
       )
     : [];
+  // Le pilote existe bien, il est simplement DÉJÀ inscrit : lui répondre
+  // « aucun pilote trouvé » serait un mensonge sur une action qu'on vient de faire.
+  const alreadyOnGrid =
+    pilotSearchReady &&
+    visiblePilots.length === 0 &&
+    pilotResults.some((r) => participants.some((p) => p.profileId === r.id));
 
   // Amis pas encore sur la grille — la 1re marche du bloc « ajouter ».
   const addableFriends = friends.filter(
     (f) => !participants.some((p) => p.profileId === f.pilotId),
   );
+  // Un admin qui n'a aucun ami n'a pas besoin d'une marche « Tes amis » vide :
+  // elle ne lui dirait que d'aller chercher un pseudo — ce que fait la marche
+  // suivante. On la retire, et on renumérote au rendu.
+  const addSteps: ('friends' | 'search' | 'guest')[] = friends.length
+    ? ['friends', 'search', 'guest']
+    : ['search', 'guest'];
+  const stepNo = (k: 'friends' | 'search' | 'guest') => addSteps.indexOf(k) + 1;
 
   const shareUrl = `${appBaseUrl()}race/${id}`;
 
@@ -718,9 +736,10 @@ export default function RaceDetailScreen() {
                              mais n'échange aucun point. On le DIT, sinon
                              l'admin croit avoir inscrit un vrai pilote. */}
 
-                      {/* 1 · Mes amis */}
+                      {/* 1 · Mes amis (masquée si le pilote n'a aucun ami) */}
+                      {addSteps.includes('friends') ? (
                       <View style={styles.addStep}>
-                        <Label>{t.races.addStep1}</Label>
+                        <Heading>{`${stepNo('friends')} · ${t.races.addStep1}`}</Heading>
                         {addableFriends.length > 0 ? (
                           <>
                             <Muted>{t.races.addStep1Hint}</Muted>
@@ -739,15 +758,14 @@ export default function RaceDetailScreen() {
                             </View>
                           </>
                         ) : (
-                          <Muted>
-                            {friends.length > 0 ? t.races.addStep1Empty : t.friends.listEmpty}
-                          </Muted>
+                          <Muted>{t.races.addStep1Empty}</Muted>
                         )}
                       </View>
+                      ) : null}
 
                       {/* 2 · Un autre pilote inscrit, par pseudo */}
                       <View style={styles.addStep}>
-                        <Label>{t.races.addStep2}</Label>
+                        <Heading>{`${stepNo('search')} · ${t.races.addStep2}`}</Heading>
                         <Muted>{t.races.invitePilotHint}</Muted>
                         <Field
                           label={t.races.invitePilotLabel}
@@ -758,7 +776,9 @@ export default function RaceDetailScreen() {
                         />
                         {searchingPilot && !pilotSearchReady ? <Muted>…</Muted> : null}
                         {pilotSearchReady && visiblePilots.length === 0 ? (
-                          <Muted>{t.races.invitePilotNone}</Muted>
+                          <Muted>
+                            {alreadyOnGrid ? t.races.invitePilotAlready : t.races.invitePilotNone}
+                          </Muted>
                         ) : null}
                         {visiblePilots.length > 0 ? (
                           <View style={styles.friendChips}>
@@ -778,8 +798,8 @@ export default function RaceDetailScreen() {
                       </View>
 
                       {/* 3 · Un invité sans compte (hors Elo) */}
-                      <View style={[styles.addStep, styles.guestStep]}>
-                        <Label>{t.races.addStep3}</Label>
+                      <View style={styles.addStep}>
+                        <Heading>{`${stepNo('guest')} · ${t.races.addStep3}`}</Heading>
                         <Muted>{t.races.guestHint}</Muted>
                         <Field
                           label={t.races.guestName}
@@ -902,9 +922,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.line,
   },
-  // La 3e marche (invité, hors Elo) est visuellement en retrait : c'est un
-  // dernier recours, pas l'option par défaut.
-  guestStep: { opacity: 0.9 },
   guestNudge: { fontStyle: 'italic' },
   friendChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   friendChip: {

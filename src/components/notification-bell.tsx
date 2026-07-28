@@ -73,5 +73,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeTxt: { fontSize: 11, fontWeight: '800', color: colors.bg, lineHeight: 14 },
+  // Blanc, comme le libellé des boutons primaires : #0a0706 sur #e10600
+  // tombe à ~3,7:1, sous le minimum AA pour du 11 px.
+  badgeTxt: { fontSize: 11, fontWeight: '800', color: '#ffffff', lineHeight: 14 },
 });
