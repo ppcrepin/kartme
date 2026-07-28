@@ -241,6 +241,44 @@ Découpé en deux temps testables (décisions PO 2026-07-14).
 
 ---
 
+## 🔧 Backlog d'améliorations *(validé PO 2026-07-28)*
+
+Issu de **deux sources** : la comparaison front-end/UX avec l'app de Maggie (`ppcrepin/kartme-maggie`, stack Vite + Firebase) et les **premiers retours de test** des beta-testeurs.
+
+### 🔥 Priorité — en cours
+
+| # | Amélioration | Origine | État |
+|---|---|---|---|
+| **A1** | **Invités sans Elo affiché** — « Invité · hors classement » au lieu de « Rookie · 1000 » (grille, résultats, médaille de grade masquée) ; les invités sont aussi **exclus du détail des duels**, puisqu'aucun point ne s'échange avec eux | retour de test | ✅ **fait** *(front-end seul)* |
+| **A2** | **Inviter un pilote sans être ami** — recherche par pseudo directement dans la course (anti-rebond 300 ms, exclut ceux déjà sur la grille) ; les amis restent en raccourci. *La RLS autorisait déjà l'admin à ajouter tout pilote non bloqué : la limitation était purement dans l'interface.* | retour de test | ✅ **fait** *(front-end seul)* |
+| **A3** | **Calibration des nouveaux** — facteur K élevé sur les premières courses (inspiré de Maggie : débutant 40 / standard 20 / élite 10) → vrai niveau atteint en 3-4 courses au lieu de 20 ; libellé « En calibration » | retour de test | ⏳ |
+| **A4** | **Recherche de circuit à l'échelle France** — circuits récents en tête, « près de moi » (géoloc), recherche par ville, tolérante aux accents/fautes | retour de test | ⏳ |
+| **A5** | **Centre de notifications in-app + cloche** — aujourd'hui uniquement du push : notif refusée = information perdue | app Maggie | ⏳ |
+
+### ⏭️ Ensuite
+
+| # | Amélioration | Origine |
+|---|---|---|
+| **A6** | **Abandons (DNF)** — classer un pilote « abandon » au lieu de le retirer (sortie de piste, panne) | app Maggie |
+| **A7** | **Photo de profil** (upload) à la place des initiales | app Maggie |
+| **A8** | **Suppression de compte annulable** (délai de grâce) au lieu d'immédiate | app Maggie |
+| **A9** | **Saisie par chronos** — entrer les temps, l'app en déduit le classement | app Maggie |
+| **A10** | **Brouillon hors-ligne** de la saisie (coupure réseau au circuit) | app Maggie |
+
+### 💡 À l'étude
+
+Écran « course en cours » (chrono, « j'ai fini / j'abandonne ») · signalement avec preuve photo + arbitrage par l'organisateur · profil enrichi (prénom, circuit favori, taux de complétion) · XP + thèmes déblocables · badges à niveaux · annulation de course avec motif.
+
+### ❌ Écarté pour KartSquad
+
+Back-office admin à 11 écrans (surdimensionné : la boîte de modération + l'écran Stats suffisent) · application bilingue (le français est assumé) · **Elo par discipline** (complexité forte, format unique chez nous) · quota (la limite de courses/jour existe déjà).
+
+### 🛡️ Atouts à ne pas casser
+
+**Pilotes fantômes** (invités sans compte — Maggie exige un compte pour tous : friction majeure le jour de la course) · temps au tour + record du circuit · carte « Ma position » + Top X% · grades et médailles · courbe d'Elo · face-à-face · revanche en un tap · **anti-triche** (Elo entre inscrits seulement) · **le ton karting** (Kart-astrophe, Voiture balai, Safety car… — l'app de Maggie a une copie neutre, c'est notre signature).
+
+---
+
 ## Phase 4 — Publication stores
 
 ### Lot 4.1 — Marque & ASO

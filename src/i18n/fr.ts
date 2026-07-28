@@ -86,6 +86,14 @@ export const fr = {
     pilotName: 'Nom du pilote',
     add: 'Ajouter',
     you: 'toi',
+    // Invité sans compte : son Elo est gelé et exclu des classements — on
+    // n'affiche donc aucun score, qui laisserait croire à un vrai classement.
+    guest: 'Invité · hors classement',
+    // Invitation d'un pilote inscrit par pseudo (sans exiger l'amitié).
+    invitePilot: 'Inviter un pilote inscrit',
+    invitePilotLabel: 'Chercher par pseudo',
+    invitePilotPlaceholder: 'Pseudo du pilote…',
+    invitePilotNone: 'Aucun pilote trouvé avec ce pseudo.',
     remove: 'Retirer',
     rejoin: 'Je participe',
     share: 'Partager la course',

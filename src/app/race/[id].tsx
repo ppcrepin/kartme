@@ -25,7 +25,7 @@ import { badgesForRace, type BadgeKey } from '@/lib/badges';
 import { formatRaceDate } from '@/lib/datetime';
 import { pairwiseBreakdown } from '@/lib/elo';
 import { formatLap, parseLap } from '@/lib/laptime';
-import { listFriends, type FriendEntry } from '@/lib/friends';
+import { listFriends, searchPilots, type FriendEntry, type Pilot } from '@/lib/friends';
 import { gradeForElo } from '@/lib/grade';
 import {
   addGhostParticipant,
@@ -112,6 +112,8 @@ export default function RaceDetailScreen() {
   const [joinError, setJoinError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [myNewBadges, setMyNewBadges] = useState<BadgeKey[]>([]);
+  const [pilotQuery, setPilotQuery] = useState('');
+  const [pilotResults, setPilotResults] = useState<Pilot[]>([]);
   const [circuitRecord, setCircuitRecord] = useState<{ ms: number; holder: string } | null>(null);
   const [lapEditId, setLapEditId] = useState<string | null>(null);
   const [lapInput, setLapInput] = useState('');
@@ -151,6 +153,25 @@ export default function RaceDetailScreen() {
   const locked = race?.status === 'locked';
   const canCorrect = !!race && withinCorrectionWindow(race);
   const selfParticipating = participants.some((p) => p.isSelf);
+
+  // Recherche de pilote par pseudo (anti-rebond 300 ms, min 2 caractères).
+  // Exclut ceux déjà sur la grille. Aucune amitié requise.
+  useEffect(() => {
+    if (pilotQuery.trim().length < 2) return; // résultats masqués à l'affichage (voir visiblePilots)
+    let active = true;
+    const timer = setTimeout(() => {
+      searchPilots(pilotQuery)
+        .then((rows) => {
+          if (!active) return;
+          setPilotResults(rows.filter((r) => !participants.some((p) => p.profileId === r.id)));
+        })
+        .catch(() => active && setPilotResults([]));
+    }, 300);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [pilotQuery, participants]);
 
   // Record du circuit (temps au tour) — chargé une fois la course terminée.
   useEffect(() => {
@@ -202,6 +223,19 @@ export default function RaceDetailScreen() {
     setBusy(true);
     try {
       await addProfileParticipant(id!, profileId);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Ajoute un pilote trouvé par pseudo (aucune amitié requise). */
+  async function onAddPilotById(profileId: string) {
+    setBusy(true);
+    try {
+      await addProfileParticipant(id!, profileId);
+      setPilotQuery('');
+      setPilotResults([]);
       await refresh();
     } finally {
       setBusy(false);
@@ -317,6 +351,11 @@ export default function RaceDetailScreen() {
     }
   }
 
+  // Résultats de recherche dérivés : masqués tant que la saisie est trop courte
+  // (évite de vider l'état dans l'effet, et donc un rendu en cascade).
+  const searchingPilot = pilotQuery.trim().length >= 2;
+  const visiblePilots = searchingPilot ? pilotResults : [];
+
   const shareUrl = `${appBaseUrl()}race/${id}`;
 
   // Résumé texte des résultats (podium) pour le partage.
@@ -330,8 +369,12 @@ export default function RaceDetailScreen() {
       ].join('\n')
     : undefined;
 
-  // Entrées pour le détail par paire (C10), recalculé à l'affichage.
-  const pairInputs = results.map((r) => ({ name: r.name, eloBefore: r.eloBefore, position: r.position }));
+  // Entrées pour le détail par paire (C10), recalculé à l'affichage. Les invités
+  // sont exclus : l'Elo ne s'échange qu'entre inscrits (anti-triche), afficher un
+  // duel contre eux laisserait croire à des points qui n'existent pas.
+  const pairInputs = results
+    .filter((r) => !r.isGuest)
+    .map((r) => ({ name: r.name, eloBefore: r.eloBefore, position: r.position }));
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -404,13 +447,19 @@ export default function RaceDetailScreen() {
                               {r.name}
                               {r.isSelf ? <Muted> ({t.races.you})</Muted> : null}
                             </Body>
-                            <Muted style={{ color: grade.color }}>
-                              {grade.name} · {r.eloAfter}
-                            </Muted>
+                            {r.isGuest ? (
+                              <Muted>{t.races.guest}</Muted>
+                            ) : (
+                              <Muted style={{ color: grade.color }}>
+                                {grade.name} · {r.eloAfter}
+                              </Muted>
+                            )}
                           </View>
-                          <Body style={[styles.delta, { color: deltaColor(r.eloDelta) }]}>
-                            {fmtDelta(r.eloDelta)}
-                          </Body>
+                          {!r.isGuest ? (
+                            <Body style={[styles.delta, { color: deltaColor(r.eloDelta) }]}>
+                              {fmtDelta(r.eloDelta)}
+                            </Body>
+                          ) : null}
                         </View>
 
                         {isOpen ? (
@@ -536,6 +585,8 @@ export default function RaceDetailScreen() {
                   </Label>
                   {participants.map((p) => {
                     const grade = gradeForElo(p.elo);
+                    // Invité (sans compte) : Elo gelé et hors classement → pas de score affiché.
+                    const isGuest = !p.profileId;
                     return (
                       <Card key={p.id}>
                         <View style={styles.pilotRow}>
@@ -545,11 +596,15 @@ export default function RaceDetailScreen() {
                               {p.name}
                               {p.isSelf ? <Muted> ({t.races.you})</Muted> : null}
                             </Body>
-                            <Muted style={{ color: grade.color }}>
-                              {grade.name} · {p.elo}
-                            </Muted>
+                            {isGuest ? (
+                              <Muted>{t.races.guest}</Muted>
+                            ) : (
+                              <Muted style={{ color: grade.color }}>
+                                {grade.name} · {p.elo}
+                              </Muted>
+                            )}
                           </View>
-                          <GradeMedal grade={grade} size={30} />
+                          {!isGuest ? <GradeMedal grade={grade} size={30} /> : null}
                           {isAdmin && !locked ? (
                             <Pressable onPress={() => onRemove(p.id)} accessibilityRole="button">
                               <Muted style={styles.remove}>{t.races.remove}</Muted>
@@ -577,35 +632,62 @@ export default function RaceDetailScreen() {
                       </View>
                       <Button label={t.races.add} onPress={onAddPilot} disabled={busy} />
 
-                      {/* Sélection parmi mes amis (lot 2.1) */}
-                      {(() => {
-                        const addable = friends.filter(
-                          (f) => !participants.some((p) => p.profileId === f.pilotId),
-                        );
-                        return (
-                          <View style={styles.friendPick}>
-                            <Label>{t.friends.addToRace}</Label>
-                            {friends.length === 0 ? (
-                              <Muted>{t.friends.noFriendsYet}</Muted>
-                            ) : addable.length === 0 ? (
-                              <Muted>{t.friends.allFriendsAdded}</Muted>
-                            ) : (
+                      {/* Inviter un pilote inscrit — par pseudo, SANS exiger l'amitié.
+                          (La RLS autorise déjà l'admin à ajouter tout pilote non bloqué.) */}
+                      <View style={styles.friendPick}>
+                        <Label>{t.races.invitePilot}</Label>
+                        <Field
+                          label={t.races.invitePilotLabel}
+                          value={pilotQuery}
+                          onChangeText={setPilotQuery}
+                          autoCapitalize="none"
+                          placeholder={t.races.invitePilotPlaceholder}
+                        />
+                        {searchingPilot && visiblePilots.length === 0 ? (
+                          <Muted>{t.races.invitePilotNone}</Muted>
+                        ) : null}
+                        {visiblePilots.length > 0 ? (
+                          <View style={styles.friendChips}>
+                            {visiblePilots.map((p) => (
+                              <Pressable
+                                key={p.id}
+                                onPress={() => onAddPilotById(p.id)}
+                                accessibilityRole="button"
+                                disabled={busy}
+                                style={styles.friendChip}>
+                                <Avatar name={p.username} size={24} />
+                                <Body style={styles.friendChipTxt}>+ {p.username}</Body>
+                              </Pressable>
+                            ))}
+                          </View>
+                        ) : null}
+
+                        {/* Raccourci : mes amis, en un tap */}
+                        {(() => {
+                          const addable = friends.filter(
+                            (f) => !participants.some((p) => p.profileId === f.pilotId),
+                          );
+                          if (addable.length === 0) return null;
+                          return (
+                            <>
+                              <Label style={styles.friendsShortcut}>{t.friends.addToRace}</Label>
                               <View style={styles.friendChips}>
                                 {addable.map((f) => (
                                   <Pressable
                                     key={f.pilotId}
                                     onPress={() => onAddFriend(f.pilotId)}
                                     accessibilityRole="button"
+                                    disabled={busy}
                                     style={styles.friendChip}>
                                     <Avatar name={f.username} size={24} />
                                     <Body style={styles.friendChipTxt}>+ {f.username}</Body>
                                   </Pressable>
                                 ))}
                               </View>
-                            )}
-                          </View>
-                        );
-                      })()}
+                            </>
+                          );
+                        })()}
+                      </View>
 
                       {!selfParticipating ? (
                         <Button label={t.races.rejoin} variant="ghost" onPress={onToggleSelf} />
@@ -689,6 +771,7 @@ const styles = StyleSheet.create({
   remove: { color: colors.inkDim2 },
   addRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   friendPick: { gap: spacing.sm, marginTop: spacing.sm },
+  friendsShortcut: { marginTop: spacing.sm },
   friendChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   friendChip: {
     flexDirection: 'row',

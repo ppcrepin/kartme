@@ -221,6 +221,8 @@ export interface RaceResult {
   position: number;
   name: string;
   isSelf: boolean;
+  /** Invité sans compte : Elo gelé et hors classement → on n'affiche pas de score. */
+  isGuest: boolean;
   eloBefore: number;
   eloAfter: number;
   eloDelta: number;
@@ -298,6 +300,7 @@ export async function listResults(raceId: string, selfId?: string): Promise<Race
     position: r.position,
     name: r.participation?.profile?.username ?? r.participation?.ghost?.display_name ?? '—',
     isSelf: !!selfId && r.participation?.profile_id === selfId,
+    isGuest: !r.participation?.profile_id,
     eloBefore: r.elo_before,
     eloAfter: r.elo_after,
     eloDelta: r.elo_delta,
