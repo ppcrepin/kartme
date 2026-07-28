@@ -16,6 +16,8 @@ export interface LeaderboardRow {
   elo: number;
   races: number;
   isMe: boolean;
+  /** Chemin de la photo (null = initiales, ou fantôme). */
+  avatarPath: string | null;
 }
 
 export interface MyRank {
@@ -35,6 +37,7 @@ type RawRow = {
   elo: number;
   races: number;
   is_me: boolean;
+  avatar_path: string | null;
 };
 
 export async function getLeaderboard(
@@ -55,6 +58,7 @@ export async function getLeaderboard(
     elo: r.elo,
     races: r.races,
     isMe: r.is_me,
+    avatarPath: r.avatar_path ?? null,
   }));
 }
 

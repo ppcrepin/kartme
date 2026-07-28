@@ -7,6 +7,7 @@ import { Avatar, Button, Card, GradeMedal, Tag } from '@/components/ui';
 import { Body, Muted } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
+import { signedAvatarUrls } from '@/lib/avatar';
 import { gradeForElo, isCalibrating } from '@/lib/grade';
 import {
   getLeaderboard,
@@ -39,6 +40,22 @@ export default function ClassementsScreen() {
   const [failed, setFailed] = useState<Partial<Record<LeaderboardScope, boolean>>>({});
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreFailed, setMoreFailed] = useState(false);
+  // Liens signés des photos, cumulés au fil des pages : on ne re-signe jamais
+  // ce qu'on a déjà, et une page de plus ne coûte qu'une requête.
+  const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
+
+  /** Signe les chemins encore inconnus et fusionne — jamais deux fois le même. */
+  const mergeAvatars = useCallback(async (rows: { avatarPath: string | null }[]) => {
+    setAvatars((prev) => {
+      const missing = rows.map((r) => r.avatarPath).filter((p2): p2 is string => !!p2 && !prev.has(p2));
+      if (missing.length > 0) {
+        void signedAvatarUrls(missing).then((got) => {
+          if (got.size > 0) setAvatars((cur) => new Map([...cur, ...got]));
+        });
+      }
+      return prev;
+    });
+  }, []);
   // Un seul chargement en vol par portée (ref : pas besoin de re-rendu).
   const inFlight = useRef<Partial<Record<LeaderboardScope, boolean>>>({});
   // Bascule auto vers « Global » une seule fois si l'onglet Amis est vide
@@ -55,6 +72,7 @@ export default function ClassementsScreen() {
           [sc]: { rows, myRank, mayHaveMore: rows.length === LEADERBOARD_PAGE },
         }));
         setFailed((prev) => ({ ...prev, [sc]: false }));
+        void mergeAvatars(rows);
         if (sc === 'friends' && rows.length === 0 && !autoSwitched.current) {
           autoSwitched.current = true;
           setScope('global');
@@ -66,7 +84,7 @@ export default function ClassementsScreen() {
       .finally(() => {
         inFlight.current[sc] = false;
       });
-  }, []);
+  }, [mergeAvatars]);
 
   useFocusEffect(
     useCallback(() => {
@@ -87,6 +105,7 @@ export default function ClassementsScreen() {
       // réapparaître dans la fenêtre suivante — on garde sa première ligne.
       const seen = new Set(current.rows.map(rowKey));
       const fresh = next.filter((r) => !seen.has(rowKey(r)));
+      void mergeAvatars(fresh);
       setLoaded((prev) => ({
         ...prev,
         [scope]: {
@@ -189,7 +208,12 @@ export default function ClassementsScreen() {
                   <Card style={row.isMe ? styles.meCard : undefined}>
                     <View style={styles.row}>
                       <Body style={styles.rank}>{row.rank}</Body>
-                      <Avatar name={row.username} size={36} />
+                      <Avatar
+                        name={row.username}
+                        size={36}
+                        uri={row.avatarPath ? (avatars.get(row.avatarPath) ?? null) : null}
+                        cacheKey={row.avatarPath}
+                      />
                       <View style={styles.flex}>
                         <Body>
                           {row.username}

@@ -7,6 +7,7 @@ import { Avatar, Button, Card, Field, GradeMedal } from '@/components/ui';
 import { Body, Label, Muted } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
+import { signedAvatarUrls } from '@/lib/avatar';
 import {
   acceptFriendRequest,
   deleteFriendship,
@@ -27,10 +28,19 @@ export default function AmisScreen() {
   const [searched, setSearched] = useState(false);
   const [showAllFriends, setShowAllFriends] = useState(false);
   const [lists, setLists] = useState<FriendLists>({ received: [], sent: [], friends: [] });
+  const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
 
   const refresh = useCallback(() => {
     listFriendships()
-      .then(setLists)
+      .then(async (l) => {
+        setLists(l);
+        // UNE signature pour les trois listes réunies.
+        setAvatars(
+          await signedAvatarUrls(
+            [...l.received, ...l.sent, ...l.friends].map((f) => f.avatarPath),
+          ),
+        );
+      })
       .catch(() => {});
   }, []);
 
@@ -55,6 +65,8 @@ export default function AmisScreen() {
         if (active) {
           setResults(rows);
           setSearched(true);
+          const got = await signedAvatarUrls(rows.map((r) => r.avatarPath));
+          if (active && got.size > 0) setAvatars((cur) => new Map([...cur, ...got]));
         }
       } catch {
         /* silencieux */
@@ -100,7 +112,12 @@ export default function AmisScreen() {
                 <Pressable key={p.id} onPress={() => router.push(`/pilot/${p.id}`)} accessibilityRole="button">
                   <Card>
                     <View style={styles.row}>
-                      <Avatar name={p.username} size={36} />
+                      <Avatar
+                        name={p.username}
+                        size={36}
+                        uri={p.avatarPath ? (avatars.get(p.avatarPath) ?? null) : null}
+                        cacheKey={p.avatarPath}
+                      />
                       <View style={styles.flex}>
                         <Body>{p.username}</Body>
                         <Muted style={{ color: grade.color }}>
@@ -128,7 +145,12 @@ export default function AmisScreen() {
                         style={[styles.row, styles.flex]}
                         onPress={() => router.push(`/pilot/${f.pilotId}`)}
                         accessibilityRole="button">
-                        <Avatar name={f.username} size={36} />
+                        <Avatar
+                          name={f.username}
+                          size={36}
+                          uri={f.avatarPath ? (avatars.get(f.avatarPath) ?? null) : null}
+                          cacheKey={f.avatarPath}
+                        />
                         <Body style={styles.flex}>{f.username}</Body>
                       </Pressable>
                       <Pressable onPress={() => onAccept(f)} accessibilityRole="button" style={styles.action}>
@@ -153,7 +175,12 @@ export default function AmisScreen() {
                         style={[styles.row, styles.flex]}
                         onPress={() => router.push(`/pilot/${f.pilotId}`)}
                         accessibilityRole="button">
-                        <Avatar name={f.username} size={36} />
+                        <Avatar
+                          name={f.username}
+                          size={36}
+                          uri={f.avatarPath ? (avatars.get(f.avatarPath) ?? null) : null}
+                          cacheKey={f.avatarPath}
+                        />
                         <Body style={styles.flex}>{f.username}</Body>
                       </Pressable>
                       <Pressable onPress={() => onDelete(f)} accessibilityRole="button" style={styles.action}>
@@ -176,7 +203,12 @@ export default function AmisScreen() {
                     <Pressable key={f.friendshipId} onPress={() => router.push(`/pilot/${f.pilotId}`)} accessibilityRole="button">
                       <Card>
                         <View style={styles.row}>
-                          <Avatar name={f.username} size={36} />
+                          <Avatar
+                          name={f.username}
+                          size={36}
+                          uri={f.avatarPath ? (avatars.get(f.avatarPath) ?? null) : null}
+                          cacheKey={f.avatarPath}
+                        />
                           <View style={styles.flex}>
                             <Body>{f.username}</Body>
                             <Muted style={{ color: grade.color }}>{grade.name} · {f.elo}</Muted>

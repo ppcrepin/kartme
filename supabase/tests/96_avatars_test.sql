@@ -266,6 +266,40 @@ begin
   raise notice 'Scénario 4 (chemin exposé) ✔';
 end $$;
 
+-- ═══ Scénario 4bis : le classement porte la photo (A7b) ═══
+-- Le grief PO : « j'ajoute une photo mais dans le classement je ne la vois
+-- pas ». Le classement est justement l'écran où l'on parcourt le plus de
+-- monde ; sans le chemin, le client n'a rien à signer.
+do $$
+declare
+  A uuid := 'ff000000-0000-0000-0000-00000000000a';
+  B uuid := 'ff000000-0000-0000-0000-00000000000b';
+begin
+  perform tests.as_uid(B);
+  set local role authenticated;
+  update profiles set avatar_path = B::text || '/photo3.jpg' where id = B;
+  reset role;
+  -- Un pilote n'entre au classement qu'avec au moins une course jouée.
+  insert into elo_history (profile_id, elo, delta) values (A, 1000, 0), (B, 1000, 0);
+
+  perform tests.as_uid(A);
+  perform tests.eq((select count(*) from get_leaderboard('global')
+                    where profile_id = B and avatar_path = B::text || '/photo3.jpg'),
+                   1, 'get_leaderboard renvoie le chemin');
+
+  -- Et il reste sous la même clause de visibilité que le reste de la ligne :
+  -- un profil privé non-ami ne figure pas au classement du tout, donc son
+  -- chemin n'en sort pas non plus.
+  update profiles set is_private = true where id = B;
+  perform tests.eq((select count(*) from get_leaderboard('global') where profile_id = B), 0,
+                   'profil privé non-ami : ni ligne ni chemin');
+
+  update profiles set is_private = false where id = B;
+  delete from elo_history where profile_id in (A, B);
+  update profiles set avatar_path = null where id = B;
+  raise notice 'Scénario 4bis (photo au classement) ✔';
+end $$;
+
 -- ═══ Scénario 5 : RGPD — la photo part avec le compte, et n'y revient pas ═══
 do $$
 declare A uuid := 'ff000000-0000-0000-0000-00000000000a'; denied boolean := false;

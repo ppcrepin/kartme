@@ -9,6 +9,7 @@ import { Body, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
+import { signedAvatarUrls } from '@/lib/avatar';
 import {
   correctRaceResults,
   listParticipants,
@@ -43,12 +44,14 @@ export default function RankScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [restored, setRestored] = useState(false);
+  const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
 
   useFocusEffect(
     useCallback(() => {
       listParticipants(id!, session?.user.id)
         .then(async (parts) => {
           setParticipants(parts);
+          void signedAvatarUrls(parts.map((x) => x.avatarPath)).then(setAvatars);
           const byId = new Map(parts.map((p) => [p.id, p]));
 
           // Brouillon local (A10) : au circuit, une coupure réseau ou un
@@ -255,7 +258,12 @@ export default function RankScreen() {
                       <View style={[styles.check, !absent && styles.checkOn]}>
                         <Body style={styles.checkTxt}>{absent ? '' : '✓'}</Body>
                       </View>
-                      <Avatar name={p.name} size={36} />
+                      <Avatar
+                        name={p.name}
+                        size={36}
+                        uri={p.avatarPath ? (avatars.get(p.avatarPath) ?? null) : null}
+                        cacheKey={p.avatarPath}
+                      />
                       <Body style={[styles.flex, absent && styles.nameAbsent]}>
                         {p.name}
                         {p.isSelf ? <Muted> ({t.races.you})</Muted> : null}
@@ -298,7 +306,12 @@ export default function RankScreen() {
                           {out ? t.races.dnfShort : finishRank(index)}
                         </Body>
                       </View>
-                      <Avatar name={p.name} size={34} />
+                      <Avatar
+                        name={p.name}
+                        size={34}
+                        uri={p.avatarPath ? (avatars.get(p.avatarPath) ?? null) : null}
+                        cacheKey={p.avatarPath}
+                      />
                       <Body style={[styles.flex, out && styles.nameAbsent]} numberOfLines={1}>
                         {p.name}
                         {p.isSelf ? <Muted> ({t.races.you})</Muted> : null}
@@ -325,7 +338,12 @@ export default function RankScreen() {
                             {out ? t.races.dnfShort : ranked ? pos + 1 : '·'}
                           </Body>
                         </View>
-                        <Avatar name={p.name} size={36} />
+                        <Avatar
+                        name={p.name}
+                        size={36}
+                        uri={p.avatarPath ? (avatars.get(p.avatarPath) ?? null) : null}
+                        cacheKey={p.avatarPath}
+                      />
                         <Body style={[styles.flex, out && styles.nameAbsent]}>
                           {p.name}
                           {p.isSelf ? <Muted> ({t.races.you})</Muted> : null}

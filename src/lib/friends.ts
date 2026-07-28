@@ -30,6 +30,8 @@ export interface FriendEntry {
   pilotId: string;
   username: string;
   elo: number;
+  /** Chemin de la photo (null = initiales). Le lien signé se demande par lots. */
+  avatarPath: string | null;
 }
 
 export interface FriendLists {
@@ -112,8 +114,8 @@ type RawFriendship = {
   requester_id: string;
   addressee_id: string;
   status: 'pending' | 'accepted';
-  requester: { username: string; elo: number } | null;
-  addressee: { username: string; elo: number } | null;
+  requester: { username: string; elo: number; avatar_path: string | null } | null;
+  addressee: { username: string; elo: number; avatar_path: string | null } | null;
 };
 
 /** Relation entre moi et un pilote donné (pour la fiche P). */
@@ -145,7 +147,7 @@ export async function listFriendships(): Promise<FriendLists> {
   const { data, error } = await supabase
     .from('friendships')
     .select(
-      'id, requester_id, addressee_id, status, requester:profiles!friendships_requester_id_fkey(username, elo), addressee:profiles!friendships_addressee_id_fkey(username, elo)',
+      'id, requester_id, addressee_id, status, requester:profiles!friendships_requester_id_fkey(username, elo, avatar_path), addressee:profiles!friendships_addressee_id_fkey(username, elo, avatar_path)',
     )
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -159,6 +161,7 @@ export async function listFriendships(): Promise<FriendLists> {
       pilotId: otherIsRequester ? r.requester_id : r.addressee_id,
       username: other?.username ?? '—',
       elo: other?.elo ?? 1000,
+      avatarPath: other?.avatar_path ?? null,
     };
   };
 
