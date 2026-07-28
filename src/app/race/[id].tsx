@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CircuitPicker } from '@/components/circuit-picker';
+import { LapField } from '@/components/lap-field';
 import { DateTimeField } from '@/components/date-time-field';
 import { Podium } from '@/components/podium';
 import { ShareCard } from '@/components/share-card';
@@ -24,7 +25,7 @@ import { useAuth } from '@/lib/auth';
 import { badgesForRace, type BadgeKey } from '@/lib/badges';
 import { formatRaceDate } from '@/lib/datetime';
 import { pairwiseBreakdown } from '@/lib/elo';
-import { formatLap, parseLap } from '@/lib/laptime';
+import { digitsToMs, formatLap, msToDigits } from '@/lib/laptime';
 import { listFriends, searchPilots, type FriendEntry, type Pilot } from '@/lib/friends';
 import { gradeForElo, isCalibrating } from '@/lib/grade';
 import {
@@ -123,7 +124,7 @@ export default function RaceDetailScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [circuitRecord, setCircuitRecord] = useState<{ ms: number; holder: string } | null>(null);
   const [lapEditId, setLapEditId] = useState<string | null>(null);
-  const [lapInput, setLapInput] = useState('');
+  const [lapInput, setLapInput] = useState('');   // chiffres bruts (pavé numérique)
   const [lapError, setLapError] = useState<string | null>(null);
   // Saisie GROUPÉE (A9) : l'admin d'une course de huit pilotes ouvrait huit
   // fois le même champ. `null` = mode désactivé.
@@ -353,14 +354,14 @@ export default function RaceDetailScreen() {
 
   function startLapEdit(r: RaceResult) {
     setLapEditId(r.participationId);
-    setLapInput(r.bestLapMs != null ? formatLap(r.bestLapMs) : '');
+    setLapInput(msToDigits(r.bestLapMs));
     setLapError(null);
   }
 
   async function onSaveLap(participationId: string) {
-    // Champ vidé = effacement du temps ; sinon on parse.
+    // Champ vidé = effacement du temps ; sinon on convertit les chiffres.
     const cleared = lapInput.trim() === '';
-    const ms = cleared ? null : parseLap(lapInput);
+    const ms = cleared ? null : digitsToMs(lapInput);
     if (!cleared && ms === null) {
       setLapError(t.races.lapInvalid);
       return;
@@ -385,9 +386,7 @@ export default function RaceDetailScreen() {
     setLapEditId(null);
     setLapError(null);
     setLapBulk(
-      Object.fromEntries(
-        results.map((r) => [r.participationId, r.bestLapMs != null ? formatLap(r.bestLapMs) : '']),
-      ),
+      Object.fromEntries(results.map((r) => [r.participationId, msToDigits(r.bestLapMs)])),
     );
   }
 
@@ -396,7 +395,7 @@ export default function RaceDetailScreen() {
     const entries: { participationId: string; ms: number | null }[] = [];
     for (const [pid, raw] of Object.entries(lapBulk)) {
       const cleared = raw.trim() === '';
-      const ms = cleared ? null : parseLap(raw);
+      const ms = cleared ? null : digitsToMs(raw);
       if (!cleared && ms === null) {
         // Sur huit champs, « temps invalide » sans nom oblige à chercher.
         const who = results.find((r) => r.participationId === pid);
@@ -672,14 +671,13 @@ export default function RaceDetailScreen() {
                     <View style={styles.lapEditBox}>
                       <Muted>{t.races.lapBulkHint}</Muted>
                       {[...results].sort(lapSort).map((r) => (
-                        <Field
+                        <LapField
                           key={r.participationId}
                           label={displayName(r)}
-                          value={lapBulk[r.participationId] ?? ''}
-                          onChangeText={(v) =>
+                          digits={lapBulk[r.participationId] ?? ''}
+                          onChangeDigits={(v) =>
                             setLapBulk((prev) => ({ ...(prev ?? {}), [r.participationId]: v }))
                           }
-                          placeholder="0:52.348"
                         />
                       ))}
                       {lapError ? <Muted style={styles.rematchErr}>{lapError}</Muted> : null}
@@ -726,11 +724,10 @@ export default function RaceDetailScreen() {
                         </View>
                         {editing ? (
                           <View style={styles.lapEditBox}>
-                            <Field
+                            <LapField
                               label={t.races.lapLabel}
-                              value={lapInput}
-                              onChangeText={setLapInput}
-                              placeholder="0:52.348"
+                              digits={lapInput}
+                              onChangeDigits={setLapInput}
                             />
                             {lapError ? <Muted style={styles.rematchErr}>{lapError}</Muted> : null}
                             <View style={styles.actions}>
