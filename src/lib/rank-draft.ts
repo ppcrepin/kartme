@@ -18,6 +18,8 @@ export interface RankDraft {
   absentIds: string[];
   orderedIds: string[];
   tapOrder: string[];
+  /** Abandons (A6) — absent des brouillons écrits avant cette version. */
+  dnfIds?: string[];
   savedAt: number;
 }
 
@@ -48,7 +50,10 @@ export function loadDraft(raceId: string, currentIds: string[]): RankDraft | nul
       return null;
     }
     const known = new Set(currentIds);
-    const cited = [...(d.absentIds ?? []), ...(d.orderedIds ?? []), ...(d.tapOrder ?? [])];
+    const cited = [
+      ...(d.absentIds ?? []), ...(d.orderedIds ?? []),
+      ...(d.tapOrder ?? []), ...(d.dnfIds ?? []),
+    ];
     if (cited.some((pid) => !known.has(pid))) {
       clearDraft(raceId);
       return null;
@@ -69,5 +74,10 @@ export function clearDraft(raceId: string): void {
 
 /** Un brouillon vaut la peine d'être restauré s'il contient un début d'ordre. */
 export function isMeaningful(d: RankDraft): boolean {
-  return d.orderedIds.length > 0 || d.tapOrder.length > 0 || d.absentIds.length > 0;
+  return (
+    d.orderedIds.length > 0 ||
+    d.tapOrder.length > 0 ||
+    d.absentIds.length > 0 ||
+    (d.dnfIds?.length ?? 0) > 0
+  );
 }

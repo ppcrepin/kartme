@@ -19,6 +19,8 @@ export interface PairContribution {
   opponent: string;
   /** true si le pilote a fini devant cet adversaire. */
   beat: boolean;
+  /** true si les deux sont EX ÆQUO (deux abandons) : demi-point de part et d'autre. */
+  tied: boolean;
   /** Probabilité attendue de le battre (0–1). */
   expected: number;
   /** Points gagnés/perdus sur ce duel (fraction de K/(n−1)). */
@@ -33,11 +35,17 @@ export function pairwiseBreakdown(self: PairInput, all: PairInput[]): PairContri
   return others.map((o) => {
     const expected = 1 / (1 + Math.pow(10, (o.eloBefore - self.eloBefore) / DIVISOR));
     const beat = self.position < o.position;
+    const tied = self.position === o.position;
+    // Score du duel : 1 / 0,5 / 0. L'égalité n'arrive qu'entre abandons, que
+    // le serveur classe ex æquo — sans ce cas, l'écran affirmerait qu'un
+    // abandon en a « battu » un autre.
+    const score = beat ? 1 : tied ? 0.5 : 0;
     return {
       opponent: o.name,
       beat,
+      tied,
       expected,
-      points: (K / (n - 1)) * ((beat ? 1 : 0) - expected),
+      points: (K / (n - 1)) * (score - expected),
     };
   });
 }

@@ -36,6 +36,9 @@ export default function RankScreen() {
   const [absents, setAbsents] = useState<Set<string>>(new Set());
   const [ordered, setOrdered] = useState<Participant[]>([]);
   const [tapOrder, setTapOrder] = useState<string[]>([]);
+  // Abandons (A6) : ids de participation. Ils sont classés DERNIERS — ex æquo
+  // entre eux — et l'ordre dans lequel on les marque n'a aucune importance.
+  const [dnfs, setDnfs] = useState<Set<string>>(new Set());
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -57,6 +60,7 @@ export default function RankScreen() {
             setAbsents(new Set(draft.absentIds));
             setOrdered(draft.orderedIds.map((pid) => byId.get(pid)!).filter(Boolean));
             setTapOrder(draft.tapOrder);
+            setDnfs(new Set(draft.dnfIds ?? []));
             setMode(draft.mode);
             setStep(draft.step);
             setRestored(true);
@@ -64,10 +68,12 @@ export default function RankScreen() {
           }
 
           if (isCorrect) {
-            // Correction : pré-remplir dans l'ordre du classement enregistré.
-            const order = await resultOrder(id!).catch(() => [] as string[]);
-            const ord = order.map((pid) => byId.get(pid)).filter(Boolean) as Participant[];
+            // Correction : pré-remplir l'ordre ENREGISTRÉ, abandons compris —
+            // sinon corriger une place effacerait tous les abandons sans le dire.
+            const saved = await resultOrder(id!).catch(() => ({ order: [], dnf: [] }));
+            const ord = saved.order.map((pid) => byId.get(pid)).filter(Boolean) as Participant[];
             setOrdered(ord.length ? ord : parts);
+            setDnfs(new Set(saved.dnf));
           } else if (isLocked) {
             // Course clôturée : roster figé → tous présents, ordre à saisir.
             setOrdered(parts);
@@ -83,7 +89,10 @@ export default function RankScreen() {
    * calculer, sans passer par un rendu intermédiaire.
    */
   const persist = useCallback(
-    (patch: Partial<{ step: Step; mode: Mode; absentIds: string[]; orderedIds: string[]; tapOrder: string[] }>) => {
+    (patch: Partial<{
+      step: Step; mode: Mode; absentIds: string[]; orderedIds: string[];
+      tapOrder: string[]; dnfIds: string[];
+    }>) => {
       if (isCorrect || !id) return; // la correction ne se brouillonne pas
       saveDraft(id, {
         step,
@@ -91,10 +100,11 @@ export default function RankScreen() {
         absentIds: [...absents],
         orderedIds: ordered.map((p) => p.id),
         tapOrder,
+        dnfIds: [...dnfs],
         ...patch,
       });
     },
-    [id, isCorrect, step, mode, absents, ordered, tapOrder],
+    [id, isCorrect, step, mode, absents, ordered, tapOrder, dnfs],
   );
 
   function toggleAbsent(pid: string) {
@@ -121,8 +131,21 @@ export default function RankScreen() {
     setRestored(false);
     setAbsents(new Set());
     setTapOrder([]);
+    setDnfs(new Set());
     setOrdered(rosterFinal ? participants : []);
     setStep(rosterFinal ? 'order' : 'presents');
+  }
+
+  function toggleDnf(pid: string) {
+    const next = new Set(dnfs);
+    if (next.has(pid)) next.delete(pid);
+    else next.add(pid);
+    setDnfs(next);
+    // En mode tap, un pilote marqué « abandon » n'a plus à être pointé : on le
+    // retire de l'ordre, sinon la saisie ne pourrait jamais se compléter.
+    const tap = tapOrder.filter((x) => !next.has(x));
+    setTapOrder(tap);
+    persist({ dnfIds: [...next], tapOrder: tap });
   }
 
   function onReorder(next: Participant[]) {
@@ -142,20 +165,26 @@ export default function RankScreen() {
   }
 
   async function onValidate() {
-    const order = mode === 'drag' ? ordered.map((p) => p.id) : tapOrder;
+    const base = mode === 'drag' ? ordered.map((p) => p.id) : tapOrder;
+    // Les abandons ferment la marche : le serveur les égalise entre eux, mais
+    // leur position d'AFFICHAGE vient de leur rang dans ce tableau.
+    const finishers = base.filter((pid) => !dnfs.has(pid));
+    const retired = present.map((p) => p.id).filter((pid) => dnfs.has(pid));
+    const order = [...finishers, ...retired];
+    const dnfList = [...retired];
     setBusy(true);
     setError(null);
     try {
       if (isCorrect) {
         // Correction : roster figé, on ne fait que réordonner.
-        await correctRaceResults(id!, order);
+        await correctRaceResults(id!, order, dnfList);
       } else {
         // Les absents n'ont pas couru : retirés seulement maintenant, juste
         // avant le calcul (le moteur exige l'ensemble exact des participants).
         for (const pid of absents) {
           await removeParticipant(pid);
         }
-        await submitRaceResults(id!, order);
+        await submitRaceResults(id!, order, dnfList);
       }
       // Le classement est en base : le brouillon n'a plus de raison d'être.
       clearDraft(id!);
@@ -168,8 +197,15 @@ export default function RankScreen() {
 
   const present = participants.filter((p) => !absents.has(p.id));
   const presentCount = present.length;
-  const tapComplete = tapOrder.length === present.length && present.length >= 2;
-  const canValidate = mode === 'drag' ? ordered.length >= 2 : tapComplete;
+  /** Place à l'arrivée d'une ligne de la liste ordonnée (les abandons ne comptent pas). */
+  const finishRank = (index: number) =>
+    ordered.slice(0, index + 1).filter((p) => !dnfs.has(p.id)).length;
+  // Une course sans arrivée ne classe rien : le serveur la refuse, l'interface
+  // ne doit pas laisser croire l'inverse.
+  const finishersCount = present.filter((p) => !dnfs.has(p.id)).length;
+  const tapComplete = tapOrder.length === finishersCount && finishersCount >= 1;
+  const canValidate =
+    finishersCount >= 1 && present.length >= 2 && (mode === 'drag' ? ordered.length >= 2 : tapComplete);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -240,34 +276,44 @@ export default function RankScreen() {
                 keyOf={(p) => p.id}
                 onReorder={onReorder}
                 onDraggingChange={setDragging}
-                renderItem={(p, index) => (
-                  <View style={styles.dragRow}>
-                    <View style={[styles.pos, styles.posOn]}>
-                      <Body style={styles.posTxtOn}>{index + 1}</Body>
+                renderItem={(p, index) => {
+                  const out = dnfs.has(p.id);
+                  return (
+                    <View style={styles.dragRow}>
+                      <View style={[styles.pos, out ? styles.posOut : styles.posOn]}>
+                        <Body style={out ? styles.posTxtOut : styles.posTxtOn}>
+                          {out ? t.races.dnfShort : finishRank(index)}
+                        </Body>
+                      </View>
+                      <Avatar name={p.name} size={34} />
+                      <Body style={[styles.flex, out && styles.nameAbsent]} numberOfLines={1}>
+                        {p.name}
+                        {p.isSelf ? <Muted> ({t.races.you})</Muted> : null}
+                      </Body>
                     </View>
-                    <Avatar name={p.name} size={34} />
-                    <Body style={styles.flex} numberOfLines={1}>
-                      {p.name}
-                      {p.isSelf ? <Muted> ({t.races.you})</Muted> : null}
-                    </Body>
-                  </View>
-                )}
+                  );
+                }}
               />
             ) : (
               <View style={styles.list}>
                 {present.map((p) => {
+                  const out = dnfs.has(p.id);
                   const pos = tapOrder.indexOf(p.id);
                   const ranked = pos >= 0;
                   return (
-                    <Pressable key={p.id} onPress={() => toggleTap(p.id)} accessibilityRole="button">
-                      <Card style={[styles.pilot, ranked && styles.pilotRanked]}>
-                        <View style={[styles.pos, ranked && styles.posOn]}>
-                          <Body style={[styles.posTxt, ranked && styles.posTxtOn]}>
-                            {ranked ? pos + 1 : '·'}
+                    <Pressable
+                      key={p.id}
+                      onPress={() => (out ? undefined : toggleTap(p.id))}
+                      disabled={out}
+                      accessibilityRole="button">
+                      <Card style={[styles.pilot, ranked && styles.pilotRanked, out && styles.pilotAbsent]}>
+                        <View style={[styles.pos, ranked && styles.posOn, out && styles.posOut]}>
+                          <Body style={[styles.posTxt, ranked && styles.posTxtOn, out && styles.posTxtOut]}>
+                            {out ? t.races.dnfShort : ranked ? pos + 1 : '·'}
                           </Body>
                         </View>
                         <Avatar name={p.name} size={36} />
-                        <Body style={styles.flex}>
+                        <Body style={[styles.flex, out && styles.nameAbsent]}>
                           {p.name}
                           {p.isSelf ? <Muted> ({t.races.you})</Muted> : null}
                         </Body>
@@ -277,6 +323,31 @@ export default function RankScreen() {
                 })}
               </View>
             )}
+
+            {/* Abandons (A6) — section à part plutôt qu'un bouton dans chaque
+                ligne : en mode glisser-déposer, un appui dans la ligne entrerait
+                en conflit avec le geste de déplacement. */}
+            <View style={styles.dnfBlock}>
+              <Muted style={styles.dnfTitle}>{t.races.dnfTitle}</Muted>
+              <Muted>{t.races.dnfHint}</Muted>
+              <View style={styles.dnfChips}>
+                {present.map((p) => {
+                  const out = dnfs.has(p.id);
+                  return (
+                    <Pressable
+                      key={p.id}
+                      onPress={() => toggleDnf(p.id)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: out }}
+                      style={[styles.dnfChip, out && styles.dnfChipOn]}>
+                      <Body style={[styles.dnfChipTxt, out && styles.dnfChipTxtOn]}>
+                        {out ? '✕ ' : ''}{p.name}
+                      </Body>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
 
             <Pressable
               onPress={() => onSetMode(mode === 'drag' ? 'tap' : 'drag')}
@@ -311,6 +382,15 @@ export default function RankScreen() {
 
 const styles = StyleSheet.create({
   draft: { gap: spacing.xs },
+  posOut: { backgroundColor: 'transparent', borderColor: colors.line, borderWidth: 1 },
+  posTxtOut: { color: colors.inkDim2, fontSize: 10, fontWeight: '800' },
+  dnfBlock: { gap: spacing.xs, marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.line },
+  dnfTitle: { color: colors.ink, fontWeight: '700' },
+  dnfChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
+  dnfChip: { paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderRadius: 999, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
+  dnfChipOn: { borderColor: colors.accent },
+  dnfChipTxt: { fontSize: 13, color: colors.inkDim },
+  dnfChipTxtOn: { color: colors.accent, fontWeight: '700' },
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl * 2 },
   back: { alignSelf: 'flex-start', paddingVertical: spacing.xs },

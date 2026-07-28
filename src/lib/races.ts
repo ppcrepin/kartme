@@ -235,13 +235,23 @@ export interface RaceResult {
   eloAfter: number;
   eloDelta: number;
   bestLapMs: number | null;
+  /** Abandon (A6) : classé dernier côté Elo, « Abandon » à l'affichage. */
+  dnf: boolean;
 }
 
-/** Soumet l'ordre d'arrivée (ids de participation) → calcul Elo serveur. */
-export async function submitRaceResults(raceId: string, orderedParticipationIds: string[]): Promise<void> {
+/**
+ * Soumet l'ordre d'arrivée (ids de participation) → calcul Elo serveur.
+ * `dnfParticipationIds` : les abandons, classés DERNIERS et ex æquo entre eux.
+ */
+export async function submitRaceResults(
+  raceId: string,
+  orderedParticipationIds: string[],
+  dnfParticipationIds: string[] = [],
+): Promise<void> {
   const { error } = await supabase.rpc('submit_race_results', {
     p_race_id: raceId,
     p_order: orderedParticipationIds,
+    p_dnf: dnfParticipationIds,
   });
   if (error) throw new Error(error.message);
 }
@@ -251,10 +261,15 @@ export async function submitRaceResults(raceId: string, orderedParticipationIds:
  * serveur si la fenêtre est passée ou si un pilote a couru une autre course
  * depuis (l'Elo serait faussé).
  */
-export async function correctRaceResults(raceId: string, orderedParticipationIds: string[]): Promise<void> {
+export async function correctRaceResults(
+  raceId: string,
+  orderedParticipationIds: string[],
+  dnfParticipationIds: string[] = [],
+): Promise<void> {
   const { error } = await supabase.rpc('correct_race_results', {
     p_race_id: raceId,
     p_order: orderedParticipationIds,
+    p_dnf: dnfParticipationIds,
   });
   if (error) throw new Error(error.message);
 }
@@ -271,15 +286,24 @@ export async function reopenRace(raceId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-/** Ids de participation dans l'ordre du classement enregistré (pour pré-remplir la correction). */
-export async function resultOrder(raceId: string): Promise<string[]> {
+/**
+ * Classement enregistré, pour pré-remplir la correction : l'ordre ET les
+ * abandons. Sans les abandons, une correction d'ordre les effacerait tous en
+ * silence — l'admin ne corrigerait qu'une place et repromouvrait des pilotes
+ * qui n'ont jamais fini.
+ */
+export async function resultOrder(raceId: string): Promise<{ order: string[]; dnf: string[] }> {
   const { data, error } = await supabase
     .from('results')
-    .select('participation_id, position')
+    .select('participation_id, position, dnf')
     .eq('race_id', raceId)
     .order('position');
   if (error) throw new Error(error.message);
-  return ((data ?? []) as { participation_id: string }[]).map((r) => r.participation_id);
+  const rows = (data ?? []) as { participation_id: string; dnf: boolean | null }[];
+  return {
+    order: rows.map((r) => r.participation_id),
+    dnf: rows.filter((r) => r.dnf === true).map((r) => r.participation_id),
+  };
 }
 
 type RawResult = {
@@ -289,6 +313,7 @@ type RawResult = {
   elo_after: number;
   elo_delta: number;
   best_lap_ms: number | null;
+  dnf: boolean | null;
   participation: {
     profile_id: string | null;
     profile: { username: string } | null;
@@ -299,7 +324,7 @@ type RawResult = {
 export async function listResults(raceId: string, selfId?: string): Promise<RaceResult[]> {
   const { data, error } = await supabase
     .from('results')
-    .select('participation_id, position, elo_before, elo_after, elo_delta, best_lap_ms, participation:participations(profile_id, profile:profiles(username), ghost:ghost_profiles(display_name))')
+    .select('participation_id, position, elo_before, elo_after, elo_delta, best_lap_ms, dnf, participation:participations(profile_id, profile:profiles(username), ghost:ghost_profiles(display_name))')
     .eq('race_id', raceId)
     .order('position');
   if (error) throw new Error(error.message);
@@ -314,7 +339,25 @@ export async function listResults(raceId: string, selfId?: string): Promise<Race
     eloAfter: r.elo_after,
     eloDelta: r.elo_delta,
     bestLapMs: r.best_lap_ms,
+    dnf: r.dnf === true,
   }));
+}
+
+/**
+ * Saisie GROUPÉE des meilleurs tours (A9) : une course de huit pilotes se
+ * renseigne en un enregistrement au lieu de huit allers-retours.
+ * `ms` à null efface le temps.
+ */
+export async function setLapTimes(
+  raceId: string,
+  entries: { participationId: string; ms: number | null }[],
+): Promise<void> {
+  if (entries.length === 0) return;
+  const { error } = await supabase.rpc('set_lap_times', {
+    p_race_id: raceId,
+    p_entries: entries.map((e) => ({ participation_id: e.participationId, ms: e.ms })),
+  });
+  if (error) throw new Error(error.message);
 }
 
 /** Renseigne / efface (p_ms null) le meilleur tour d'un pilote (soi-même ou admin). */

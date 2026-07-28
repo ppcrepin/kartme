@@ -39,6 +39,7 @@ import {
   listResults,
   lockRace,
   setLapTime,
+  setLapTimes,
   onRaceUpdate,
   rematch,
   removeParticipant,
@@ -124,6 +125,9 @@ export default function RaceDetailScreen() {
   const [lapEditId, setLapEditId] = useState<string | null>(null);
   const [lapInput, setLapInput] = useState('');
   const [lapError, setLapError] = useState<string | null>(null);
+  // Saisie GROUPÉE (A9) : l'admin d'une course de huit pilotes ouvrait huit
+  // fois le même champ. `null` = mode désactivé.
+  const [lapBulk, setLapBulk] = useState<Record<string, string> | null>(null);
 
   const [editing, setEditing] = useState(false);
   const [editCircuit, setEditCircuit] = useState<Circuit | null>(null);
@@ -376,6 +380,46 @@ export default function RaceDetailScreen() {
     }
   }
 
+  /** Ouvre la saisie groupée, pré-remplie avec les temps déjà connus. */
+  function startBulkLaps() {
+    setLapEditId(null);
+    setLapError(null);
+    setLapBulk(
+      Object.fromEntries(
+        results.map((r) => [r.participationId, r.bestLapMs != null ? formatLap(r.bestLapMs) : '']),
+      ),
+    );
+  }
+
+  async function onSaveBulkLaps() {
+    if (!lapBulk) return;
+    const entries: { participationId: string; ms: number | null }[] = [];
+    for (const [pid, raw] of Object.entries(lapBulk)) {
+      const cleared = raw.trim() === '';
+      const ms = cleared ? null : parseLap(raw);
+      if (!cleared && ms === null) {
+        setLapError(t.races.lapInvalid);
+        return;
+      }
+      // On n'envoie que ce qui a CHANGÉ : un enregistrement ne doit pas
+      // réécrire les temps que l'admin n'a pas touchés.
+      const before = results.find((r) => r.participationId === pid)?.bestLapMs ?? null;
+      if (ms !== before) entries.push({ participationId: pid, ms });
+    }
+    setLapError(null);
+    setBusy(true);
+    try {
+      await setLapTimes(id!, entries);
+      setLapBulk(null);
+      await refresh();
+      if (race?.circuit_id) setCircuitRecord(await getCircuitRecord(race.circuit_id).catch(() => null));
+    } catch (e) {
+      setLapError(e instanceof Error ? e.message : t.races.lapInvalid);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onRematch() {
     setBusy(true);
     setRematchError(null);
@@ -451,9 +495,11 @@ export default function RaceDetailScreen() {
           .slice(0, 3)
           // Invité : pas de delta partagé (son Elo est gelé, « 0 » serait trompeur).
           .map((r) =>
-            r.isGuest
-              ? `${MEDALS[r.position - 1] ?? r.position} ${displayName(r)}`
-              : `${MEDALS[r.position - 1] ?? r.position} ${displayName(r)} ${r.eloDelta > 0 ? '+' : ''}${r.eloDelta}`,
+            r.dnf
+              ? `${t.races.dnfShort} ${displayName(r)} ${r.eloDelta > 0 ? '+' : ''}${r.eloDelta}`
+              : r.isGuest
+                ? `${MEDALS[r.position - 1] ?? r.position} ${displayName(r)}`
+                : `${MEDALS[r.position - 1] ?? r.position} ${displayName(r)} ${r.eloDelta > 0 ? '+' : ''}${r.eloDelta}`,
           )
           .join(' · '),
       ].join('\n')
@@ -464,7 +510,14 @@ export default function RaceDetailScreen() {
   // duel contre eux laisserait croire à des points qui n'existent pas.
   const pairInputs = results
     .filter((r) => !r.isGuest)
-    .map((r) => ({ name: r.name, eloBefore: r.eloBefore, position: r.position }));
+    // Rang EFFECTIF : les abandons sont ex æquo derrière tout le monde, comme
+    // côté serveur. Avec leur position d'affichage, l'explication prétendrait
+    // qu'un abandon en a battu un autre.
+    .map((r) => ({
+      name: r.name,
+      eloBefore: r.eloBefore,
+      position: r.dnf ? results.filter((x) => !x.dnf).length + 1 : r.position,
+    }));
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -534,7 +587,11 @@ export default function RaceDetailScreen() {
                       accessibilityRole="button">
                       <Card style={isOpen ? styles.cardOpen : undefined}>
                         <View style={styles.resultRow}>
-                          <Body style={styles.posNum}>{r.position}</Body>
+                          {/* Un abandon n'a pas de place à l'arrivée : afficher
+                              son rang laisserait croire qu'il a fini là. */}
+                          <Body style={[styles.posNum, r.dnf && styles.posNumDnf]}>
+                            {r.dnf ? t.races.dnfShort : r.position}
+                          </Body>
                           <Avatar name={r.hiddenProfile ? '?' : r.name} size={34} />
                           <View style={styles.flex}>
                             <Body>
@@ -543,6 +600,10 @@ export default function RaceDetailScreen() {
                             </Body>
                             {r.isGuest ? (
                               <Muted>{t.races.guest}</Muted>
+                            ) : r.dnf ? (
+                              <Muted>
+                                {t.races.dnf} · {grade.name} · {r.eloAfter}
+                              </Muted>
                             ) : (
                               <Muted style={{ color: grade.color }}>
                                 {grade.name} · {r.eloAfter}
@@ -563,7 +624,12 @@ export default function RaceDetailScreen() {
                             {duels.map((duel) => (
                               <View key={duel.opponent} style={styles.pairRow}>
                                 <Muted style={styles.flex}>
-                                  {duel.beat ? t.races.pairBeat : t.races.pairLost} {duel.opponent}
+                                  {duel.tied
+                                    ? t.races.pairTied
+                                    : duel.beat
+                                      ? t.races.pairBeat
+                                      : t.races.pairLost}{' '}
+                                  {duel.opponent}
                                 </Muted>
                                 <Body style={[styles.pairPts, { color: deltaColor(duel.points) }]}>
                                   {duel.points >= 0 ? '+' : ''}
@@ -589,8 +655,43 @@ export default function RaceDetailScreen() {
                         .replace('%n', circuitRecord.holder)}
                     </Muted>
                   ) : null}
+                  {/* Mode groupé : réservé à l'admin, seul à pouvoir écrire
+                      pour tout le monde. Un pilote garde sa saisie unitaire. */}
+                  {isAdmin && lapBulk === null ? (
+                    <Button label={t.races.lapBulk} variant="ghost" onPress={startBulkLaps} />
+                  ) : null}
+
+                  {lapBulk !== null ? (
+                    <View style={styles.lapEditBox}>
+                      <Muted>{t.races.lapBulkHint}</Muted>
+                      {[...results].sort(lapSort).map((r) => (
+                        <Field
+                          key={r.participationId}
+                          label={displayName(r)}
+                          value={lapBulk[r.participationId] ?? ''}
+                          onChangeText={(v) =>
+                            setLapBulk((prev) => ({ ...(prev ?? {}), [r.participationId]: v }))
+                          }
+                          placeholder="0:52.348"
+                        />
+                      ))}
+                      {lapError ? <Muted style={styles.rematchErr}>{lapError}</Muted> : null}
+                      <View style={styles.actions}>
+                        <Button
+                          label={t.common.cancel}
+                          variant="ghost"
+                          onPress={() => {
+                            setLapBulk(null);
+                            setLapError(null);
+                          }}
+                        />
+                        <Button label={t.races.lapSave} onPress={onSaveBulkLaps} disabled={busy} />
+                      </View>
+                    </View>
+                  ) : null}
+
                   {[...results].sort(lapSort).map((r) => {
-                    const editable = r.isSelf || isAdmin;
+                    const editable = (r.isSelf || isAdmin) && lapBulk === null;
                     const editing = lapEditId === r.participationId;
                     return (
                       <Card key={r.participationId}>
@@ -938,6 +1039,7 @@ const styles = StyleSheet.create({
   },
   friendChipTxt: { fontSize: 13, fontWeight: '700' },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  posNumDnf: { fontSize: 11, fontWeight: '800', color: colors.inkDim2 },
   posNum: { fontFamily: fonts.serifBlack, fontSize: 18, width: 22, textAlign: 'center', color: colors.ink },
   delta: { fontWeight: '800' },
   cardOpen: { borderColor: colors.line2 },

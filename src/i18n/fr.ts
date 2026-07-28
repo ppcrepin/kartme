@@ -135,6 +135,9 @@ export const fr = {
     lapEdit: 'Modifier',
     lapLabel: 'Meilleur tour (m:ss.mmm) — vide pour effacer',
     lapSave: 'Enregistrer',
+    // Saisie groupée (A9) : huit pilotes = huit ouvertures de champ auparavant.
+    lapBulk: 'Saisir tous les temps',
+    lapBulkHint: 'Renseigne les meilleurs tours d’un coup. Laisse vide pour ne pas en mettre.',
     lapInvalid: 'Temps invalide (ex. 0:52.348).',
     limitReached: 'Limite de %n courses par jour atteinte.',
     errorDate: 'Date ou heure invalide.',
@@ -165,6 +168,13 @@ export const fr = {
     draftRestored: 'Saisie reprise',
     draftRestoredHint: 'On a retrouvé ton classement en cours sur cet appareil.',
     draftDiscard: 'Repartir de zéro',
+    // Abandons (A6). Décision PO : classé dernier — la règle la plus simple,
+    // et la seule qu'on ne puisse pas exploiter pour protéger son Elo.
+    dnfTitle: 'Un pilote n’a pas fini ?',
+    dnfHint: 'Touche-le : il sera classé dernier. Plusieurs abandons sont ex æquo entre eux.',
+    dnfShort: 'ABD',
+    dnf: 'Abandon',
+    needOneFinisher: 'Il faut au moins un pilote à l’arrivée.',
     needTwoPilots: 'Ajoute au moins 2 pilotes pour saisir le classement.',
     // Cycle de vie (lot 2.6) : verrou + rappel, correction 24 h.
     lock: 'Clôturer les invitations',
@@ -186,6 +196,7 @@ export const fr = {
     pairTitle: 'D’où viennent tes points ?',
     pairBeat: 'devant',
     pairLost: 'derrière',
+    pairTied: 'Ex æquo avec',
     pairClose: 'Fermer le détail',
     shareResults: 'Partager les résultats',
     shareResultsHint: 'Envoie le résumé dans le groupe.',
