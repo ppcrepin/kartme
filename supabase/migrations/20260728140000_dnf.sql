@@ -34,12 +34,28 @@ alter table public.results add column if not exists dnf boolean not null default
 -- (Reprise fidèle de la fonction de la vague calibration ; changements : le
 --  paramètre p_dnf, le rang égalisé des abandons et le score 0,5 en cas
 --  d'égalité.)
--- Les DEUX signatures possibles sont supprimées : celle d'avant les abandons
--- (2 arguments) et celle de ce lot (3 arguments). Sans la seconde, rejouer ce
--- script sur une base déjà à jour échoue — « function already exists with same
--- argument types » — et le correctif suivant devient impossible à appliquer.
-drop function if exists public.submit_race_results(uuid, uuid[]);
-drop function if exists public.submit_race_results(uuid, uuid[], uuid[]);
+-- Balayage de TOUTES les variantes du moteur avant recréation.
+--
+-- Énumérer les signatures à la main (2 arguments, puis 3) ne suffit pas : il
+-- suffit qu'une base porte une variante oubliée — un DEFAULT différent, un
+-- paramètre nommé autrement, un essai resté en place — pour que la création
+-- échoue avec « function already exists with same argument types », et le
+-- script devient alors impossible à rejouer, donc impossible à corriger.
+-- On interroge le catalogue : ce qui existe est supprimé, quoi que ce soit.
+do $sweep$
+declare f record;
+begin
+  for f in
+    select p.oid::regprocedure as sig
+    from pg_proc p
+    join pg_namespace ns on ns.oid = p.pronamespace
+    where ns.nspname = 'public'
+      and p.proname in ('submit_race_results', 'correct_race_results')
+  loop
+    execute 'drop function ' || f.sig;
+  end loop;
+end $sweep$;
+
 create function public.submit_race_results(
   p_race_id uuid, p_order uuid[], p_dnf uuid[] default '{}'::uuid[]
 )
@@ -260,8 +276,7 @@ grant execute on function public.submit_race_results(uuid, uuid[], uuid[]) to au
 
 -- ── Correction 24 h : les abandons se corrigent aussi ─────────────────────
 -- (Reprise fidèle de la version « temps au tour préservés » + p_dnf.)
-drop function if exists public.correct_race_results(uuid, uuid[]);
-drop function if exists public.correct_race_results(uuid, uuid[], uuid[]);
+-- (Déjà supprimée par le balayage en tête de fichier.)
 create function public.correct_race_results(
   p_race_id uuid, p_order uuid[], p_dnf uuid[] default null
 )
