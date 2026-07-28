@@ -238,6 +238,12 @@ export default function PilotScreen() {
               ) : (
                 <Muted style={styles.duelEmpty}>{t.friends.faceToFaceEmpty}</Muted>
               )}
+              {/* Courses où aucun des deux n'a fini : ni victoire, ni défaite. */}
+              {duel && duel.draws > 0 ? (
+                <Muted style={styles.duelEmpty}>
+                  {t.friends.faceToFaceDraws.replace('%n', String(duel.draws))}
+                </Muted>
+              ) : null}
             </Card>
 
             {/* Stats, courbe & historique (profil public ou ami) */}
@@ -289,7 +295,11 @@ export default function PilotScreen() {
                         accessibilityRole="button">
                         <Card>
                           <View style={styles.historyRow}>
-                            <Body style={styles.historyPos}>{h.position}</Body>
+                            {/* Un abandon a bien une position en base (l'index l'exige), mais
+    l'afficher laisserait croire qu'il a fini là. */}
+                            <Body style={[styles.historyPos, h.dnf && styles.historyPosDnf]}>
+                              {h.dnf ? t.races.dnfShort : h.position}
+                            </Body>
                             <View style={styles.flex}>
                               <Body>{h.circuitName ?? t.races.noCircuit}</Body>
                               {h.scheduledAt ? <Muted>{formatRaceDate(h.scheduledAt)}</Muted> : null}
@@ -392,6 +402,7 @@ const styles = StyleSheet.create({
   historySection: { gap: spacing.sm },
   historyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   historyPos: { fontFamily: fonts.serifBlack, fontSize: 18, width: 22, textAlign: 'center', color: colors.ink },
+  historyPosDnf: { fontFamily: fonts.sans, fontSize: 10, fontWeight: '800', color: colors.inkDim2 },
   historyDelta: { fontWeight: '800' },
   reportRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   footCol: { gap: spacing.sm },

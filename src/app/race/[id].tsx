@@ -107,7 +107,7 @@ export default function RaceDetailScreen() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [results, setResults] = useState<RaceResult[]>([]);
   const [friends, setFriends] = useState<FriendEntry[]>([]);
-  const [expanded, setExpanded] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -398,7 +398,9 @@ export default function RaceDetailScreen() {
       const cleared = raw.trim() === '';
       const ms = cleared ? null : parseLap(raw);
       if (!cleared && ms === null) {
-        setLapError(t.races.lapInvalid);
+        // Sur huit champs, « temps invalide » sans nom oblige à chercher.
+        const who = results.find((r) => r.participationId === pid);
+        setLapError(`${who ? displayName(who) + ' — ' : ''}${t.races.lapInvalid}`);
         return;
       }
       // On n'envoie que ce qui a CHANGÉ : un enregistrement ne doit pas
@@ -495,11 +497,9 @@ export default function RaceDetailScreen() {
           .slice(0, 3)
           // Invité : pas de delta partagé (son Elo est gelé, « 0 » serait trompeur).
           .map((r) =>
-            r.dnf
-              ? `${t.races.dnfShort} ${displayName(r)} ${r.eloDelta > 0 ? '+' : ''}${r.eloDelta}`
-              : r.isGuest
-                ? `${MEDALS[r.position - 1] ?? r.position} ${displayName(r)}`
-                : `${MEDALS[r.position - 1] ?? r.position} ${displayName(r)} ${r.eloDelta > 0 ? '+' : ''}${r.eloDelta}`,
+            r.isGuest
+              ? `${r.dnf ? t.races.dnfShort : (MEDALS[r.position - 1] ?? r.position)} ${displayName(r)}`
+              : `${r.dnf ? t.races.dnfShort : (MEDALS[r.position - 1] ?? r.position)} ${displayName(r)} ${r.eloDelta > 0 ? '+' : ''}${r.eloDelta}`,
           )
           .join(' · '),
       ].join('\n')
@@ -514,6 +514,7 @@ export default function RaceDetailScreen() {
     // côté serveur. Avec leur position d'affichage, l'explication prétendrait
     // qu'un abandon en a battu un autre.
     .map((r) => ({
+      participationId: r.participationId,
       name: r.name,
       eloBefore: r.eloBefore,
       position: r.dnf ? results.filter((x) => !x.dnf).length + 1 : r.position,
@@ -576,13 +577,16 @@ export default function RaceDetailScreen() {
                   const grade = gradeForElo(r.eloAfter);
                   // Invité : aucun duel (Elo gelé) → ligne non dépliable, pas de
                   // panneau vide « d'où viennent tes points ».
-                  const isOpen = expanded === r.position && !r.isGuest;
-                  const self = pairInputs.find((p) => p.position === r.position);
+                  const isOpen = expanded === r.participationId && !r.isGuest;
+                  // Indexé sur la PARTICIPATION : deux abandons partagent le
+                  // même rang effectif, chercher par position renverrait le
+                  // voisin — et son panneau se contredirait lui-même.
+                  const self = pairInputs.find((p) => p.participationId === r.participationId);
                   const duels = isOpen && self ? pairwiseBreakdown(self, pairInputs) : [];
                   return (
                     <Pressable
-                      key={r.position}
-                      onPress={() => setExpanded(isOpen ? null : r.position)}
+                      key={r.participationId}
+                      onPress={() => setExpanded(isOpen ? null : r.participationId)}
                       disabled={r.isGuest}
                       accessibilityRole="button">
                       <Card style={isOpen ? styles.cardOpen : undefined}>
@@ -602,7 +606,10 @@ export default function RaceDetailScreen() {
                               <Muted>{t.races.guest}</Muted>
                             ) : r.dnf ? (
                               <Muted>
-                                {t.races.dnf} · {grade.name} · {r.eloAfter}
+                                {t.races.dnf} ·{' '}
+                                <Muted style={{ color: grade.color }}>
+                                  {grade.name} · {r.eloAfter}
+                                </Muted>
                               </Muted>
                             ) : (
                               <Muted style={{ color: grade.color }}>
@@ -690,8 +697,8 @@ export default function RaceDetailScreen() {
                     </View>
                   ) : null}
 
-                  {[...results].sort(lapSort).map((r) => {
-                    const editable = (r.isSelf || isAdmin) && lapBulk === null;
+                  {(lapBulk === null ? [...results].sort(lapSort) : []).map((r) => {
+                    const editable = r.isSelf || isAdmin;
                     const editing = lapEditId === r.participationId;
                     return (
                       <Card key={r.participationId}>

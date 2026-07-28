@@ -6,12 +6,24 @@
 -- bien là) ou lui inventer une place qu'il n'a pas faite.
 --
 -- Décision PO 2026-07-28 : **un abandon est classé DERNIER**.
---   · C'est la règle la plus simple à expliquer, et la seule INEXPLOITABLE :
---     un pilote en train de finir dernier n'a aucun intérêt à se faire noter
---     « abandon » pour protéger son Elo (le coût est identique).
 --   · Plusieurs abandons sont EX ÆQUO derniers entre eux : leur duel vaut 0,5
 --     de part et d'autre, donc l'échange reste symétrique et la SOMME NULLE
 --     entre inscrits est préservée (l'invariant anti-triche tient).
+--
+-- LIMITE ASSUMÉE, à ne pas romancer. « Abandon coûte exactement ce que coûte
+-- une dernière place » n'est vrai que pour un abandon UNIQUE. À plusieurs,
+-- l'égalité redistribue :
+--   · 4 pilotes à 1000, D dernier          → −32
+--   · 4 pilotes à 1000, C et D abandonnent → −21 chacun (D économise 11 points,
+--     C en paie 10 de trop)
+--   · 3 pilotes, B à 700 et C à 1600 abandonnent → B GAGNE ~4 points
+--     (il aurait perdu ~12 en finissant dernier)
+-- Autrement dit : deux pilotes peuvent, en se déclarant tous deux « abandon »,
+-- amortir la perte du dernier réel — prétexte socialement indiscutable, gain
+-- net, et rien dans l'app ne le signale. C'est la contrepartie de l'égalité :
+-- traiter deux abandons différemment supposerait de les départager, ce qu'aucun
+-- classement ne permet. Aucun texte de l'interface ne doit donc promettre que
+-- « l'abandon coûte des points » — c'est faux dans ce cas.
 --
 -- Détail d'implémentation : `results.position` garde des valeurs DISTINCTES
 -- (l'index unique (race_id, position) existe depuis le schéma initial et sert
@@ -60,10 +72,34 @@ begin
     raise exception 'Classement invalide (pilotes incohérents)';
   end if;
 
+  -- Liste d'abandons bien formée. Un NULL ou un doublon fausserait `n_fin`
+  -- (count(*) les compte) : le rang égalisé descendrait d'un cran et un pilote
+  -- ARRIVÉ se retrouverait ex æquo avec un abandon — un transfert d'Elo
+  -- déclenché par un champ que le serveur est censé valider.
+  if array_position(p_dnf, null) is not null
+     or (select count(*) from unnest(p_dnf)) is distinct from
+        (select count(distinct id) from unnest(p_dnf) as d(id)) then
+    raise exception 'Liste d''abandons invalide (doublon ou valeur vide)';
+  end if;
+
   -- Un abandon doit faire partie du classement soumis.
   if exists (select 1 from unnest(coalesce(p_dnf, '{}'::uuid[])) as d(id)
              where not (d.id = any(p_order))) then
     raise exception 'Abandon invalide (pilote hors classement)';
+  end if;
+
+  -- …et être placé DERRIÈRE tous les pilotes à l'arrivée. Le rang d'affichage
+  -- (`results.position`) est pris tel quel dans p_order : sans ce contrôle, un
+  -- abandon envoyé en tête serait « ABD » sur l'écran course mais position 1
+  -- partout ailleurs — podium, partage, badge « Champagne », victoires du
+  -- profil. Un appel direct à l'API suffirait à se fabriquer des victoires.
+  if exists (
+    select 1 from unnest(p_order) with ordinality as o(pid, rk)
+    where o.pid = any(coalesce(p_dnf, '{}'::uuid[]))
+      and o.rk < (select max(o2.rk) from unnest(p_order) with ordinality as o2(pid, rk)
+                  where not (o2.pid = any(coalesce(p_dnf, '{}'::uuid[]))))
+  ) then
+    raise exception 'Un abandon ne peut pas être classé devant un pilote à l''arrivée';
   end if;
   -- Une course où personne ne finit n'a pas de sens : elle ne classe rien et
   -- ferait 100 % d'ex æquo (aucun point échangé, mais un compteur de courses
@@ -72,7 +108,8 @@ begin
     raise exception 'Il faut au moins un pilote à l''arrivée';
   end if;
 
-  n_fin := n - (select count(*) from unnest(coalesce(p_dnf, '{}'::uuid[])));
+  n_fin := n - (select count(distinct id) from unnest(coalesce(p_dnf, '{}'::uuid[])) as d(id)
+                where d.id is not null);
 
   create temp table _calc on commit drop as
   select
@@ -179,7 +216,7 @@ grant execute on function public.submit_race_results(uuid, uuid[], uuid[]) to au
 -- (Reprise fidèle de la version « temps au tour préservés » + p_dnf.)
 drop function if exists public.correct_race_results(uuid, uuid[]);
 create function public.correct_race_results(
-  p_race_id uuid, p_order uuid[], p_dnf uuid[] default '{}'::uuid[]
+  p_race_id uuid, p_order uuid[], p_dnf uuid[] default null
 )
 returns void
 language plpgsql security definer set search_path = public as $$
@@ -213,6 +250,16 @@ begin
     select participation_id, best_lap_ms from results
     where race_id = p_race_id and best_lap_ms is not null;
 
+  -- p_dnf ABSENT (null) ≠ p_dnf VIDE. Un client dont le bundle n'a pas été
+  -- rechargé (PWA en cache) appelle encore la fonction à deux arguments : sans
+  -- cette reprise, corriger une place effacerait TOUS les abandons en silence
+  -- et repromouvrait en pilotes arrivés ceux qui n'avaient jamais fini.
+  -- Même logique que le snapshot des temps au tour, juste au-dessus.
+  if p_dnf is null then
+    select coalesce(array_agg(participation_id), '{}'::uuid[]) into p_dnf
+    from results where race_id = p_race_id and dnf;
+  end if;
+
   perform set_config('kartsquad.elo_engine', '1', true);
 
   update profiles p set elo = rr.elo_before
@@ -240,6 +287,135 @@ end $$;
 revoke all on function public.correct_race_results(uuid, uuid[], uuid[]) from public, anon;
 grant execute on function public.correct_race_results(uuid, uuid[], uuid[]) to authenticated;
 
+
+-- ── Badges : un abandon n'a battu personne ────────────────────────────────
+-- Les badges raisonnaient sur `position`, qui existe toujours pour un abandon.
+-- Sans garde, un abandon décrochait « DRS » pour avoir « battu » un autre
+-- abandon plus fort, « Safety car » pour avoir « fini devant » les pilotes
+-- au-dessus de lui, et un seul des deux ex æquo prenait la « Voiture balai »
+-- selon l'ordre arbitraire dans lequel le client les avait empilés.
+-- (Reprise fidèle du moteur 12 badges ; seuls les blocs 3, 6, 10 et 11 changent.)
+create or replace function public.award_badges(p_race_id uuid)
+returns void
+language plpgsql security definer set search_path = public
+as $$
+declare
+  n int;             -- nombre total de participants (inscrits + fantômes)
+  v_ranked boolean;  -- la course compte-t-elle pour l'Elo ?
+  v_morning boolean; -- heure prévue le matin (6h–midi, Paris) ?
+begin
+  select count(*) into n from results where race_id = p_race_id;
+  v_ranked := public.race_is_ranked(p_race_id);
+  select extract(hour from scheduled_at at time zone 'Europe/Paris') between 6 and 11
+    into v_morning from races where id = p_race_id;
+
+  insert into user_badges (profile_id, badge_key, race_id)
+  select b.profile_id, b.badge_key, p_race_id
+  from (
+    with mine as (
+      select pp.profile_id, r.position, r.dnf, r.elo_before, r.elo_after, r.elo_delta
+      from results r
+      join participations pp on pp.id = r.participation_id
+      where r.race_id = p_race_id and pp.profile_id is not null
+    ),
+    counted as (
+      select m.*,
+        (select count(*) from elo_history eh where eh.profile_id = m.profile_id) as races
+      from mine m
+    )
+    -- 1 · Kart d'identité — 1ère course jouée
+    select profile_id, 'kart_didentite' as badge_key from counted
+    union all
+    -- 2 · Habitué des stands — 10 courses jouées
+    select profile_id, 'habitue_stands' from counted where races >= 10
+    union all
+    -- 3 · Champagne ! — 1ère victoire (dans une course qui compte)
+    select profile_id, 'champagne' from counted where position = 1 and not dnf and v_ranked
+    union all
+    -- 4 · Sur les chapeaux de roues — 3 victoires d'affilée, dans des courses
+    -- qui comptent, par ordre de validation (results.created_at).
+    select c.profile_id, 'chapeaux_de_roues'
+    from counted c
+    where c.position = 1 and v_ranked
+      and (
+        select count(*) from (
+          select r2.position
+          from results r2
+          join participations p2 on p2.id = r2.participation_id
+          where p2.profile_id = c.profile_id and public.race_is_ranked(r2.race_id)
+          order by r2.created_at desc, r2.id desc
+          limit 3
+        ) last3
+        where last3.position = 1
+      ) = 3
+    union all
+    -- 5 · Kart-astrophe — perdre au moins 45 Elo (hors calibration : les gros
+    -- écarts y sont attendus, le badge perdrait son sens)
+    select c.profile_id, 'kart_astrophe' from counted c
+    join profiles pf on pf.id = c.profile_id
+    where c.elo_delta <= -45 and pf.races > 5
+    union all
+    -- 6 · Voiture balai — finir dernier d'une course d'au moins 3 pilotes
+    select c.profile_id, 'voiture_balai' from counted c
+    where n >= 3 and not c.dnf
+      and c.position = (select max(r4.position) from results r4
+                        where r4.race_id = p_race_id and not r4.dnf)
+    union all
+    -- 7 · Tête-à-queue — perdre un palier de grade entier
+    select profile_id, 'tete_a_queue' from counted
+    where public.grade_band(elo_after) < public.grade_band(elo_before)
+    union all
+    -- 8 · Midi moins le kart — participer à une course du matin (qui compte)
+    select profile_id, 'midi_moins_le_kart' from counted where v_morning and v_ranked
+    union all
+    -- 9 · Chef d'écurie — organiser 10 courses QUI COMPTENT (anti-farming)
+    select ra.admin_id, 'chef_ecurie'
+    from races ra
+    where ra.id = p_race_id
+      and (select count(*) from races r2
+           where r2.admin_id = ra.admin_id and r2.status = 'completed'
+             and public.race_is_ranked(r2.id)) >= 10
+    union all
+    -- 10 · DRS — battre un pilote INSCRIT parti 300+ Elo au-dessus
+    select c.profile_id, 'drs' from counted c
+    where not c.dnf and exists (
+      select 1 from results r3
+      join participations p3 on p3.id = r3.participation_id
+      where r3.race_id = p_race_id and p3.profile_id is not null
+        and not r3.dnf
+        and r3.elo_before >= c.elo_before + 300
+        and c.position < r3.position
+    )
+    union all
+    -- 11 · Safety car — finir DEVANT tous les pilotes inscrits partis avec un
+    -- Elo plus élevé (il faut qu'au moins un inscrit soit au-dessus de moi).
+    select c.profile_id, 'safety_car' from counted c
+    where not c.dnf and exists (
+      select 1 from results rh
+      join participations ph on ph.id = rh.participation_id
+      where rh.race_id = p_race_id and ph.profile_id is not null
+        and not rh.dnf
+        and rh.elo_before > c.elo_before
+    )
+    and not exists (
+      select 1 from results rh2
+      join participations ph2 on ph2.id = rh2.participation_id
+      where rh2.race_id = p_race_id and ph2.profile_id is not null
+        and not rh2.dnf
+        and rh2.elo_before > c.elo_before
+        and rh2.position < c.position   -- un mieux classé (Elo) a fini devant moi
+    )
+    union all
+    -- 12 · Push — gagner au moins 45 Elo (hors calibration, même logique que 5)
+    select c.profile_id, 'push' from counted c
+    join profiles pf on pf.id = c.profile_id
+    where c.elo_delta >= 45 and pf.races > 5
+  ) b
+  on conflict (profile_id, badge_key) do nothing;
+end;
+$$;
+revoke all on function public.award_badges(uuid) from public, anon, authenticated;
+
 -- ── A9 : saisie GROUPÉE des temps au tour ─────────────────────────────────
 -- L'admin d'une course de 8 pilotes devait ouvrir 8 fois le même champ. On
 -- accepte désormais tous les temps d'un coup. Mêmes règles qu'unitairement :
@@ -254,6 +430,9 @@ begin
   if v_uid is null then raise exception 'Non authentifié'; end if;
   select admin_id into v_admin from races where id = p_race_id;
   if v_admin is null then raise exception 'Course introuvable'; end if;
+  if jsonb_typeof(coalesce(p_entries, '[]'::jsonb)) <> 'array' then
+    raise exception 'Format de saisie invalide';
+  end if;
 
   for e in
     select (x ->> 'participation_id')::uuid as pid,
@@ -274,7 +453,8 @@ begin
     if e.ms is not null and (e.ms < 10000 or e.ms > 1200000) then
       raise exception 'Temps invalide';
     end if;
-    update results set best_lap_ms = e.ms where participation_id = e.pid;
+    update results set best_lap_ms = e.ms
+      where participation_id = e.pid and race_id = p_race_id;
   end loop;
 end $$;
 revoke all on function public.set_lap_times(uuid, jsonb) from public, anon;

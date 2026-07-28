@@ -177,7 +177,11 @@ export default function ProfilScreen() {
                 accessibilityRole="button">
                 <Card>
                   <View style={styles.historyRow}>
-                    <Body style={styles.historyPos}>{h.position}</Body>
+                    {/* Un abandon a bien une position en base (l'index l'exige), mais
+    l'afficher laisserait croire qu'il a fini là. */}
+                            <Body style={[styles.historyPos, h.dnf && styles.historyPosDnf]}>
+                              {h.dnf ? t.races.dnfShort : h.position}
+                            </Body>
                     <View style={styles.flex}>
                       <Body>{h.circuitName ?? t.races.noCircuit}</Body>
                       {h.scheduledAt ? <Muted>{formatRaceDate(h.scheduledAt)}</Muted> : null}
@@ -256,6 +260,7 @@ const styles = StyleSheet.create({
   section: { gap: spacing.sm },
   historyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   historyPos: { fontFamily: fonts.serifBlack, fontSize: 18, width: 22, textAlign: 'center', color: colors.ink },
+  historyPosDnf: { fontFamily: fonts.sans, fontSize: 10, fontWeight: '800', color: colors.inkDim2 },
   historyElo: { alignItems: 'flex-end' },
   historyDelta: { fontWeight: '800' },
   foot: { gap: spacing.sm, marginTop: spacing.md, alignItems: 'flex-start' },

@@ -154,6 +154,19 @@ export default function RankScreen() {
   }
 
   function onSetMode(next: Mode) {
+    // Passer du tap au glisser-déposer sans reporter l'ordre pointé le perdait
+    // en silence. Le bloc « abandons » vit sous la liste dans les deux modes et
+    // invite justement à faire l'aller-retour.
+    if (next === 'drag' && tapOrder.length > 0) {
+      const byId = new Map(present.map((p) => [p.id, p]));
+      const picked = tapOrder.map((pid) => byId.get(pid)).filter(Boolean) as Participant[];
+      const rest = present.filter((p) => !tapOrder.includes(p.id));
+      const merged = [...picked, ...rest];
+      setOrdered(merged);
+      setMode(next);
+      persist({ mode: next, orderedIds: merged.map((p) => p.id) });
+      return;
+    }
     setMode(next);
     persist({ mode: next });
   }
@@ -367,12 +380,15 @@ export default function RankScreen() {
                     persist({ tapOrder: [] });
                   }} />
               ) : null}
+              {/* Sans ce mot, le bouton grisé n'explique rien : l'admin qui a
+                  tout marqué en abandon ne comprend pas pourquoi ça bloque. */}
               <Button
                 label={isCorrect ? t.races.confirmCorrection : t.races.validateRanking}
                 onPress={onValidate}
                 disabled={!canValidate || busy}
               />
             </View>
+            {finishersCount < 1 ? <Muted>{t.races.needOneFinisher}</Muted> : null}
           </>
         )}
       </ScrollView>

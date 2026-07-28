@@ -42,6 +42,8 @@ export interface FaceToFace {
   races: number;
   myWins: number;
   theirWins: number;
+  /** Courses où aucun des deux n'a fini : match nul, pas une victoire. */
+  draws: number;
 }
 
 type RawPilot = {
@@ -215,6 +217,7 @@ export async function reportPilot(
 
 // ── Face-à-face ───────────────────────────────────────────────────────────
 type RawDuel = {
+  dnf: boolean | null;
   race_id: string;
   position: number;
   participation: { profile_id: string | null } | null;
@@ -224,30 +227,39 @@ type RawDuel = {
 export async function faceToFace(otherId: string): Promise<FaceToFace> {
   const { data: auth } = await supabase.auth.getUser();
   const me = auth.user?.id;
-  if (!me) return { races: 0, myWins: 0, theirWins: 0 };
+  if (!me) return { races: 0, myWins: 0, theirWins: 0, draws: 0 };
 
   const { data, error } = await supabase
     .from('results')
-    .select('race_id, position, participation:participations!inner(profile_id)')
+    .select('race_id, position, dnf, participation:participations!inner(profile_id)')
     .in('participation.profile_id', [me, otherId]);
   if (error) throw new Error(error.message);
 
-  const byRace = new Map<string, { mine?: number; theirs?: number }>();
+  type Side = { pos: number; dnf: boolean };
+  const byRace = new Map<string, { mine?: Side; theirs?: Side }>();
   for (const r of (data ?? []) as unknown as RawDuel[]) {
     const slot = byRace.get(r.race_id) ?? {};
-    if (r.participation?.profile_id === me) slot.mine = r.position;
-    else if (r.participation?.profile_id === otherId) slot.theirs = r.position;
+    const side: Side = { pos: r.position, dnf: r.dnf === true };
+    if (r.participation?.profile_id === me) slot.mine = side;
+    else if (r.participation?.profile_id === otherId) slot.theirs = side;
     byRace.set(r.race_id, slot);
   }
 
   let races = 0;
   let myWins = 0;
   let theirWins = 0;
+  let draws = 0;
   for (const { mine, theirs } of byRace.values()) {
-    if (mine === undefined || theirs === undefined) continue;
+    if (!mine || !theirs) continue;
     races += 1;
-    if (mine < theirs) myWins += 1;
+    // Deux abandons : le moteur les a déclarés ex æquo (0,5 chacun). Leur
+    // donner un vainqueur d'après la position d'affichage inventerait une
+    // victoire que l'Elo n'a jamais accordée.
+    if (mine.dnf && theirs.dnf) draws += 1;
+    else if (mine.dnf) theirWins += 1;
+    else if (theirs.dnf) myWins += 1;
+    else if (mine.pos < theirs.pos) myWins += 1;
     else theirWins += 1;
   }
-  return { races, myWins, theirWins };
+  return { races, myWins, theirWins, draws };
 }

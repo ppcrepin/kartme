@@ -28,6 +28,8 @@ export interface HistoryEntry {
   circuitName: string | null;
   scheduledAt: string | null;
   position: number;
+  /** Abandon : la position d'affichage existe, mais elle ne « vaut » rien. */
+  dnf: boolean;
   eloDelta: number;
   eloAfter: number;
 }
@@ -96,6 +98,7 @@ export async function getEloCurve(profileId?: string): Promise<EloPoint[]> {
 
 type RawHistory = {
   position: number;
+  dnf: boolean | null;
   elo_delta: number;
   elo_after: number;
   race: { id: string; scheduled_at: string; circuit: { name: string } | null } | null;
@@ -112,7 +115,7 @@ export async function getRaceHistory(profileId?: string): Promise<HistoryEntry[]
   const { data, error } = await supabase
     .from('results')
     .select(
-      'position, elo_delta, elo_after, race:races(id, scheduled_at, circuit:circuits(name)), participation:participations!inner(profile_id)',
+      'position, dnf, elo_delta, elo_after, race:races(id, scheduled_at, circuit:circuits(name)), participation:participations!inner(profile_id)',
     )
     .eq('participation.profile_id', id)
     .order('created_at', { ascending: false });
@@ -122,16 +125,22 @@ export async function getRaceHistory(profileId?: string): Promise<HistoryEntry[]
     circuitName: r.race?.circuit?.name ?? null,
     scheduledAt: r.race?.scheduled_at ?? null,
     position: r.position,
+    dnf: r.dnf === true,
     eloDelta: r.elo_delta,
     eloAfter: r.elo_after,
   }));
 }
 
-/** Agrégats : nombre de courses, victoires, podiums. */
+/**
+ * Agrégats : nombre de courses, victoires, podiums.
+ * Un abandon compte comme une course (il était sur la piste) mais jamais comme
+ * un podium : dans une course à trois, sa position d'affichage vaut 3 — sans
+ * ce filtre, on « ferait un podium » en abandonnant.
+ */
 export function statsFromHistory(history: HistoryEntry[]): ProfileStats {
   return {
     races: history.length,
-    wins: history.filter((h) => h.position === 1).length,
-    podiums: history.filter((h) => h.position <= 3).length,
+    wins: history.filter((h) => !h.dnf && h.position === 1).length,
+    podiums: history.filter((h) => !h.dnf && h.position <= 3).length,
   };
 }

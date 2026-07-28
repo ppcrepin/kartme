@@ -103,6 +103,39 @@ begin
   raise notice 'Scénario 2 (abandons ex æquo, somme nulle) ✔';
 end $$;
 
+-- ═══ Scénario 2bis : la limite ASSUMÉE de l'égalité (à documenter, pas à cacher) ═══
+-- Deux abandons d'Elo très différents : le plus faible GAGNE des points, alors
+-- qu'il aurait perdu en finissant dernier. C'est la contrepartie de l'ex æquo.
+-- Ce test ne « valide » pas le comportement : il le FIGE, pour qu'un changement
+-- de barème soit une décision et non une surprise.
+do $$
+declare
+  Y uuid := 'dd000000-0000-0000-0000-000000000020';   -- finit
+  Z uuid := 'dd000000-0000-0000-0000-000000000021';   -- faible, abandonne
+  Z2 uuid := 'dd000000-0000-0000-0000-000000000022';  -- fort, abandonne
+  r uuid := 'dd200000-0000-0000-0000-00000000000b';
+  py uuid := 'dd400000-0000-0000-0000-000000000091';
+  pz uuid := 'dd400000-0000-0000-0000-000000000092';
+  pz2 uuid := 'dd400000-0000-0000-0000-000000000093';
+  d_faible int;
+begin
+  perform tests.mk_user(Y, 1000);
+  perform tests.mk_user(Z, 700);
+  perform tests.mk_user(Z2, 1600);
+  insert into races (id, admin_id, scheduled_at) values (r, Y, now());
+  insert into participations (id, race_id, profile_id) values (py, r, Y), (pz, r, Z), (pz2, r, Z2);
+  perform tests.call_submit(Y, r, array[py, pz, pz2], array[pz, pz2]);
+
+  select elo_delta into d_faible from results where participation_id = pz;
+  if d_faible <= 0 then
+    raise exception 'Le comportement a changé : le faible ex æquo ne gagne plus de points (%). '
+                    'Ce n''est pas forcément un bug — mais c''est une décision à prendre.', d_faible;
+  end if;
+  perform tests.eq((select sum(elo_delta) from results where race_id = r), 0,
+                   'somme nulle malgré la redistribution');
+  raise notice 'Scénario 2bis (limite assumée de l''ex æquo : le faible gagne %) ✔', d_faible;
+end $$;
+
 -- ═══ Scénario 3 : garde-fous de saisie ═══
 do $$
 declare
@@ -165,13 +198,138 @@ begin
   update elo_history set created_at = now() - interval '2 hours' where race_id <> r;
   update races set completed_at = now() - interval '1 hour' where id = r;
   perform set_config('request.jwt.claims', json_build_object('sub', I, 'role', 'authenticated')::text, true);
-  perform public.correct_race_results(r, array[pi, pj]);
+  -- Tableau VIDE explicite = « plus aucun abandon ». À distinguer de l'absence
+  -- de paramètre, testée au scénario 4bis.
+  perform public.correct_race_results(r, array[pi, pj], '{}'::uuid[]);
   perform set_config('kartsquad.elo_engine', '', true);
 
   perform tests.eq((select count(*) from results where race_id = r and dnf), 0,
                    'correction : l''abandon a été retiré');
   perform tests.eq((select sum(elo_delta) from results where race_id = r), 0, 'somme nulle après correction');
   raise notice 'Scénario 4 (correction des abandons) ✔';
+end $$;
+
+-- ═══ Scénario 4bis : un client qui n'envoie PAS d'abandons n'en efface aucun ═══
+-- Un bundle PWA en cache appelle encore la fonction à deux arguments. Sans
+-- reprise des abandons enregistrés, corriger une place les effacerait tous en
+-- silence et repromouvrait en pilotes arrivés ceux qui n'avaient jamais fini.
+do $$
+declare
+  P uuid := 'dd000000-0000-0000-0000-000000000017';
+  Q uuid := 'dd000000-0000-0000-0000-000000000018';
+  R2 uuid := 'dd000000-0000-0000-0000-000000000019';
+  r uuid := 'dd200000-0000-0000-0000-000000000008';
+  pp1 uuid := 'dd400000-0000-0000-0000-000000000061';
+  pp2 uuid := 'dd400000-0000-0000-0000-000000000062';
+  pp3 uuid := 'dd400000-0000-0000-0000-000000000063';
+begin
+  perform tests.mk_user(P, 1000);
+  perform tests.mk_user(Q, 1000);
+  perform tests.mk_user(R2, 1000);
+  insert into races (id, admin_id, scheduled_at) values (r, P, now());
+  insert into participations (id, race_id, profile_id) values (pp1, r, P), (pp2, r, Q), (pp3, r, R2);
+  perform tests.call_submit(P, r, array[pp1, pp2, pp3], array[pp3]);
+
+  update elo_history set created_at = now() - interval '2 hours' where race_id <> r;
+  update races set completed_at = now() - interval '1 hour' where id = r;
+  perform set_config('request.jwt.claims', json_build_object('sub', P, 'role', 'authenticated')::text, true);
+  perform public.correct_race_results(r, array[pp2, pp1, pp3]);   -- 2 arguments seulement
+  perform set_config('kartsquad.elo_engine', '', true);
+
+  perform tests.eq((select count(*) from results where race_id = r and dnf), 1,
+                   'l''abandon survit à une correction qui ne le mentionne pas');
+  perform tests.eq((select count(*) from results where participation_id = pp3 and dnf), 1,
+                   'et c''est bien le même pilote');
+  perform tests.eq((select position from results where participation_id = pp1)::bigint, 2,
+                   'la correction d''ordre a bien été appliquée');
+  raise notice 'Scénario 4bis (abandons préservés sans p_dnf) ✔';
+end $$;
+
+-- ═══ Scénario 4ter : garde-fous de forme et de position ═══
+do $$
+declare
+  S uuid := 'dd000000-0000-0000-0000-00000000001a';
+  T uuid := 'dd000000-0000-0000-0000-00000000001b';
+  U uuid := 'dd000000-0000-0000-0000-00000000001c';
+  r uuid := 'dd200000-0000-0000-0000-000000000009';
+  ps uuid := 'dd400000-0000-0000-0000-000000000071';
+  pt uuid := 'dd400000-0000-0000-0000-000000000072';
+  pu uuid := 'dd400000-0000-0000-0000-000000000073';
+  refuse boolean;
+begin
+  perform tests.mk_user(S, 1000);
+  perform tests.mk_user(T, 1000);
+  perform tests.mk_user(U, 1000);
+  insert into races (id, admin_id, scheduled_at) values (r, S, now());
+  insert into participations (id, race_id, profile_id) values (ps, r, S), (pt, r, T), (pu, r, U);
+
+  -- Abandon placé DEVANT un pilote à l'arrivée : « ABD » à l'écran, mais
+  -- position 1 pour le podium, le partage et le badge Champagne.
+  refuse := false;
+  begin
+    perform tests.call_submit(S, r, array[ps, pt, pu], array[ps]);
+  exception when others then refuse := true;
+  end;
+  if not refuse then raise exception 'ÉCHEC : abandon classé 1er accepté'; end if;
+
+  -- Doublon dans la liste d'abandons : fausserait le nombre d'arrivants, donc
+  -- le rang égalisé — un pilote ARRIVÉ deviendrait ex æquo avec un abandon.
+  refuse := false;
+  begin
+    perform tests.call_submit(S, r, array[ps, pt, pu], array[pu, pu]);
+  exception when others then refuse := true;
+  end;
+  if not refuse then raise exception 'ÉCHEC : doublon d''abandon accepté'; end if;
+
+  -- Valeur vide : même effet, et le contrôle « présent dans le classement »
+  -- ne l'attrape pas (null = any(...) vaut null, pas false).
+  refuse := false;
+  begin
+    perform tests.call_submit(S, r, array[ps, pt, pu], array[null, pu]::uuid[]);
+  exception when others then refuse := true;
+  end;
+  if not refuse then raise exception 'ÉCHEC : abandon NULL accepté'; end if;
+
+  -- Le cas légitime passe, et personne n'est ex æquo à tort.
+  perform tests.call_submit(S, r, array[ps, pt, pu], array[pu]);
+  perform tests.eq((select sum(elo_delta) from results where race_id = r), 0, 'somme nulle');
+  if (select elo_delta from results where participation_id = pt)
+     = (select elo_delta from results where participation_id = pu) then
+    raise exception 'ÉCHEC : le 2e à l''arrivée ne doit pas être ex æquo avec l''abandon';
+  end if;
+  raise notice 'Scénario 4ter (forme et position des abandons) ✔';
+end $$;
+
+-- ═══ Scénario 4quater : les badges ignorent les abandons ═══
+do $$
+declare
+  V uuid := 'dd000000-0000-0000-0000-00000000001d';   -- fort, abandonne
+  W uuid := 'dd000000-0000-0000-0000-00000000001e';   -- faible, abandonne
+  X uuid := 'dd000000-0000-0000-0000-00000000001f';   -- finit
+  r uuid := 'dd200000-0000-0000-0000-00000000000a';
+  pv uuid := 'dd400000-0000-0000-0000-000000000081';
+  pw uuid := 'dd400000-0000-0000-0000-000000000082';
+  px2 uuid := 'dd400000-0000-0000-0000-000000000083';
+begin
+  perform tests.mk_user(V, 1800);
+  perform tests.mk_user(W, 1000);
+  perform tests.mk_user(X, 1000);
+  insert into races (id, admin_id, scheduled_at) values (r, X, now());
+  insert into participations (id, race_id, profile_id) values (px2, r, X), (pw, r, W), (pv, r, V);
+  -- X finit ; W et V abandonnent (W devant V dans le tableau, mais ex æquo).
+  perform tests.call_submit(X, r, array[px2, pw, pv], array[pw, pv]);
+
+  perform tests.eq((select count(*) from user_badges where profile_id = W and badge_key = 'drs'), 0,
+                   'un abandon ne décroche pas DRS en « battant » un autre abandon');
+  perform tests.eq((select count(*) from user_badges where profile_id in (V, W) and badge_key = 'safety_car'), 0,
+                   'un abandon ne « finit devant » personne');
+  perform tests.eq((select count(*) from user_badges where profile_id in (V, W) and badge_key = 'voiture_balai'), 0,
+                   'la voiture balai ne va pas à un abandon');
+  perform tests.eq((select count(*) from user_badges where profile_id = X and badge_key = 'voiture_balai'), 1,
+                   'elle va au dernier À L''ARRIVÉE');
+  perform tests.eq((select count(*) from user_badges where profile_id in (V, W) and badge_key = 'champagne'), 0,
+                   'pas de Champagne pour un abandon');
+  raise notice 'Scénario 4quater (badges et abandons) ✔';
 end $$;
 
 -- ═══ Scénario 5 : saisie GROUPÉE des temps (A9) ═══

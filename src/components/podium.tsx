@@ -8,9 +8,13 @@ import type { RaceResult } from '@/lib/races';
 
 /** Podium des 3 premiers (2e · 1er · 3e), marches colorées or/argent/bronze. */
 export function Podium({ results }: { results: RaceResult[] }) {
-  const first = results.find((r) => r.position === 1);
-  const second = results.find((r) => r.position === 2);
-  const third = results.find((r) => r.position === 3);
+  // Un abandon ne monte pas sur le podium. Sans ce filtre, une course à trois
+  // dont un pilote abandonne le hissait sur la marche bronze avec un « 3 »,
+  // à deux centimètres de la liste qui affiche « Abandon ».
+  const finishers = results.filter((r) => !r.dnf);
+  const first = finishers.find((r) => r.position === 1);
+  const second = finishers.find((r) => r.position === 2);
+  const third = finishers.find((r) => r.position === 3);
   if (!first) return null;
 
   return (
