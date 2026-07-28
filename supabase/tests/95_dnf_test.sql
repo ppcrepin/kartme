@@ -103,11 +103,10 @@ begin
   raise notice 'Scénario 2 (abandons ex æquo, somme nulle) ✔';
 end $$;
 
--- ═══ Scénario 2bis : la limite ASSUMÉE de l'égalité (à documenter, pas à cacher) ═══
--- Deux abandons d'Elo très différents : le plus faible GAGNE des points, alors
--- qu'il aurait perdu en finissant dernier. C'est la contrepartie de l'ex æquo.
--- Ce test ne « valide » pas le comportement : il le FIGE, pour qu'un changement
--- de barème soit une décision et non une surprise.
+-- ═══ Scénario 2bis : un abandon ne RAPPORTE jamais de points ═══
+-- L'égalité pouvait faire gagner de l'Elo au plus faible des abandons (0,5
+-- face à un adversaire dont l'espérance frôlait 0,95). Décision PO : son gain
+-- est plafonné à 0, et ce qu'il aurait pris revient aux pilotes ARRIVÉS.
 do $$
 declare
   Y uuid := 'dd000000-0000-0000-0000-000000000020';   -- finit
@@ -117,7 +116,6 @@ declare
   py uuid := 'dd400000-0000-0000-0000-000000000091';
   pz uuid := 'dd400000-0000-0000-0000-000000000092';
   pz2 uuid := 'dd400000-0000-0000-0000-000000000093';
-  d_faible int;
 begin
   perform tests.mk_user(Y, 1000);
   perform tests.mk_user(Z, 700);
@@ -126,14 +124,17 @@ begin
   insert into participations (id, race_id, profile_id) values (py, r, Y), (pz, r, Z), (pz2, r, Z2);
   perform tests.call_submit(Y, r, array[py, pz, pz2], array[pz, pz2]);
 
-  select elo_delta into d_faible from results where participation_id = pz;
-  if d_faible <= 0 then
-    raise exception 'Le comportement a changé : le faible ex æquo ne gagne plus de points (%). '
-                    'Ce n''est pas forcément un bug — mais c''est une décision à prendre.', d_faible;
+  if (select max(elo_delta) from results where participation_id in (pz, pz2)) > 0 then
+    raise exception 'ÉCHEC : un abandon a gagné des points (% et %)',
+      (select elo_delta from results where participation_id = pz),
+      (select elo_delta from results where participation_id = pz2);
+  end if;
+  if (select elo_delta from results where participation_id = py) <= 0 then
+    raise exception 'ÉCHEC : le surplus doit revenir au pilote arrivé';
   end if;
   perform tests.eq((select sum(elo_delta) from results where race_id = r), 0,
-                   'somme nulle malgré la redistribution');
-  raise notice 'Scénario 2bis (limite assumée de l''ex æquo : le faible gagne %) ✔', d_faible;
+                   'somme nulle malgré le plafonnement et la redistribution');
+  raise notice 'Scénario 2bis (un abandon ne rapporte jamais) ✔';
 end $$;
 
 -- ═══ Scénario 3 : garde-fous de saisie ═══

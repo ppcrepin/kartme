@@ -33,31 +33,62 @@ export function parseLap(raw: string): number | null {
 }
 
 /**
- * Saisie « pavé numérique » (retour PO 2026-07-28 : ne plus avoir à taper les
- * « : » ni le « . »). Le pilote tape SEULEMENT des chiffres, qui se remplissent
- * de la DROITE vers la gauche — millièmes, puis secondes, puis minutes :
+ * Saisie « masque » (retour PO 2026-07-28) : on tape SEULEMENT des chiffres,
+ * qui remplissent le gabarit `m:ss.mmm` de GAUCHE à DROITE. Les emplacements
+ * pas encore saisis restent affichés en gris — on voit d'un coup d'œil où on
+ * en est, et il n'y a ni « : » ni « . » à viser sur un clavier de téléphone.
  *
- *   5       → 0:00.005      52348   → 0:52.348
- *   523     → 0:00.523      102345  → 1:02.345
+ *   0        → 0:__.___     052      → 0:52.___
+ *   05234    → 0:52.34_     052348   → 0:52.348
+ *   1023     → 1:02.3__     102345   → 1:02.345
  *
- * C'est la mécanique d'un chronomètre ou d'un champ monétaire : on ne se
- * demande jamais où mettre le séparateur, il se place tout seul.
+ * Six emplacements : une minute, deux secondes, trois millièmes. Largement
+ * suffisant en karting (plafond 9:59.999, bien à l'intérieur des bornes).
  */
-export const LAP_MAX_DIGITS = 7; // mm:ss.mmm
+export const LAP_SLOTS = 6;
+/** Gabarit affiché : `true` = emplacement de chiffre, sinon séparateur. */
+export const LAP_MASK: { char: string; digit: boolean }[] = [
+  { char: '0', digit: true },
+  { char: ':', digit: false },
+  { char: '0', digit: true },
+  { char: '0', digit: true },
+  { char: '.', digit: false },
+  { char: '0', digit: true },
+  { char: '0', digit: true },
+  { char: '0', digit: true },
+];
 
-/** Ne garde que les chiffres, et plafonne la longueur. */
-export function onlyDigits(raw: string): string {
-  return raw.replace(/\D/g, '').slice(0, LAP_MAX_DIGITS);
+/**
+ * Gabarit prêt à afficher : chaque caractère, et s'il est « allumé » (saisi)
+ * ou laissé en gris. Un séparateur s'allume dès que le chiffre qui le précède
+ * est saisi. Fonction pure — le rendu n'a plus qu'à choisir deux couleurs.
+ */
+export function lapMaskParts(digits: string): { char: string; filled: boolean }[] {
+  const d = onlyDigits(digits);
+  return LAP_MASK.map((m, i) => {
+    const slot = LAP_MASK.slice(0, i).filter((x) => x.digit).length;
+    if (m.digit) return { char: d[slot] ?? m.char, filled: slot < d.length };
+    return { char: m.char, filled: slot > 0 && slot <= d.length };
+  });
 }
 
-/** Chiffres bruts → millisecondes. Renvoie null si vide ou hors bornes. */
+/** Ne garde que les chiffres, et plafonne au nombre d'emplacements. */
+export function onlyDigits(raw: string): string {
+  return raw.replace(/\D/g, '').slice(0, LAP_SLOTS);
+}
+
+/**
+ * Chiffres saisis → millisecondes. Les emplacements laissés vides valent 0
+ * (« 052 » = 0:52.000). Renvoie null si rien n'est saisi ou si le temps sort
+ * des bornes acceptées.
+ */
 export function digitsToMs(digits: string): number | null {
   const d = onlyDigits(digits);
   if (!d) return null;
-  const padded = d.padStart(6, '0');
-  const mmm = parseInt(padded.slice(-3), 10);
-  const ss = parseInt(padded.slice(-5, -3), 10);
-  const mm = parseInt(padded.slice(0, -5) || '0', 10);
+  const full = d.padEnd(LAP_SLOTS, '0');
+  const mm = parseInt(full.slice(0, 1), 10);
+  const ss = parseInt(full.slice(1, 3), 10);
+  const mmm = parseInt(full.slice(3), 10);
   // 62 secondes n'est pas une saisie plausible : c'est une minute mal tapée.
   if (ss >= 60) return null;
   const ms = mm * 60_000 + ss * 1000 + mmm;
@@ -65,21 +96,11 @@ export function digitsToMs(digits: string): number | null {
   return ms;
 }
 
-/** Chiffres bruts → affichage « m:ss.mmm », y compris pendant la frappe. */
-export function formatDigits(digits: string): string {
-  const d = onlyDigits(digits);
-  if (!d) return '';
-  const padded = d.padStart(6, '0');
-  const mm = padded.slice(0, -5) || '0';
-  return `${parseInt(mm, 10)}:${padded.slice(-5, -3)}.${padded.slice(-3)}`;
-}
-
-/** Millisecondes → chiffres bruts (pré-remplissage d'un temps existant). */
+/** Millisecondes → chiffres du gabarit (pré-remplissage d'un temps existant). */
 export function msToDigits(ms: number | null): string {
   if (ms == null) return '';
-  const m = Math.floor(ms / 60_000);
+  const m = Math.min(9, Math.floor(ms / 60_000));
   const s = Math.floor((ms % 60_000) / 1000);
   const mmm = ms % 1000;
-  const raw = `${m}${String(s).padStart(2, '0')}${String(mmm).padStart(3, '0')}`;
-  return raw.replace(/^0+(?=\d{5})/, ''); // pas de zéro de tête inutile
+  return `${m}${String(s).padStart(2, '0')}${String(mmm).padStart(3, '0')}`;
 }

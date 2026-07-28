@@ -133,11 +133,11 @@ export const fr = {
     lapAdd: 'Ajouter mon temps',
     lapAddOther: 'Ajouter un temps',
     lapEdit: 'Modifier',
-    lapLabel: 'Meilleur tour — tape les chiffres, vide pour effacer',
+    lapLabel: 'Meilleur tour — chiffres seuls, vide pour effacer',
     lapSave: 'Enregistrer',
     // Saisie groupée (A9) : huit pilotes = huit ouvertures de champ auparavant.
     lapBulk: 'Saisir tous les temps',
-    lapBulkHint: 'Tape seulement les chiffres : ils se placent tout seuls (52348 → 0:52.348). Laisse vide pour ne pas mettre de temps.',
+    lapBulkHint: 'Tape seulement les chiffres, de gauche à droite : 0 5 2 3 4 8 → 0:52.348. Laisse vide pour ne pas mettre de temps.',
     lapInvalid: 'Temps invalide (entre 10 s et 20 min, secondes < 60).',
     limitReached: 'Limite de %n courses par jour atteinte.',
     errorDate: 'Date ou heure invalide.',

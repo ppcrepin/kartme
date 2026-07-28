@@ -12,18 +12,16 @@
 --
 -- LIMITE ASSUMÉE, à ne pas romancer. « Abandon coûte exactement ce que coûte
 -- une dernière place » n'est vrai que pour un abandon UNIQUE. À plusieurs,
--- l'égalité redistribue :
---   · 4 pilotes à 1000, D dernier          → −32
---   · 4 pilotes à 1000, C et D abandonnent → −21 chacun (D économise 11 points,
---     C en paie 10 de trop)
---   · 3 pilotes, B à 700 et C à 1600 abandonnent → B GAGNE ~4 points
---     (il aurait perdu ~12 en finissant dernier)
--- Autrement dit : deux pilotes peuvent, en se déclarant tous deux « abandon »,
--- amortir la perte du dernier réel — prétexte socialement indiscutable, gain
--- net, et rien dans l'app ne le signale. C'est la contrepartie de l'égalité :
--- traiter deux abandons différemment supposerait de les départager, ce qu'aucun
--- classement ne permet. Aucun texte de l'interface ne doit donc promettre que
--- « l'abandon coûte des points » — c'est faux dans ce cas.
+-- l'égalité redistribue : 4 pilotes à 1000, C et D abandonnent → −21 chacun au
+-- lieu de −32 pour le dernier réel (il économise 11 points, C en paie 10 de
+-- trop). Deux pilotes peuvent donc amortir la perte du dernier en se déclarant
+-- tous deux « abandon ». Les départager supposerait de classer deux pilotes
+-- qu'aucun classement ne sépare — on assume.
+--
+-- En revanche, un abandon ne peut JAMAIS gagner d'Elo (décision PO, voir le
+-- plafonnement dans _delta) : c'était le seul cas vraiment indéfendable.
+-- L'interface ne doit pour autant pas promettre que « l'abandon coûte des
+-- points » : à plusieurs, il peut ne rien coûter du tout.
 --
 -- Détail d'implémentation : `results.position` garde des valeurs DISTINCTES
 -- (l'index unique (race_id, position) existe depuis le schéma initial et sert
@@ -173,10 +171,32 @@ begin
   -- Arrondi à somme nulle (plus grand reste) UNIQUEMENT sur les inscrits ;
   -- les fantômes reçoivent delta 0.
   create temp table _delta on commit drop as
-  with r as (
+  with reg as (
+    select * from _raw where profile_id is not null
+  ),
+  -- Décision PO 2026-07-28 : **un abandon ne rapporte JAMAIS de points**.
+  -- L'égalité entre abandons pouvait faire GAGNER de l'Elo au plus faible
+  -- (0,5 face à un adversaire dont l'espérance frôlait 0,95) : « ABD Kevin +4 »
+  -- partagé sur WhatsApp est indéfendable. On plafonne donc son gain à 0 et on
+  -- rend ce qu'il aurait pris aux pilotes qui ont FINI — la somme reste nulle,
+  -- et la phrase tient en une ligne pour la FAQ.
+  surplus as (
+    select coalesce(sum(greatest(raw, 0)) filter (where is_dnf), 0) as s,
+           count(*) filter (where not is_dnf) as n_fin_reg
+    from reg
+  ),
+  adj as (
+    select participation_id, profile_id, ghost_id, rank, is_dnf, elo_before,
+      case when is_dnf then least(raw, 0)
+           else raw + (select case when n_fin_reg > 0 then s / n_fin_reg else 0 end
+                       from surplus)
+      end as raw
+    from reg
+  ),
+  r as (
     select participation_id, profile_id, ghost_id, rank, is_dnf, elo_before, raw,
            round(raw)::int as base, (round(raw) - raw) as up_err
-    from _raw where profile_id is not null
+    from adj
   ),
   resid as (select coalesce(sum(base), 0)::int as s from r),
   ranked as (

@@ -1,15 +1,20 @@
-import { Field } from '@/components/ui';
-import { formatDigits, onlyDigits } from '@/lib/laptime';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+
+import { colors, fonts, radius, spacing } from '@/constants/theme';
+import { LAP_SLOTS, lapMaskParts, onlyDigits } from '@/lib/laptime';
 
 /**
- * Champ chrono « pavé numérique » (retour PO 2026-07-28).
+ * Champ chrono à GABARIT (retour PO 2026-07-28).
  *
- * On ne tape QUE des chiffres : ils se remplissent de la droite vers la gauche
- * et les séparateurs se placent seuls (0:52.348). Plus de « : » ni de « . » à
- * viser sur un clavier de téléphone, au bord d'une piste, entre deux courses.
+ * On ne tape que des chiffres : ils remplissent `m:ss.mmm` de gauche à droite,
+ * et les emplacements pas encore saisis restent **en gris**. On voit d'un coup
+ * d'œil où on en est, et il n'y a ni « : » ni « . » à viser sur un clavier de
+ * téléphone, au bord d'une piste, entre deux courses.
  *
- * L'état remonté au parent est la chaîne de CHIFFRES BRUTS — la valeur affichée
- * n'est qu'une mise en forme. Le parent la convertit avec digitsToMs().
+ * Le gabarit est un `Text` à deux couleurs — impossible dans un TextInput, qui
+ * ne colore pas des morceaux de sa valeur. La saisie est donc captée par un
+ * TextInput transparent posé par-dessus : c'est lui qui reçoit le clavier, le
+ * collage et la touche retour ; le gabarit ne fait qu'afficher.
  */
 export function LapField({
   label,
@@ -22,31 +27,71 @@ export function LapField({
   onChangeDigits: (next: string) => void;
   error?: string | null;
 }) {
-  // La valeur affichée n'est qu'une projection des chiffres : pas d'état à
-  // synchroniser, donc pas de ref.
-  const shown = formatDigits(digits);
-
-  function onChangeText(text: string) {
-    const next = onlyDigits(text);
-    // Effacement d'un SÉPARATEUR : le texte a raccourci mais le nombre de
-    // chiffres n'a pas bougé. Sans ce cas, la touche « retour » resterait
-    // sans effet une frappe sur deux et le champ paraîtrait bloqué.
-    if (text.length < shown.length && next.length === digits.length) {
-      onChangeDigits(digits.slice(0, -1));
-      return;
-    }
-    onChangeDigits(next);
-  }
+  const parts = lapMaskParts(digits);
 
   return (
-    <Field
-      label={label}
-      value={shown}
-      onChangeText={onChangeText}
-      placeholder="0:00.000"
-      keyboardType="number-pad"
-      inputMode="numeric"
-      error={error}
-    />
+    <View style={styles.wrap}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={[styles.box, !!error && styles.errored]}>
+        <Text style={styles.mask} allowFontScaling={false}>
+          {parts.map((part, i) => (
+            <Text key={i} style={part.filled ? styles.on : styles.off}>
+              {part.char}
+            </Text>
+          ))}
+        </Text>
+        <TextInput
+          value={digits}
+          onChangeText={(text) => onChangeDigits(onlyDigits(text))}
+          keyboardType="number-pad"
+          inputMode="numeric"
+          maxLength={LAP_SLOTS}
+          accessibilityLabel={label}
+          // Transparent : seul le gabarit se voit. Le curseur reste caché — la
+          // progression se lit à la couleur, pas à la position d'un trait.
+          style={styles.capture}
+          caretHidden
+          selectionColor="transparent"
+        />
+      </View>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  wrap: { gap: spacing.xs },
+  label: {
+    color: colors.inkDim2,
+    fontFamily: fonts.sans,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  box: {
+    backgroundColor: colors.surface2,
+    borderColor: colors.line2,
+    borderWidth: 1,
+    borderRadius: radius.card,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    justifyContent: 'center',
+  },
+  errored: { borderColor: colors.accent },
+  // `letterSpacing` fixe : le gabarit ne doit pas « danser » à chaque frappe.
+  mask: { fontFamily: fonts.sans, fontSize: 20, letterSpacing: 2 },
+  on: { color: colors.ink, fontWeight: '700' },
+  off: { color: colors.inkDim2 },
+  capture: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    color: 'transparent',
+    fontSize: 20,
+    paddingHorizontal: spacing.md,
+  },
+  error: { color: colors.accent, fontFamily: fonts.sans, fontSize: 12 },
+});
