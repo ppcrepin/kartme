@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts } from '@/constants/theme';
@@ -27,27 +28,45 @@ function colorFor(name: string): string {
  * retombe sur les initiales, sans distinguer « pas de photo » de « pas le
  * droit » : les deux se ressemblent, et c'est voulu.
  */
-export function Avatar({ name, size = 44, uri }: { name: string; size?: number; uri?: string | null }) {
+export function Avatar({
+  name,
+  size = 44,
+  uri,
+  cacheKey,
+}: {
+  name: string;
+  size?: number;
+  uri?: string | null;
+  /**
+   * Clé de cache STABLE (le chemin de la photo). Sans elle, chaque écran
+   * re-signe un lien différent pour la même image : expo-image indexe son
+   * cache sur l'URI, donc l'avatar était retéléchargé à chaque navigation —
+   * précisément sur la 3G de bord de piste qu'on cherche à ménager.
+   */
+  cacheKey?: string | null;
+}) {
+  const [failed, setFailed] = useState(false);
   const dim = { width: size, height: size, borderRadius: size / 2 };
-  if (uri) {
-    return (
-      <Image
-        accessibilityLabel={name}
-        source={{ uri }}
-        style={[styles.base, dim]}
-        contentFit="cover"
-        // Les initiales restent visibles le temps du chargement plutôt qu'un
-        // trou gris : sur une grille de huit pilotes, ça évite le clignotement.
-        placeholder={undefined}
-        transition={150}
-      />
-    );
-  }
+
+  // Les initiales sont TOUJOURS rendues, la photo se superpose. Un lien
+  // expiré, une image supprimée ou un réseau coupé laissaient sinon un rond
+  // vide — le repli était dans une branche jamais atteinte.
   return (
     <View
-      accessibilityLabel={name}
+      accessibilityLabel={uri && !failed ? `Photo de profil de ${name}` : name}
       style={[styles.base, dim, { backgroundColor: colorFor(name) }]}>
       <Text style={[styles.initials, { fontSize: size * 0.38 }]}>{initialsOf(name)}</Text>
+      {uri && !failed ? (
+        <Image
+          source={{ uri }}
+          cachePolicy="memory-disk"
+          recyclingKey={cacheKey ?? uri}
+          style={[StyleSheet.absoluteFill, { borderRadius: size / 2 }]}
+          contentFit="cover"
+          transition={150}
+          onError={() => setFailed(true)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -56,6 +75,7 @@ const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     borderWidth: 2,
     borderColor: colors.bg,
   },

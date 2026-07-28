@@ -16,6 +16,7 @@ import {
   type Report,
   removePilotAvatar,
 } from '@/lib/moderation';
+import { signedAvatarUrls } from '@/lib/avatar';
 import { validateUsername } from '@/lib/username';
 
 /** S5 — Boîte de modération (super-admin). Liste des signalements + actions. */
@@ -28,11 +29,17 @@ export default function ModerationScreen() {
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmSuspend, setConfirmSuspend] = useState<string | null>(null);
+  const [confirmPhoto, setConfirmPhoto] = useState<string | null>(null);
+  const [avatarUrls, setAvatarUrls] = useState<Map<string, string>>(new Map());
 
   const refresh = useCallback(async () => {
     try {
-      setReports(await listReports(onlyOpen));
+      const rows = await listReports(onlyOpen);
+      setReports(rows);
       setError(null);
+      // UN seul appel de signature pour toute la liste — c'est le cas d'usage
+      // pour lequel `signedAvatarUrls` prend un tableau.
+      setAvatarUrls(await signedAvatarUrls(rows.map((r) => r.reportedAvatarPath)));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur');
     }
@@ -104,7 +111,15 @@ export default function ModerationScreen() {
 
               {r.reportedId ? (
                 <View style={styles.pilotRow}>
-                  <Avatar name={r.reportedName ?? '—'} size={30} />
+                  {/* Photo agrandie sur un signalement de photo : sans elle,
+                      le modérateur retirait à l'aveugle, et le signalement
+                      devenait un droit de retrait unilatéral entre pilotes. */}
+                  <Avatar
+                    name={r.reportedName ?? '—'}
+                    size={r.category === 'photo' ? 64 : 30}
+                    uri={r.reportedAvatarPath ? (avatarUrls.get(r.reportedAvatarPath) ?? null) : null}
+                    cacheKey={r.reportedAvatarPath}
+                  />
                   <Body style={styles.flex}>
                     {r.reportedName ?? t.moderation.unknownPilot}
                     {r.reportedSuspended ? <Muted> · {t.moderation.suspendedTag}</Muted> : null}
@@ -144,12 +159,35 @@ export default function ModerationScreen() {
                       />
                       {/* Photo : retrait direct. Le pilote repasse en initiales
                           et l'ancien fichier devient illisible. */}
-                      <Button
-                        label={t.moderation.removePhoto}
-                        variant="ghost"
-                        onPress={() => run(() => removePilotAvatar(r.reportedId!))}
-                        disabled={busy}
-                      />
+                      {/* Seulement s'il y a une photo, et en deux temps comme
+                          « Suspendre » : le retrait est irréversible pour le
+                          pilote, qui devra tout refaire. */}
+                      {r.reportedAvatarPath ? (
+                        confirmPhoto === r.id ? (
+                          <>
+                            <Button
+                              label={t.common.cancel}
+                              variant="ghost"
+                              onPress={() => setConfirmPhoto(null)}
+                            />
+                            <Button
+                              label={t.moderation.removePhotoConfirm}
+                              onPress={() => {
+                                setConfirmPhoto(null);
+                                void run(() => removePilotAvatar(r.reportedId!));
+                              }}
+                              disabled={busy}
+                            />
+                          </>
+                        ) : (
+                          <Button
+                            label={t.moderation.removePhoto}
+                            variant="ghost"
+                            onPress={() => setConfirmPhoto(r.id)}
+                            disabled={busy}
+                          />
+                        )
+                      ) : null}
                       {r.reportedSuspended ? (
                         <Button
                           label={t.moderation.reactivate}

@@ -19,6 +19,8 @@ export interface Report {
   reportedId: string | null;
   reportedName: string | null;
   reportedSuspended: boolean;
+  /** Chemin de la photo signalée : la modération doit VOIR ce qu'elle retire. */
+  reportedAvatarPath: string | null;
   raceId: string | null;
   raceCircuit: string | null;
 }
@@ -34,6 +36,7 @@ type RawReport = {
   reported_id: string | null;
   reported_name: string | null;
   reported_suspended: boolean;
+  reported_avatar_path: string | null;
   race_id: string | null;
   race_circuit: string | null;
 };
@@ -52,6 +55,7 @@ export async function listReports(onlyOpen = false): Promise<Report[]> {
     reportedId: r.reported_id,
     reportedName: r.reported_name,
     reportedSuspended: r.reported_suspended,
+    reportedAvatarPath: r.reported_avatar_path ?? null,
     raceId: r.race_id,
     raceCircuit: r.race_circuit,
   }));

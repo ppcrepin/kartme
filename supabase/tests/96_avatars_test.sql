@@ -77,6 +77,106 @@ begin
   raise notice 'Scénario 1 (propriété du chemin) ✔';
 end $$;
 
+-- ═══ Scénario 1bis : les exploits trouvés par le Reviewer ═══
+do $$
+declare
+  B uuid := 'ff000000-0000-0000-0000-00000000000b';
+  A uuid := 'ff000000-0000-0000-0000-00000000000a';
+  V uuid := 'ff000000-0000-0000-0000-000000000099';
+  denied boolean := false;
+begin
+  -- Traversée « .. » : le chemin commence bien par MON identifiant, donc un
+  -- contrôle de préfixe l'acceptait — et il retournait la policy de lecture
+  -- contre elle-même (c'est MA visibilité qui aurait été évaluée).
+  perform tests.as_uid(B);
+  set local role authenticated;
+  begin
+    update profiles set avatar_path = B::text || '/../' || A::text || '/vol.jpg' where id = B;
+  exception when others then denied := true;
+  end;
+  reset role;
+  if not denied then raise exception 'ÉCHEC : traversée « .. » acceptée'; end if;
+
+  -- INSERT : le profil est créé par un INSERT client direct, qu'un garde
+  -- BEFORE UPDATE ne voit jamais. Le chemin d'autrui doit être NEUTRALISÉ.
+  insert into auth.users (id, email) values (V, 'v@t');
+  perform tests.as_uid(V);
+  set local role authenticated;
+  insert into public.profiles (id, username, elo, avatar_path, terms_accepted_at, terms_version)
+    values (V, 'Voleur', 1000, A::text || '/photo1.jpg', now(), 1);
+  reset role;
+  perform tests.eq((select count(*) from profiles where id = V and avatar_path is null), 1,
+                   'chemin d''autrui neutralisé à l''inscription');
+  raise notice 'Scénario 1bis (usurpation et traversée) ✔';
+end $$;
+
+-- ═══ Scénario 1ter : le prédicat de lecture suit EXACTEMENT le profil ═══
+-- La policy est la seule barrière entre une photo privée et le reste du monde,
+-- et le harnais n'a pas de schéma storage : c'est pour ça que le prédicat vit
+-- dans une fonction.
+do $$
+declare
+  A uuid := 'ff000000-0000-0000-0000-00000000000a';
+  B uuid := 'ff000000-0000-0000-0000-00000000000b';
+  M uuid := 'ff000000-0000-0000-0000-00000000000e';
+  chemin text;
+begin
+  perform tests.as_uid(A);
+  set local role authenticated;
+  update profiles set avatar_path = A::text || '/pub.jpg' where id = A;
+  reset role;
+  chemin := A::text || '/pub.jpg';
+
+  -- Profil public : visible de tous.
+  perform tests.as_uid(B);
+  if not public.can_read_avatar(chemin) then raise exception 'ÉCHEC : photo publique illisible'; end if;
+
+  -- Profil privé non-ami : masqué, comme get_pilot.
+  update profiles set is_private = true where id = A;
+  perform tests.as_uid(B);
+  if public.can_read_avatar(chemin) then raise exception 'ÉCHEC : photo d''un profil privé lisible par un non-ami'; end if;
+  -- …mais la modération doit pouvoir la voir, sinon elle retire à l'aveugle.
+  perform tests.as_uid(M);
+  if not public.can_read_avatar(chemin) then raise exception 'ÉCHEC : la modération ne voit pas la photo signalée'; end if;
+  update profiles set is_private = false where id = A;
+
+  -- Compte SUSPENDU : get_pilot l'exclut, la photo doit suivre.
+  perform set_config('kartsquad.moderate_suspend', '1', true);
+  update profiles set suspended_at = now() where id = A;
+  perform set_config('kartsquad.moderate_suspend', '', true);
+  perform tests.as_uid(B);
+  if public.can_read_avatar(chemin) then raise exception 'ÉCHEC : photo d''un compte suspendu encore lisible'; end if;
+  perform set_config('kartsquad.moderate_suspend', '1', true);
+  update profiles set suspended_at = null where id = A;
+  perform set_config('kartsquad.moderate_suspend', '', true);
+
+  -- Bloqué : rien.
+  insert into blocks (blocker_id, blocked_id) values (B, A);
+  perform tests.as_uid(B);
+  if public.can_read_avatar(chemin) then raise exception 'ÉCHEC : photo d''un pilote bloqué lisible'; end if;
+  delete from blocks where blocker_id = B;
+
+  -- Chemin qui n'est plus celui du profil : illisible, même pour son auteur.
+  perform tests.as_uid(A);
+  if public.can_read_avatar(A::text || '/ancienne.jpg') then
+    raise exception 'ÉCHEC : une photo remplacée reste lisible';
+  end if;
+  raise notice 'Scénario 1ter (lecture alignée sur le profil) ✔';
+end $$;
+
+-- ═══ Scénario 1quater : le fichier remplacé part en file de suppression ═══
+do $$
+declare A uuid := 'ff000000-0000-0000-0000-00000000000a';
+begin
+  perform tests.as_uid(A);
+  set local role authenticated;
+  update profiles set avatar_path = A::text || '/nouvelle.jpg' where id = A;
+  reset role;
+  perform tests.eq((select count(*) from avatar_gc where path = A::text || '/pub.jpg'), 1,
+                   'l''ancien fichier est mis en file de suppression');
+  raise notice 'Scénario 1quater (ramasse-miettes) ✔';
+end $$;
+
 -- ═══ Scénario 2 : la modération retire une photo ═══
 do $$
 declare
@@ -97,7 +197,38 @@ begin
   perform public.moderate_remove_avatar(A);
   perform tests.eq((select count(*) from profiles where id = A and avatar_path is null), 1,
                    'le modérateur a retiré la photo');
-  raise notice 'Scénario 2 (retrait par la modération) ✔';
+
+  -- La sanction TIENT : sans ça, le pilote reposait le même chemin dans la
+  -- seconde et la modération de photo ne servait à rien.
+  denied := false;
+  perform tests.as_uid(A);
+  set local role authenticated;
+  begin
+    update profiles set avatar_path = A::text || '/photo1.jpg' where id = A;
+  exception when others then denied := true;
+  end;
+  reset role;
+  if not denied then raise exception 'ÉCHEC : le pilote a reposé sa photo après sanction'; end if;
+
+  -- Un identifiant inconnu ne doit pas passer pour un succès.
+  denied := false;
+  perform tests.as_uid(M);
+  begin
+    perform public.moderate_remove_avatar('ff000000-0000-0000-0000-0000000000ff');
+  exception when others then denied := true;
+  end;
+  if not denied then raise exception 'ÉCHEC : pilote inexistant accepté en silence'; end if;
+
+  -- Et elle se lève (erreur de modération, photo corrigée hors ligne).
+  perform tests.as_uid(M);
+  perform public.moderate_allow_avatar(A);
+  perform tests.as_uid(A);
+  set local role authenticated;
+  update profiles set avatar_path = A::text || '/photo1.jpg' where id = A;
+  reset role;
+  perform tests.eq((select count(*) from profiles where id = A and avatar_path is not null), 1,
+                   'sanction levée : le pilote peut remettre une photo');
+  raise notice 'Scénario 2 (retrait persistant et levable) ✔';
 end $$;
 
 -- ═══ Scénario 3 : une photo se signale ═══
@@ -135,14 +266,26 @@ begin
   raise notice 'Scénario 4 (chemin exposé) ✔';
 end $$;
 
--- ═══ Scénario 5 : RGPD — la photo part avec le compte ═══
+-- ═══ Scénario 5 : RGPD — la photo part avec le compte, et n'y revient pas ═══
 do $$
-declare A uuid := 'ff000000-0000-0000-0000-00000000000a';
+declare A uuid := 'ff000000-0000-0000-0000-00000000000a'; denied boolean := false;
 begin
   perform tests.as_uid(A);
   perform public.delete_my_account();
   perform tests.eq((select count(*) from profiles where id = A and avatar_path is null), 1,
                    'photo effacée à la suppression de compte');
+
+  -- Le jeton reste valide un moment après la suppression : sans garde, le
+  -- compte supprimé reposait une photo, et le second appel de purge ne la
+  -- voyait plus (sa clause excluait les lignes déjà supprimées).
+  perform tests.as_uid(A);
+  set local role authenticated;
+  begin
+    update profiles set avatar_path = A::text || '/revenant.jpg' where id = A;
+  exception when others then denied := true;
+  end;
+  reset role;
+  if not denied then raise exception 'ÉCHEC : un compte supprimé a reposé une photo'; end if;
   perform tests.eq((select count(*) from profiles where id = A), 1,
                    'le profil, lui, SURVIT (intégrité Elo des autres)');
   raise notice 'Scénario 5 (purge RGPD) ✔';

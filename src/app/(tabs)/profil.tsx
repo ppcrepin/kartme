@@ -1,11 +1,12 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { EloCurve } from '@/components/elo-curve';
 import { Screen } from '@/components/screen';
 import { Avatar, BadgeIcon, Button, Card, Gauge, GradeMedal, SkeletonCard } from '@/components/ui';
 import {
+  AvatarError,
   avatarPickSupported,
   pickImage,
   removeMyAvatar,
@@ -13,7 +14,7 @@ import {
   uploadAvatar,
 } from '@/lib/avatar';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
-import { colors, fonts, spacing } from '@/constants/theme';
+import { colors, fonts, spacing, states } from '@/constants/theme';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
 import { BADGE_KEYS, listBadges, type BadgeKey, type UnlockedBadge } from '@/lib/badges';
@@ -45,6 +46,15 @@ export default function ProfilScreen() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  // Un envoi 3G peut survivre au changement d'onglet : on n'écrit pas dans un
+  // composant démonté.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const load = useCallback(async (alive: () => boolean = () => true) => {
     const [p, c, h, b] = await Promise.all([
@@ -74,6 +84,21 @@ export default function ProfilScreen() {
     }, [load]),
   );
 
+  /**
+   * Message FRANÇAIS. La version précédente renvoyait `e.message` dès que
+   * l'erreur était une `Error` — c'est-à-dire toujours : les pilotes voyaient
+   * « The source image could not be decoded » sur une app entièrement en
+   * français, et le libellé traduit était du code mort.
+   */
+  function photoErrorLabel(e: unknown): string {
+    if (e instanceof AvatarError) {
+      if (e.code === 'tooBig') return t.profile.photoTooBig;
+      if (e.code === 'notAnImage') return t.profile.photoNotAnImage;
+      if (e.code === 'unreadable') return t.profile.photoUnreadable;
+    }
+    return t.profile.photoError;
+  }
+
   async function onPickPhoto() {
     setPhotoError(null);
     const file = await pickImage();
@@ -81,11 +106,11 @@ export default function ProfilScreen() {
     setPhotoBusy(true);
     try {
       await uploadAvatar(file);
-      await load();
+      if (mounted.current) await load();
     } catch (e) {
-      setPhotoError(e instanceof Error ? e.message : t.profile.photoError);
+      setPhotoError(photoErrorLabel(e));
     } finally {
-      setPhotoBusy(false);
+      if (mounted.current) setPhotoBusy(false);
     }
   }
 
@@ -94,11 +119,11 @@ export default function ProfilScreen() {
     setPhotoBusy(true);
     try {
       await removeMyAvatar();
-      await load();
+      if (mounted.current) await load();
     } catch (e) {
-      setPhotoError(e instanceof Error ? e.message : t.profile.photoError);
+      setPhotoError(photoErrorLabel(e));
     } finally {
-      setPhotoBusy(false);
+      if (mounted.current) setPhotoBusy(false);
     }
   }
 
@@ -132,7 +157,7 @@ export default function ProfilScreen() {
         {/* Identité + Elo + grade */}
         <Card>
           <View style={styles.identityRow}>
-            <Avatar name={profile.username} size={52} uri={avatarUrl} />
+            <Avatar name={profile.username} size={52} uri={avatarUrl} cacheKey={profile.avatarPath} />
             <View style={styles.flex}>
               <Title style={styles.username}>{profile.username}</Title>
               {session?.user.email ? <Muted>{session.user.email}</Muted> : null}
@@ -140,7 +165,12 @@ export default function ProfilScreen() {
                   Sur natif, le sélecteur viendra avec les builds iOS/Android. */}
               {avatarPickSupported() ? (
                 <View style={styles.photoRow}>
-                  <Pressable onPress={onPickPhoto} disabled={photoBusy} accessibilityRole="button">
+                  <Pressable
+                    onPress={onPickPhoto}
+                    disabled={photoBusy}
+                    accessibilityRole="button"
+                    accessibilityLabel={t.profile.photoChangeA11y}
+                    accessibilityState={{ disabled: photoBusy, busy: photoBusy }}>
                     <Muted style={styles.photoLink}>
                       {photoBusy
                         ? t.profile.photoBusy
@@ -149,14 +179,28 @@ export default function ProfilScreen() {
                           : t.profile.photoAdd}
                     </Muted>
                   </Pressable>
-                  {profile.avatarPath && !photoBusy ? (
-                    <Pressable onPress={onRemovePhoto} accessibilityRole="button">
+                  {/* Désactivé plutôt que masqué : le faire disparaître pendant
+                      l'envoi fait sauter la mise en page. */}
+                  {profile.avatarPath ? (
+                    <Pressable
+                      onPress={onRemovePhoto}
+                      disabled={photoBusy}
+                      accessibilityRole="button"
+                      accessibilityLabel={t.profile.photoRemoveA11y}
+                      accessibilityState={{ disabled: photoBusy }}>
                       <Muted style={styles.photoLink}>{t.profile.photoRemove}</Muted>
                     </Pressable>
                   ) : null}
                 </View>
               ) : null}
-              {photoError ? <Muted style={styles.photoError}>{photoError}</Muted> : null}
+              {/* `colors.err` et non `colors.accent` : le rouge de marque sert
+                  déjà au lien juste au-dessus — une erreur de la même couleur
+                  que l'action est illisible. Annoncée aux lecteurs d'écran. */}
+              {photoError ? (
+                <Muted style={styles.photoError} accessibilityLiveRegion="polite">
+                  {photoError}
+                </Muted>
+              ) : null}
             </View>
             <GradeMedal grade={gp.current} size={46} />
           </View>
@@ -330,7 +374,7 @@ const styles = StyleSheet.create({
   historyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   photoRow: { flexDirection: 'row', gap: spacing.md, marginTop: 2 },
   photoLink: { color: colors.accent, fontWeight: '700', fontSize: 12 },
-  photoError: { color: colors.accent, fontSize: 12, marginTop: 2 },
+  photoError: { color: states.err, fontSize: 12, marginTop: 2 },
   historyPos: { fontFamily: fonts.serifBlack, fontSize: 18, width: 22, textAlign: 'center', color: colors.ink },
   historyPosDnf: { fontFamily: fonts.sans, fontSize: 10, fontWeight: '800', color: colors.inkDim2 },
   historyElo: { alignItems: 'flex-end' },

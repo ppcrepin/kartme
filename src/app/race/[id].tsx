@@ -21,6 +21,7 @@ import { Body, Heading, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { track } from '@/lib/analytics';
+import { signedAvatarUrls } from '@/lib/avatar';
 import { useAuth } from '@/lib/auth';
 import { badgesForRace, type BadgeKey } from '@/lib/badges';
 import { formatRaceDate } from '@/lib/datetime';
@@ -123,6 +124,7 @@ export default function RaceDetailScreen() {
   const [pilotResultsFor, setPilotResultsFor] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
   const [circuitRecord, setCircuitRecord] = useState<{ ms: number; holder: string } | null>(null);
+  const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
   const [lapEditId, setLapEditId] = useState<string | null>(null);
   const [lapInput, setLapInput] = useState('');   // chiffres bruts (pavé numérique)
   const [lapError, setLapError] = useState<string | null>(null);
@@ -146,6 +148,9 @@ export default function RaceDetailScreen() {
     setParticipants(p);
     setResults(res);
     setFriends(f);
+    // UNE signature pour toute la page — grille, résultats et podium
+    // confondus. C'est exactement pour ça que le helper prend un tableau.
+    setAvatars(await signedAvatarUrls([...p.map((x) => x.avatarPath), ...res.map((x) => x.avatarPath)]));
   }, [id, selfId]);
 
   useFocusEffect(
@@ -560,7 +565,7 @@ export default function RaceDetailScreen() {
               /* ── Résultats (C9) ── */
               <View style={styles.section}>
                 <Label>{t.races.results}</Label>
-                <Podium results={results} />
+                <Podium results={results} avatars={avatars} />
 
                 {myNewBadges.length > 0 ? (
                   <Banner
@@ -595,7 +600,12 @@ export default function RaceDetailScreen() {
                           <Body style={[styles.posNum, r.dnf && styles.posNumDnf]}>
                             {r.dnf ? t.races.dnfShort : r.position}
                           </Body>
-                          <Avatar name={r.hiddenProfile ? '?' : r.name} size={34} />
+                          <Avatar
+                            name={r.hiddenProfile ? '?' : r.name}
+                            size={34}
+                            uri={r.avatarPath ? (avatars.get(r.avatarPath) ?? null) : null}
+                            cacheKey={r.avatarPath}
+                          />
                           <View style={styles.flex}>
                             <Body>
                               {r.hiddenProfile ? t.races.privatePilot : r.name}
@@ -793,7 +803,12 @@ export default function RaceDetailScreen() {
                     return (
                       <Card key={p.id}>
                         <View style={styles.pilotRow}>
-                          <Avatar name={hidden ? '?' : p.name} size={36} />
+                          <Avatar
+                            name={hidden ? '?' : p.name}
+                            size={36}
+                            uri={p.avatarPath ? (avatars.get(p.avatarPath) ?? null) : null}
+                            cacheKey={p.avatarPath}
+                          />
                           <View style={styles.flex}>
                             <Body>
                               {hidden ? t.races.privatePilot : p.name}

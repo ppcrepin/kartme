@@ -7,7 +7,14 @@ import { t } from '@/i18n';
 import type { RaceResult } from '@/lib/races';
 
 /** Podium des 3 premiers (2e · 1er · 3e), marches colorées or/argent/bronze. */
-export function Podium({ results }: { results: RaceResult[] }) {
+export function Podium({
+  results,
+  avatars,
+}: {
+  results: RaceResult[];
+  /** Liens signés, obtenus en un seul appel par l'écran de course. */
+  avatars?: Map<string, string>;
+}) {
   // Un abandon ne monte pas sur le podium. Sans ce filtre, une course à trois
   // dont un pilote abandonne le hissait sur la marche bronze avec un « 3 »,
   // à deux centimètres de la liste qui affiche « Abandon ».
@@ -19,9 +26,9 @@ export function Podium({ results }: { results: RaceResult[] }) {
 
   return (
     <View style={styles.row}>
-      <Step result={second} height={64} color={gradeColors.rookie} />
-      <Step result={first} height={92} color={gradeColors.missile} />
-      <Step result={third} height={44} color={gradeColors.roueLibre} />
+      <Step result={second} height={64} color={gradeColors.rookie} avatars={avatars} />
+      <Step result={first} height={92} color={gradeColors.missile} avatars={avatars} />
+      <Step result={third} height={44} color={gradeColors.roueLibre} avatars={avatars} />
     </View>
   );
 }
@@ -30,17 +37,24 @@ function Step({
   result,
   height,
   color,
+  avatars,
 }: {
   result: RaceResult | undefined;
   height: number;
   color: string;
+  avatars?: Map<string, string>;
 }) {
   if (!result) return <View style={styles.col} />;
   const up = result.eloDelta > 0;
   const flat = result.eloDelta === 0;
   return (
     <View style={styles.col}>
-      <Avatar name={result.name} size={44} />
+      <Avatar
+        name={result.name}
+        size={44}
+        uri={result.avatarPath ? (avatars?.get(result.avatarPath) ?? null) : null}
+        cacheKey={result.avatarPath}
+      />
       <Body style={styles.name} numberOfLines={1}>
         {result.name}
       </Body>

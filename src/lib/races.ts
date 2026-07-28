@@ -48,6 +48,8 @@ export interface Participant {
   races: number;
   /** Compte inscrit dont le profil est illisible (privé non-ami, retiré…) : ne rien inventer. */
   hiddenProfile: boolean;
+  /** Chemin de la photo (null = initiales). Le lien signé se demande par lots. */
+  avatarPath: string | null;
 }
 
 // ── Circuits (référentiel maîtrisé : pas d'ajout client) ──────────────────
@@ -150,14 +152,14 @@ type RawParticipation = {
   id: string;
   profile_id: string | null;
   ghost_id: string | null;
-  profile: { username: string; elo: number; races: number } | null;
+  profile: { username: string; elo: number; races: number; avatar_path: string | null } | null;
   ghost: { display_name: string; elo: number } | null;
 };
 
 export async function listParticipants(raceId: string, selfId?: string): Promise<Participant[]> {
   const { data, error } = await supabase
     .from('participations')
-    .select('id, profile_id, ghost_id, profile:profiles(username, elo, races), ghost:ghost_profiles(display_name, elo)')
+    .select('id, profile_id, ghost_id, profile:profiles(username, elo, races, avatar_path), ghost:ghost_profiles(display_name, elo)')
     .eq('race_id', raceId)
     .order('created_at');
   if (error) throw new Error(error.message);
@@ -174,6 +176,7 @@ export async function listParticipants(raceId: string, selfId?: string): Promise
       elo: p.profile?.elo ?? p.ghost?.elo ?? 1000,
       races: p.profile?.races ?? 0,
       hiddenProfile,
+      avatarPath: p.profile?.avatar_path ?? null,
     };
   });
 }
@@ -235,6 +238,7 @@ export interface RaceResult {
   eloAfter: number;
   eloDelta: number;
   bestLapMs: number | null;
+  avatarPath: string | null;
   /** Abandon (A6) : classé dernier côté Elo, « Abandon » à l'affichage. */
   dnf: boolean;
 }
@@ -316,7 +320,7 @@ type RawResult = {
   dnf: boolean | null;
   participation: {
     profile_id: string | null;
-    profile: { username: string } | null;
+    profile: { username: string; avatar_path: string | null } | null;
     ghost: { display_name: string } | null;
   } | null;
 };
@@ -324,7 +328,7 @@ type RawResult = {
 export async function listResults(raceId: string, selfId?: string): Promise<RaceResult[]> {
   const { data, error } = await supabase
     .from('results')
-    .select('participation_id, position, elo_before, elo_after, elo_delta, best_lap_ms, dnf, participation:participations(profile_id, profile:profiles(username), ghost:ghost_profiles(display_name))')
+    .select('participation_id, position, elo_before, elo_after, elo_delta, best_lap_ms, dnf, participation:participations(profile_id, profile:profiles(username, avatar_path), ghost:ghost_profiles(display_name))')
     .eq('race_id', raceId)
     .order('position');
   if (error) throw new Error(error.message);
@@ -339,6 +343,7 @@ export async function listResults(raceId: string, selfId?: string): Promise<Race
     eloAfter: r.elo_after,
     eloDelta: r.elo_delta,
     bestLapMs: r.best_lap_ms,
+    avatarPath: r.participation?.profile?.avatar_path ?? null,
     dnf: r.dnf === true,
   }));
 }
