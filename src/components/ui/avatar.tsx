@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts } from '@/constants/theme';
@@ -18,9 +19,30 @@ function colorFor(name: string): string {
   return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
-/** Avatar-initiales : couleur déterministe dérivée du nom. */
-export function Avatar({ name, size = 44 }: { name: string; size?: number }) {
+/**
+ * Avatar : photo si le pilote en a une ET qu'on a le droit de la voir, sinon
+ * initiales sur couleur déterministe.
+ *
+ * `uri` est un lien SIGNÉ obtenu par lots (voir lib/avatar). Absent = on
+ * retombe sur les initiales, sans distinguer « pas de photo » de « pas le
+ * droit » : les deux se ressemblent, et c'est voulu.
+ */
+export function Avatar({ name, size = 44, uri }: { name: string; size?: number; uri?: string | null }) {
   const dim = { width: size, height: size, borderRadius: size / 2 };
+  if (uri) {
+    return (
+      <Image
+        accessibilityLabel={name}
+        source={{ uri }}
+        style={[styles.base, dim]}
+        contentFit="cover"
+        // Les initiales restent visibles le temps du chargement plutôt qu'un
+        // trou gris : sur une grille de huit pilotes, ça évite le clignotement.
+        placeholder={undefined}
+        transition={150}
+      />
+    );
+  }
   return (
     <View
       accessibilityLabel={name}

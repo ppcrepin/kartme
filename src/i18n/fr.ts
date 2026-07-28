@@ -226,6 +226,7 @@ export const fr = {
       fausse_course: 'Fausse course',
       classement: 'Classement suspect',
       usurpation: 'Usurpation d’identité',
+      photo: 'Photo de profil',
       autre: 'Autre',
     },
     privateProfile: 'Profil privé — deviens son ami pour voir ses stats.',
@@ -250,6 +251,13 @@ export const fr = {
     retry: 'Réessayer',
   },
   profile: {
+    // Photo de profil (A7). Stockage privé + liens signés : la photo suit
+    // exactement les règles de visibilité du profil.
+    photoAdd: 'Ajouter une photo',
+    photoChange: 'Changer ma photo',
+    photoRemove: 'Retirer',
+    photoBusy: 'Envoi…',
+    photoError: 'Impossible d’envoyer cette photo.',
     eloLabel: 'Elo',
     nextGrade: 'plus que %n → %g',
     maxGrade: 'Grade maximal atteint 🏆',
@@ -368,6 +376,7 @@ export const fr = {
       autre: 'Autre',
     } as Record<string, string>,
     status: { open: 'À traiter', handled: 'Traité', dismissed: 'Rejeté' } as Record<string, string>,
+    removePhoto: 'Retirer la photo',
     rename: 'Renommer',
     renameLabel: 'Nouveau pseudo',
     renameConfirm: 'Renommer',

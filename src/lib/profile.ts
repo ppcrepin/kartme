@@ -10,6 +10,8 @@ export interface MyProfile {
   elo: number;
   isPrivate: boolean;
   isModerator: boolean;
+  /** Chemin de la photo dans le bucket (null = initiales). */
+  avatarPath: string | null;
 }
 
 export interface ProfileStats {
@@ -40,7 +42,7 @@ export async function getMyProfile(): Promise<MyProfile | null> {
   if (!userId) return null;
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, elo, is_private, is_moderator')
+    .select('id, username, elo, is_private, is_moderator, avatar_path')
     .eq('id', userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -51,6 +53,7 @@ export async function getMyProfile(): Promise<MyProfile | null> {
     elo: data.elo,
     isPrivate: data.is_private,
     isModerator: data.is_moderator,
+    avatarPath: data.avatar_path ?? null,
   };
 }
 

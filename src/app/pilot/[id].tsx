@@ -32,6 +32,7 @@ import {
   type Pilot,
   type ReportCategory,
 } from '@/lib/friends';
+import { signedAvatarUrls } from '@/lib/avatar';
 import { gradeForElo, isCalibrating } from '@/lib/grade';
 
 const REPORT_CATEGORIES: ReportCategory[] = [
@@ -39,6 +40,7 @@ const REPORT_CATEGORIES: ReportCategory[] = [
   'fausse_course',
   'classement',
   'usurpation',
+  'photo',
   'autre',
 ];
 
@@ -58,6 +60,7 @@ export default function PilotScreen() {
   const [blocked, setBlocked] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!id) return;
@@ -65,6 +68,10 @@ export default function PilotScreen() {
     setPilot(p);
     setFriendship(f);
     setDuel(d);
+    // Lien signé : la policy de lecture décide. Un profil privé non-ami ou un
+    // pilote bloqué n'en obtient aucun → on retombe sur les initiales.
+    const urls = await signedAvatarUrls([p?.avatarPath]);
+    setAvatarUrl(p?.avatarPath ? (urls.get(p.avatarPath) ?? null) : null);
     // Stats/courbe/historique : seulement si le profil est pleinement visible
     // (public ou ami) — sinon la confidentialité prime.
     if (p?.eloExact) {
@@ -149,7 +156,7 @@ export default function PilotScreen() {
             {/* Identité */}
             <Card>
               <View style={styles.identity}>
-                <Avatar name={pilot.username} size={52} />
+                <Avatar name={pilot.username} size={52} uri={avatarUrl} />
                 <View style={styles.flex}>
                   <Title style={styles.username}>{pilot.username}</Title>
                   {/* Sous 5 courses, le grade ne veut encore rien dire : on

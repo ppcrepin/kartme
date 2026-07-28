@@ -14,6 +14,8 @@ export interface Pilot {
   isPrivate: boolean;
   /** Courses déjà jouées — sert à afficher « En calibration » sous 5 courses. */
   races: number;
+  /** Chemin de la photo (null = initiales). Le lien signé se demande à part. */
+  avatarPath: string | null;
 }
 
 export type FriendshipStatus = 'none' | 'pending_sent' | 'pending_received' | 'accepted';
@@ -36,7 +38,7 @@ export interface FriendLists {
   friends: FriendEntry[];
 }
 
-export type ReportCategory = 'comportement' | 'fausse_course' | 'classement' | 'usurpation' | 'autre';
+export type ReportCategory = 'comportement' | 'fausse_course' | 'classement' | 'usurpation' | 'photo' | 'autre';
 
 export interface FaceToFace {
   races: number;
@@ -53,6 +55,7 @@ type RawPilot = {
   elo_exact: boolean;
   is_private: boolean;
   races: number | null;
+  avatar_path: string | null;
 };
 
 const toPilot = (r: RawPilot): Pilot => ({
@@ -64,6 +67,7 @@ const toPilot = (r: RawPilot): Pilot => ({
   // Tolérant : si le serveur n'a pas encore la migration, on suppose un pilote
   // installé plutôt que d'afficher « En calibration » à tout le monde.
   races: r.races ?? 99,
+  avatarPath: r.avatar_path ?? null,
 });
 
 export async function searchPilots(query: string): Promise<Pilot[]> {

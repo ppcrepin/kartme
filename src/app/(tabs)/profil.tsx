@@ -5,6 +5,13 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { EloCurve } from '@/components/elo-curve';
 import { Screen } from '@/components/screen';
 import { Avatar, BadgeIcon, Button, Card, Gauge, GradeMedal, SkeletonCard } from '@/components/ui';
+import {
+  avatarPickSupported,
+  pickImage,
+  removeMyAvatar,
+  signedAvatarUrls,
+  uploadAvatar,
+} from '@/lib/avatar';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -35,24 +42,65 @@ export default function ProfilScreen() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [badges, setBadges] = useState<Map<BadgeKey, UnlockedBadge>>(new Map());
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  const load = useCallback(async (alive: () => boolean = () => true) => {
+    const [p, c, h, b] = await Promise.all([
+      getMyProfile(),
+      getEloCurve(),
+      getRaceHistory(),
+      listBadges(),
+    ]);
+    if (!alive()) return;
+    setProfile(p);
+    setCurve(c);
+    setHistory(h);
+    setBadges(b);
+    // Le lien signé se demande APRÈS le profil : il expire, il ne se met pas
+    // en cache avec le reste.
+    const urls = await signedAvatarUrls([p?.avatarPath]);
+    if (alive()) setAvatarUrl(p?.avatarPath ? (urls.get(p.avatarPath) ?? null) : null);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      Promise.all([getMyProfile(), getEloCurve(), getRaceHistory(), listBadges()])
-        .then(([p, c, h, b]) => {
-          if (!active) return;
-          setProfile(p);
-          setCurve(c);
-          setHistory(h);
-          setBadges(b);
-        })
-        .catch(() => {});
+      load(() => active).catch(() => {});
       return () => {
         active = false;
       };
-    }, []),
+    }, [load]),
   );
+
+  async function onPickPhoto() {
+    setPhotoError(null);
+    const file = await pickImage();
+    if (!file) return;
+    setPhotoBusy(true);
+    try {
+      await uploadAvatar(file);
+      await load();
+    } catch (e) {
+      setPhotoError(e instanceof Error ? e.message : t.profile.photoError);
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  async function onRemovePhoto() {
+    setPhotoError(null);
+    setPhotoBusy(true);
+    try {
+      await removeMyAvatar();
+      await load();
+    } catch (e) {
+      setPhotoError(e instanceof Error ? e.message : t.profile.photoError);
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
 
   if (!profile) {
     return (
@@ -84,10 +132,31 @@ export default function ProfilScreen() {
         {/* Identité + Elo + grade */}
         <Card>
           <View style={styles.identityRow}>
-            <Avatar name={profile.username} size={52} />
+            <Avatar name={profile.username} size={52} uri={avatarUrl} />
             <View style={styles.flex}>
               <Title style={styles.username}>{profile.username}</Title>
               {session?.user.email ? <Muted>{session.user.email}</Muted> : null}
+              {/* Photo : proposée seulement là où on sait la choisir (web/PWA).
+                  Sur natif, le sélecteur viendra avec les builds iOS/Android. */}
+              {avatarPickSupported() ? (
+                <View style={styles.photoRow}>
+                  <Pressable onPress={onPickPhoto} disabled={photoBusy} accessibilityRole="button">
+                    <Muted style={styles.photoLink}>
+                      {photoBusy
+                        ? t.profile.photoBusy
+                        : profile.avatarPath
+                          ? t.profile.photoChange
+                          : t.profile.photoAdd}
+                    </Muted>
+                  </Pressable>
+                  {profile.avatarPath && !photoBusy ? (
+                    <Pressable onPress={onRemovePhoto} accessibilityRole="button">
+                      <Muted style={styles.photoLink}>{t.profile.photoRemove}</Muted>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
+              {photoError ? <Muted style={styles.photoError}>{photoError}</Muted> : null}
             </View>
             <GradeMedal grade={gp.current} size={46} />
           </View>
@@ -259,6 +328,9 @@ const styles = StyleSheet.create({
   badgesSoon: { fontSize: 12 },
   section: { gap: spacing.sm },
   historyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  photoRow: { flexDirection: 'row', gap: spacing.md, marginTop: 2 },
+  photoLink: { color: colors.accent, fontWeight: '700', fontSize: 12 },
+  photoError: { color: colors.accent, fontSize: 12, marginTop: 2 },
   historyPos: { fontFamily: fonts.serifBlack, fontSize: 18, width: 22, textAlign: 'center', color: colors.ink },
   historyPosDnf: { fontFamily: fonts.sans, fontSize: 10, fontWeight: '800', color: colors.inkDim2 },
   historyElo: { alignItems: 'flex-end' },

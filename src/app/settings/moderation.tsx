@@ -14,6 +14,7 @@ import {
   resolveReport,
   suspendPilot,
   type Report,
+  removePilotAvatar,
 } from '@/lib/moderation';
 import { validateUsername } from '@/lib/username';
 
@@ -139,6 +140,14 @@ export default function ModerationScreen() {
                         label={t.moderation.rename}
                         variant="ghost"
                         onPress={() => setRenaming({ id: r.id, name: r.reportedName ?? '' })}
+                        disabled={busy}
+                      />
+                      {/* Photo : retrait direct. Le pilote repasse en initiales
+                          et l'ancien fichier devient illisible. */}
+                      <Button
+                        label={t.moderation.removePhoto}
+                        variant="ghost"
+                        onPress={() => run(() => removePilotAvatar(r.reportedId!))}
                         disabled={busy}
                       />
                       {r.reportedSuspended ? (
