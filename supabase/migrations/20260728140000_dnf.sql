@@ -64,6 +64,13 @@ begin
   n := array_length(p_order, 1);
   if n is null or n < 2 then raise exception 'Il faut au moins 2 pilotes'; end if;
 
+  -- Doublon dans le classement : à deux pilotes, le self-join ne produit aucune
+  -- ligne → course marquée « terminée », zéro résultat, un pilote effacé de
+  -- l'histoire, et plus rejouable. À trois ou plus, erreur de contrainte brute.
+  if (select count(distinct o.id) from unnest(p_order) as o(id)) <> n then
+    raise exception 'Classement invalide (un pilote figure deux fois)';
+  end if;
+
   if (select count(*) from participations where race_id = p_race_id) <> n
      or exists (
        select 1 from unnest(p_order) as o(id)
@@ -106,6 +113,20 @@ begin
   -- incrémenté pour rien).
   if (select count(*) from unnest(coalesce(p_dnf, '{}'::uuid[]))) >= n then
     raise exception 'Il faut au moins un pilote à l''arrivée';
+  end if;
+
+  -- …et, dès que l'Elo est en jeu (au moins deux INSCRITS), au moins un inscrit
+  -- doit avoir fini. Le contrôle ci-dessus compte les participants fantômes
+  -- compris : sans celui-ci, deux inscrits pouvaient tous deux abandonner
+  -- derrière un invité, se retrouver ex æquo, et s'échanger des points.
+  if (select count(*) from participations pp
+      where pp.race_id = p_race_id and pp.profile_id is not null) >= 2
+     and not exists (
+       select 1 from participations pp
+       where pp.race_id = p_race_id and pp.profile_id is not null
+         and not (pp.id = any(coalesce(p_dnf, '{}'::uuid[])))
+     ) then
+    raise exception 'Il faut au moins un pilote inscrit à l''arrivée';
   end if;
 
   n_fin := n - (select count(distinct id) from unnest(coalesce(p_dnf, '{}'::uuid[])) as d(id)
@@ -416,6 +437,18 @@ end;
 $$;
 revoke all on function public.award_badges(uuid) from public, anon, authenticated;
 
+-- ── M5 : results n'est plus écrivable directement par un client ───────────
+-- Les policies INSERT/UPDATE datent d'avant le moteur serveur : plus aucun
+-- écran n'écrit dans `results` (l'app ne fait que lire), tout passe par des
+-- fonctions SECURITY DEFINER. Tant qu'elles existaient, un admin pouvait, via
+-- l'API, coller l'étiquette « Abandon » à n'importe qui après coup et gonfler
+-- son propre `elo_delta` : `profiles.elo` restait juste, mais la fiche de
+-- course et la somme nulle TELLES QUE VUES PAR LES PILOTES devenaient fausses.
+drop policy if exists results_insert_admin on public.results;
+drop policy if exists results_update_admin on public.results;
+revoke insert, update, delete on public.results from authenticated, anon;
+-- La lecture reste ouverte (policy results_select inchangée).
+
 -- ── A9 : saisie GROUPÉE des temps au tour ─────────────────────────────────
 -- L'admin d'une course de 8 pilotes devait ouvrir 8 fois le même champ. On
 -- accepte désormais tous les temps d'un coup. Mêmes règles qu'unitairement :
@@ -435,10 +468,16 @@ begin
   end if;
 
   for e in
+    -- `x ? 'ms'` distingue « effacer » (ms explicitement null) d'une clé
+    -- oubliée, qui effaçait le temps sans que personne l'ait demandé.
     select (x ->> 'participation_id')::uuid as pid,
-           nullif(x ->> 'ms', '')::int as ms
+           nullif(x ->> 'ms', '')::int as ms,
+           (x ? 'ms') as has_ms
     from jsonb_array_elements(coalesce(p_entries, '[]'::jsonb)) as x
   loop
+    if not e.has_ms then
+      raise exception 'Entrée invalide (temps manquant)';
+    end if;
     -- La participation doit appartenir à CETTE course : sans ce contrôle, un
     -- admin pourrait écrire les temps d'une course qui n'est pas la sienne.
     if not exists (select 1 from results res

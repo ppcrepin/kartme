@@ -97,11 +97,19 @@ begin
   perform tests.eq(tests.rows_as(B, 'select count(*) from circuits where id = ''c1111111-1111-1111-1111-111111111111'''), 1, 'B voit le circuit');
   perform tests.eq(tests.rows_as(B, 'select count(*) from ghost_profiles where id = ''91111111-1111-1111-1111-111111111111'''), 1, 'B voit le fantôme (Global)');
 
-  -- Résultats : seul l'admin de la course écrit le classement.
-  perform tests.expect_allowed(A,
+  -- Résultats : PERSONNE n'écrit directement, pas même l'admin. Le classement
+  -- ne s'obtient que par submit_race_results (SECURITY DEFINER), seul endroit
+  -- où l'Elo est calculé. Tant que l'admin pouvait écrire la table, il pouvait
+  -- gonfler son propre elo_delta ou coller « Abandon » à quelqu'un après coup :
+  -- profiles.elo restait juste, mais la fiche de course mentait aux pilotes.
+  perform tests.expect_denied(A,
     'insert into results (race_id, participation_id, position, elo_before, elo_after, elo_delta) values (''a1111111-1111-1111-1111-111111111111'', ''90000000-0000-0000-0000-000000000001'', 1, 1000, 1018, 18)');
   perform tests.expect_denied(B,
     'insert into results (race_id, participation_id, position, elo_before, elo_after, elo_delta) values (''a1111111-1111-1111-1111-111111111111'', ''90000000-0000-0000-0000-000000000001'', 1, 1000, 1500, 500)');
+  perform tests.expect_denied(A,
+    'update results set elo_delta = elo_delta + 500 where race_id = ''a1111111-1111-1111-1111-111111111111''');
+  perform tests.expect_denied(A,
+    'update results set dnf = true where race_id = ''a1111111-1111-1111-1111-111111111111''');
 
   -- Participants : seul l'admin les gère.
   perform tests.expect_denied(B,
