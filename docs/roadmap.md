@@ -279,6 +279,8 @@ Issu de **deux sources** : la comparaison front-end/UX avec l'app de Maggie (`pp
 - **`pg_cron`** doit être activé sur Supabase (Database → Extensions) pour que la purge à 90 jours tourne ; sans lui, `purge_notifications()` reste appelable à la main.
 - **Plancher Elo 100** : un duel contre un pilote au plancher peut laisser un léger résidu de somme (préexistant, amplifié en calibration) — rare, à documenter ou redistribuer un jour.
 - ~~**Fiche pilote publique** : n'affiche pas « En calibration »~~ → **corrigé** : `get_pilot` et `search_pilots` renvoient désormais `races`, la fiche affiche « En calibration » et masque la médaille de grade sous 5 courses.
+- **`get_leaderboard(null, …)` ne lève pas d'exception** (préexistant, prouvé par le vérificateur sur une base migrée jusqu'au 2026-07-13) : `p_scope not in (…)` vaut `NULL` sur une portée `NULL`, la garde ne se déclenche pas et l'on retombe silencieusement sur « amis ». Aucune fuite (on n'obtient que soi et ses amis) et le client n'envoie jamais `NULL` — dette de robustesse.
+- **Le classement ne filtre ni `suspended_at` ni `deleted_at`** (comportement depuis le lot 2.2, figé par un test en A7b) : un pilote suspendu, public, avec des courses, reste au classement. Sa photo n'est pas signable, donc l'écran montre ses initiales. **À arbitrer par le PO** : faut-il sortir les suspendus du classement ?
 - **`races_delete_admin`** : l'API permet à un admin de supprimer une course terminée (l'UI le cache) — un garde `status='upcoming'` serait sain.
 - Les invités figurent sur le podium avec l'étiquette « Invité » (sans delta) : comportement voulu — ils ont bien couru.
 
