@@ -9,7 +9,9 @@
 -- Les alias viennent des champs `alt_name`, `short_name`, `official_name`,
 -- `operator`, `brand`, `old_name` d'OpenStreetMap, et d'une petite liste tenue
 -- à la main pour ce qu'OSM ne porte pas (BRK). Ils ne s'affichent pas : ils
--- servent uniquement à être trouvé.
+-- servent uniquement à être trouvé. La récolte brute a été relue : en sont
+-- sortis « Enedis » (l'opérateur électrique, pas un nom de piste), « privé »
+-- (une étiquette d'accès égarée) et une liste de noms de virages.
 --
 -- IDEMPOTENT.
 
@@ -27,34 +29,30 @@ with a(nom, ville, alias) as (values
   ('Circuit Beausoleil', 'Laval', 'Circuit Louis Paillard'),
   ('Circuit Beltoise-Trappes', 'Trappes', 'BRK · Beltoise Racing Kart'),
   ('Circuit de Cabourg - Team Active', 'Cabourg', 'Team Active'),
-  ('Circuit de Karting de Brignoles', 'Brignoles', 'Ciricuit Jean Vial'),
+  ('Circuit de Karting de Brignoles', 'Brignoles', 'Circuit Jean Vial'),
   ('Circuit du Bugey', 'Château-Gaillard', 'Karting de Chateau-Gaillard'),
   ('Circuit du Périgord', 'Teyjat', 'Karting du Périgord'),
   ('Circuit International de Karting d''Aunay-les-Bois', 'Aunay-les-Bois', 'Circuit Karting Essay'),
   ('Circuit International de Lavelanet', 'Aigues-Vives', 'Circuit International Mathieu Vidal'),
   ('Circuit International de Saint-Amand', 'Colombiers', 'Circuit International de karting'),
   ('Energy Karting Saint-Cyr', 'Saint-Cyr', 'Energy Karting'),
-  ('Fun-Kart', 'Le Bar-sur-Loup', 'Enedis'),
   ('Kart 56', 'Ploemel', 'Karting de Ploemel'),
   ('Kartind du Nord Mayenne', 'Montreuil-Poulay', 'Karting du Fouteau'),
   ('Karting Circuit Paul Ricard', 'Le Castellet', 'KTT'),
   ('Karting de Crolles', 'Crolles', 'Chronokart'),
   ('Karting de Magescq', 'Magescq', 'Karting des Pins'),
   ('Karting de Marcillat en Combraille', 'Marcillat-en-Combraille', 'GTR Performance'),
-  ('Karting de Monteux', 'Monteux', 'privé'),
   ('Karting de Nakutakoin', 'Dumbéa', 'Kart Parc Pacific'),
   ('Karting de Pers', 'Le Rouget-Pers', 'Circuit le Lissartel'),
   ('Karting des 24h Le Mans', 'Le Mans', 'ACO · Virage Corvette'),
   ('Karting Meisenthal', 'Meisenthal', 'Club vosgien Soucht · WSV Karting'),
   ('Karting Sarron', 'Riom', 'Circuit Sarron'),
-  ('Karting Sud Toulois', 'Barisey-au-Plain', 'Enedis'),
   ('Karukera Karting Cup', 'Baie-Mahault', 'KKC'),
   ('Kpb 14', 'Marolles', 'Kpb14'),
   ('Les Amis de l''UFOLEP', 'Joué-lès-Tours', 'UFOLEP'),
   ('Méga Kart', 'Saint-Louis', 'Giga Kart'),
   ('Passion Karting 17', 'Saint-Jean-d''Angély', 'Angely Racing Kart'),
   ('Piste de karting', 'Le Creusot', 'Karting Évasion'),
-  ('Piste de Karting d''Anneville-Ambourville', 'Anneville-Ambourville', 'Castrol · Double gauche · Oméga · Virage de la ligne droite · Virage des stands · Virage du Bois · Virage du Stadium · Épingle du bas · Épingle du haut'),
   ('SpeedPark Conflans-Sainte-Honorine', 'Conflans-Sainte-Honorine', 'SpeedPark')
 )
 update public.circuits c
