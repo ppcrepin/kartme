@@ -67,6 +67,47 @@ export async function countOpenReports(): Promise<number> {
   return (data as number) ?? 0;
 }
 
+/** Signalement de circuit (karting manquant / fermé / fiche fausse). */
+export interface CircuitSuggestion {
+  id: string;
+  kind: 'manquant' | 'ferme' | 'erreur';
+  name: string;
+  city: string | null;
+  status: 'open' | 'done' | 'rejected';
+  createdAt: string;
+  authorName: string | null;
+  circuitId: string | null;
+  circuitName: string | null;
+}
+
+type RawSuggestion = {
+  id: string; kind: CircuitSuggestion['kind']; name: string; city: string | null;
+  status: CircuitSuggestion['status']; created_at: string;
+  author_id: string; author_name: string | null;
+  circuit_id: string | null; circuit_name: string | null;
+};
+
+export async function listCircuitSuggestions(onlyOpen = true): Promise<CircuitSuggestion[]> {
+  const { data, error } = await supabase.rpc('list_circuit_suggestions', { p_only_open: onlyOpen });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as RawSuggestion[]).map((r) => ({
+    id: r.id,
+    kind: r.kind,
+    name: r.name,
+    city: r.city,
+    status: r.status,
+    createdAt: r.created_at,
+    authorName: r.author_name,
+    circuitId: r.circuit_id,
+    circuitName: r.circuit_name,
+  }));
+}
+
+export async function resolveCircuitSuggestion(id: string, done: boolean): Promise<void> {
+  const { error } = await supabase.rpc('resolve_circuit_suggestion', { p_id: id, p_done: done });
+  if (error) throw new Error(error.message);
+}
+
 export async function resolveReport(reportId: string, status: ReportStatus): Promise<void> {
   const { error } = await supabase.rpc('moderate_resolve', { p_report_id: reportId, p_status: status });
   if (error) throw new Error(error.message);

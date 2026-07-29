@@ -109,6 +109,29 @@ export async function allCircuitsOnMap(center: { lat: number; lon: number }): Pr
   return nearbyCircuits(center.lat, center.lon, { limit: 5000, maxKm: 20_000 });
 }
 
+/** Signalement de circuit : manquant, fermé, ou fiche fausse. */
+export type CircuitReportKind = 'manquant' | 'ferme' | 'erreur';
+
+/**
+ * Signale un karting au référentiel. Le serveur pose l'auteur, filtre les
+ * mots, plafonne à 5/heure et refuse le doublon encore ouvert — les messages
+ * d'erreur qui remontent sont écrits pour être montrés tels quels.
+ */
+export async function suggestCircuit(
+  kind: CircuitReportKind,
+  name: string,
+  city: string | null,
+  circuitId: string | null,
+): Promise<void> {
+  const { error } = await supabase.rpc('suggest_circuit', {
+    p_kind: kind,
+    p_name: name.trim(),
+    p_city: city?.trim() || null,
+    p_circuit_id: circuitId,
+  });
+  if (error) throw new Error(error.message);
+}
+
 /** Un circuit par son identifiant (arrivée depuis la carte, lien partagé). */
 export async function getCircuit(id: string): Promise<Circuit | null> {
   const { data, error } = await supabase

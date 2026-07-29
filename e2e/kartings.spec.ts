@@ -47,6 +47,7 @@ async function ouvrirKartings(page: Page) {
     const json = (body: unknown) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
     if (url.includes('/rest/v1/rpc/nearby_circuits')) return json(CIRCUITS);
+    if (url.includes('/rest/v1/rpc/suggest_circuit')) return json('00000000-0000-0000-0000-000000000001');
     if (url.includes('/rest/v1/profiles')) return json({ id: '11111111-1111-1111-1111-111111111111', deleted_at: null });
     if (url.includes('/auth/v1/user')) return json({ id: '11111111-1111-1111-1111-111111111111' });
     return json([]);
@@ -107,6 +108,36 @@ test.describe('Onglet Kartings', () => {
     await expect(page.locator('.leaflet-container')).toHaveCount(0);
     await page.getByText('Carte', { exact: true }).click();
     await expect(page.locator('.leaflet-container')).toBeVisible();
+  });
+
+  test('signaler un karting manquant : le parcours aboutit', async ({ page }) => {
+    await ouvrirKartings(page);
+    const lien = page.getByText('Un karting manque ou a fermé ? Signale-le', { exact: true });
+    await lien.scrollIntoViewIfNeeded();
+    await lien.click();
+
+    await expect(page.getByText('Signaler un karting', { exact: true })).toBeVisible();
+    await page.getByPlaceholder('Ex. : Karting du Bocage').fill('Karting du Bocage');
+    await page.getByPlaceholder('Ex. : Vire').fill('Vire');
+    await page.getByText('Envoyer le signalement', { exact: true }).click();
+    await expect(page.getByText(/Merci ! Un modérateur va regarder/)).toBeVisible();
+  });
+
+  test('signaler une fiche fausse depuis un circuit sélectionné', async ({ page }) => {
+    await ouvrirKartings(page);
+    // Sélection par la liste (les épingles sont trop petites pour un tap fiable).
+    await page.getByText('Kart Racer', { exact: true }).click();
+    const lien = page.getByText('Signaler un problème sur cette fiche', { exact: true });
+    await lien.scrollIntoViewIfNeeded();
+    await lien.click();
+
+    // La cible est affichée, le nom prérempli, et « il manque » n'est pas
+    // proposé — la fiche existe.
+    await expect(page.getByText('Fiche concernée', { exact: true })).toBeVisible();
+    await expect(page.getByText('Il manque', { exact: true })).toHaveCount(0);
+    await page.getByText('Le nom ou la ville sont faux', { exact: true }).click();
+    await page.getByText('Envoyer le signalement', { exact: true }).click();
+    await expect(page.getByText(/Merci ! Un modérateur va regarder/)).toBeVisible();
   });
 
   test('la recherche trouve par nom, par ville et par sigle', async ({ page }) => {

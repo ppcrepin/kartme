@@ -241,6 +241,16 @@ export default function KartingsScreen() {
               }
             />
           </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              router.push({
+                pathname: '/circuit-report',
+                params: { circuitId: selected.id, circuitName: selected.name },
+              })
+            }>
+            <Muted style={styles.reportLink}>{t.races.reportCircuitFor}</Muted>
+          </Pressable>
         </Card>
       ) : null}
 
@@ -264,6 +274,11 @@ export default function KartingsScreen() {
             ) : null}
           </Pressable>
         ))}
+        {/* Le référentiel vient d'OpenStreetMap : incomplet par nature, et il
+            vieillit. Les pilotes savent — ce lien est leur canal. */}
+        <Pressable accessibilityRole="button" onPress={() => router.push('/circuit-report')}>
+          <Body style={styles.reportBtn}>{t.races.reportCircuitLink}</Body>
+        </Pressable>
         {/* Attribution ODbL : elle figure aussi dans le coin de la carte, mais
             la carte peut être remplacée par la liste sur un petit écran. */}
         <Muted style={styles.attrib}>{t.races.mapAttribution}</Muted>
@@ -295,5 +310,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.sharp, backgroundColor: colors.surface },
   km: { fontVariant: ['tabular-nums'] },
   flex: { flex: 1, gap: 2 },
-  attrib: { marginTop: spacing.lg, fontSize: 11 },
+  reportLink: { marginTop: spacing.sm, color: colors.accent, fontWeight: '700' },
+  reportBtn: { marginTop: spacing.lg, color: colors.accent, fontWeight: '700' },
+  attrib: { marginTop: spacing.md, fontSize: 11 },
 });

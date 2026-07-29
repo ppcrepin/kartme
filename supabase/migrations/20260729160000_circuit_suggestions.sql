@@ -114,7 +114,12 @@ begin
               when 'ferme'    then 'Karting fermé'
               else 'Fiche à corriger'
             end;
-  perform public.enqueue_push('circuit_suggestion', p.id,
+  -- Type 'report', PAS un type inédit : l'Edge Function d'envoi ne connaît
+  -- que quatre types et REJETTE les autres — un type 'circuit_suggestion'
+  -- aurait rempli la cloche mais jamais déclenché de push, en silence. Et
+  -- c'est sémantiquement juste : comme un signalement, cette notification de
+  -- modération est toujours envoyée, sans interrupteur de préférence.
+  perform public.enqueue_push('report', p.id,
       'Référentiel à mettre à jour 🏁',
       v_quoi || ' : ' || new.name || coalesce(' (' || new.city || ')', '') || '.',
       'settings/moderation',
@@ -157,8 +162,10 @@ begin
   end if;
 
   insert into public.circuit_suggestions (author_id, kind, name, city, circuit_id)
-  values (auth.uid(), p_kind, p_name,
-          case when p_kind = 'manquant' then p_city else p_city end,
+  values (auth.uid(), p_kind, p_name, p_city,
+          -- Le CHECK `suggestion_cible` exige qu'un « manquant » n'ait pas de
+          -- cible : on neutralise plutôt que de rejeter un appel bien
+          -- intentionné où le client aurait laissé traîner l'identifiant.
           case when p_kind = 'manquant' then null else p_circuit_id end)
   returning id into v_id;
   return v_id;
@@ -203,7 +210,49 @@ revoke all on function public.resolve_circuit_suggestion(uuid, boolean) from pub
 grant execute on function public.resolve_circuit_suggestion(uuid, boolean) to authenticated;
 
 -- ═══ 5. RGPD ══════════════════════════════════════════════════════════════
--- La suppression de compte efface l'auteur par cascade (`on delete cascade`),
--- donc le signalement part avec lui. C'est voulu : il porte un pseudo et une
--- démarche personnelle. Le circuit créé à partir de lui, s'il l'a été, reste —
--- il n'appartient à personne.
+-- Le `on delete cascade` du schéma ne suffit PAS : delete_my_account ANONYMISE
+-- le profil sans supprimer la ligne (l'Elo des autres en dépend), donc la
+-- cascade ne se déclenche jamais — c'est le test qui l'a montré, six
+-- signalements survivaient à la suppression du compte. La purge doit être
+-- explicite. Reprise FIDÈLE de la fonction du lot A7 (avatars) + une ligne.
+create or replace function public.delete_my_account()
+returns void
+language plpgsql security definer set search_path = public
+as $$
+declare uid uuid := auth.uid();
+begin
+  if uid is null then raise exception 'Non authentifié'; end if;
+
+  update public.profiles
+    set username = 'Joueur supprimé', is_private = true, deleted_at = now()
+    where id = uid and deleted_at is null;
+  -- Hors de l'UPDATE conditionnel : au deuxième appel, `deleted_at` n'est plus
+  -- nul et la clause excluait la ligne — une photo reposée entre-temps (le
+  -- jeton reste valide un moment) n'était alors plus jamais effacée.
+  update public.profiles set avatar_path = null where id = uid;
+
+  delete from public.friendships where requester_id = uid or addressee_id = uid;
+  delete from public.blocks where blocker_id = uid or blocked_id = uid;
+  delete from public.push_subscriptions where profile_id = uid;
+  delete from public.notification_preferences where profile_id = uid;
+  delete from public.notifications where profile_id = uid or actor_id = uid;
+  delete from public.reports where reporter_id = uid;
+  delete from public.user_badges where profile_id = uid;
+  -- Un signalement de circuit porte le pseudo et une démarche personnelle :
+  -- il part avec le compte. Le circuit créé à partir de lui, s'il l'a été,
+  -- reste — il n'appartient à personne.
+  delete from public.circuit_suggestions where author_id = uid;
+
+  begin
+    delete from auth.identities where user_id = uid;
+    update auth.users
+      set email = 'deleted+' || uid::text || '@kartsquad.invalid',
+          encrypted_password = null,
+          raw_user_meta_data = '{}'::jsonb
+      where id = uid;
+  exception when others then
+    raise warning 'delete_my_account : nettoyage de l''identité auth impossible pour % (%). deleted_at fait foi ; vérifier les droits sur le schéma auth.', uid, sqlerrm;
+  end;
+end $$;
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;

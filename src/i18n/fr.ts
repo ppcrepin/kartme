@@ -97,6 +97,27 @@ export const fr = {
     mapNone: 'Aucun karting ne correspond.',
     mapViewMap: 'Carte',
     mapViewList: 'Liste',
+    // Signalement de circuit (demande PO 2026-07-29) : le référentiel vient
+    // d'OpenStreetMap, il est incomplet par nature et il vieillit. Les
+    // pilotes, eux, savent.
+    reportCircuitLink: 'Un karting manque ou a fermé ? Signale-le',
+    reportCircuitFor: 'Signaler un problème sur cette fiche',
+    reportTitle: 'Signaler un karting',
+    reportKindLabel: 'Que signales-tu ?',
+    reportKinds: {
+      manquant: 'Il manque',
+      ferme: 'Il a fermé',
+      erreur: 'Le nom ou la ville sont faux',
+    } as Record<string, string>,
+    reportName: 'Nom du karting',
+    reportNamePh: 'Ex. : Karting du Bocage',
+    reportCity: 'Ville (ou la plus proche)',
+    reportCityPh: 'Ex. : Vire',
+    reportTarget: 'Fiche concernée',
+    reportSend: 'Envoyer le signalement',
+    reportDone: 'Merci ! Un modérateur va regarder. Le référentiel profite à tous les pilotes.',
+    reportNeedName: 'Indique au moins le nom du karting.',
+    reportBack: 'Retour à la carte',
     circuitTruncated: '%n circuits affichés sur %t — précise ta recherche (nom ou ville).',
     circuitNearTitle: 'Autour de toi',
     circuitLocating: 'Recherche de ta position…',
@@ -405,6 +426,17 @@ export const fr = {
     empty: 'Aucun signalement.',
     by: 'Signalé par',
     unknownPilot: 'Pilote inconnu',
+    // Section « référentiel des circuits » de la boîte de modération.
+    circuitsTitle: 'Circuits signalés',
+    circuitsEmpty: 'Aucun circuit signalé.',
+    circuitKinds: {
+      manquant: 'Manquant',
+      ferme: 'Fermé',
+      erreur: 'Fiche à corriger',
+    } as Record<string, string>,
+    circuitDone: 'Traité',
+    circuitReject: 'Écarter',
+    circuitTargetGone: 'fiche supprimée depuis',
     suspendedTag: 'suspendu',
     categories: {
       comportement: 'Comportement',

@@ -9,10 +9,13 @@ import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import {
   deleteReportedRace,
+  listCircuitSuggestions,
   listReports,
   renamePilot,
+  resolveCircuitSuggestion,
   resolveReport,
   suspendPilot,
+  type CircuitSuggestion,
   type Report,
   removePilotAvatar,
 } from '@/lib/moderation';
@@ -31,11 +34,14 @@ export default function ModerationScreen() {
   const [confirmSuspend, setConfirmSuspend] = useState<string | null>(null);
   const [confirmPhoto, setConfirmPhoto] = useState<string | null>(null);
   const [avatarUrls, setAvatarUrls] = useState<Map<string, string>>(new Map());
+  const [suggestions, setSuggestions] = useState<CircuitSuggestion[]>([]);
 
   const refresh = useCallback(async () => {
     try {
       const rows = await listReports(onlyOpen);
       setReports(rows);
+      // La file des circuits suit le même filtre « À traiter / Tous ».
+      setSuggestions(await listCircuitSuggestions(onlyOpen));
       setError(null);
       // UN seul appel de signature pour toute la liste — c'est le cas d'usage
       // pour lequel `signedAvatarUrls` prend un tableau.
@@ -280,6 +286,50 @@ export default function ModerationScreen() {
             </Card>
           ))
         )}
+      
+        {/* ── Référentiel des circuits : kartings manquants / fermés / faux ── */}
+        <Label style={styles.circuitsTitle}>{t.moderation.circuitsTitle}</Label>
+        {suggestions.length === 0 ? (
+          <Muted style={styles.empty}>{t.moderation.circuitsEmpty}</Muted>
+        ) : (
+          suggestions.map((sg) => (
+            <Card key={sg.id} style={sg.status !== 'open' ? styles.cardDone : undefined}>
+              <View style={styles.rowTop}>
+                <Label>{t.moderation.circuitKinds[sg.kind]}</Label>
+                <Muted>{new Date(sg.createdAt).toLocaleDateString('fr-FR')}</Muted>
+              </View>
+              <Body style={styles.msg}>
+                {sg.name}
+                {sg.city ? ` (${sg.city})` : ''}
+              </Body>
+              {/* Pour une correction, la fiche visée — si elle existe encore. */}
+              {sg.kind !== 'manquant' ? (
+                <Muted style={styles.meta}>
+                  {t.races.reportTarget} : {sg.circuitName ?? t.moderation.circuitTargetGone}
+                </Muted>
+              ) : null}
+              <Muted style={styles.meta}>
+                {t.moderation.by} {sg.authorName ?? '—'}
+              </Muted>
+              {sg.status === 'open' ? (
+                <View style={styles.resolveRow}>
+                  <Button
+                    label={t.moderation.circuitDone}
+                    variant="ghost"
+                    onPress={() => run(() => resolveCircuitSuggestion(sg.id, true))}
+                    disabled={busy}
+                  />
+                  <Button
+                    label={t.moderation.circuitReject}
+                    variant="ghost"
+                    onPress={() => run(() => resolveCircuitSuggestion(sg.id, false))}
+                    disabled={busy}
+                  />
+                </View>
+              ) : null}
+            </Card>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -301,6 +351,7 @@ const styles = StyleSheet.create({
   msg: { marginTop: spacing.xs, fontStyle: 'italic' },
   renameBox: { marginTop: spacing.sm, gap: spacing.sm },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm, alignItems: 'center' },
+  circuitsTitle: { marginTop: spacing.lg },
   deleteLink: { color: colors.accent, marginTop: spacing.sm, textDecorationLine: 'underline' },
   resolveRow: {
     flexDirection: 'row',
