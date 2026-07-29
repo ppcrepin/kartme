@@ -45,6 +45,11 @@ export default function KartingsScreen() {
   const [geoError, setGeoError] = useState<GeoErrorCode | null>(null);
   const [selected, setSelected] = useState<Circuit | null>(null);
   const [query, setQuery] = useState('');
+  // Carte ou liste. Une carte occupe l'écran ET capte le balayage — sur
+  // téléphone, on se retrouvait prisonnier d'elle, sans moyen d'atteindre la
+  // suite de la page. Pouvoir la replier n'est pas un confort, c'est la
+  // sortie de secours.
+  const [vue, setVue] = useState<'carte' | 'liste'>('carte');
   // Garde de MONTAGE : ne pas écrire dans l'état d'un écran démonté. À ne pas
   // confondre avec le focus — une réponse partie avant un changement d'onglet
   // et revenue après doit encore pouvoir s'afficher.
@@ -109,9 +114,11 @@ export default function KartingsScreen() {
       ? t.races.circuitGeoDenied
       : geoError === 'unsupported'
         ? t.races.circuitGeoUnsupported
-        : geoError
-          ? t.races.circuitGeoUnavailable
-          : null;
+        : geoError === 'timeout'
+          ? t.races.circuitGeoTimeout
+          : geoError
+            ? t.races.circuitGeoUnavailable
+            : null;
 
   // Recherche : sans elle, seuls les 12 premiers kartings sont atteignables
   // autrement qu'en pointant sur la carte — donc rien pour qui navigue au
@@ -144,6 +151,35 @@ export default function KartingsScreen() {
       </View>
       {geoMessage ? <Muted style={styles.geoErr}>{geoMessage}</Muted> : null}
 
+      {/* La recherche est AU-DESSUS de la carte : sous elle, elle se trouvait
+          hors de l'écran sur un téléphone, et le seul moyen d'y accéder aurait
+          été de faire défiler… en balayant la carte, qui se déplace. */}
+      <Field
+        label={t.races.mapSearch}
+        placeholder={t.races.mapSearch}
+        value={query}
+        onChangeText={setQuery}
+        autoCapitalize="words"
+      />
+
+      <View style={styles.segment}>
+        {(['carte', 'liste'] as const).map((v) => (
+          <Pressable
+            key={v}
+            accessibilityRole="button"
+            accessibilityState={{ selected: vue === v }}
+            onPress={() => setVue(v)}
+            style={[styles.segItem, vue === v && styles.segItemOn]}>
+            <Body style={vue === v ? styles.segTxtOn : styles.segTxt}>
+              {v === 'carte' ? t.races.mapViewMap : t.races.mapViewList}
+            </Body>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Chercher un nom, c'est vouloir la liste : on efface la carte sans
+          toucher au choix du pilote, qui la retrouve en effaçant sa saisie. */}
+      {vue === 'carte' && !query ? (
       <View style={styles.mapBox}>
         {loading ? (
           <View style={styles.center}>
@@ -164,6 +200,7 @@ export default function KartingsScreen() {
           />
         )}
       </View>
+      ) : null}
 
       {selected ? (
         <Card>
@@ -191,14 +228,10 @@ export default function KartingsScreen() {
         </Card>
       ) : null}
 
-      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-        <Field
-          label={t.races.mapSearch}
-          placeholder={t.races.mapSearch}
-          value={query}
-          onChangeText={setQuery}
-          autoCapitalize="words"
-        />
+      <ScrollView
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
         {/* « Autour de toi » serait un mensonge sans position : le tri part
             alors du centre de la France. */}
         <Label>{query ? t.races.mapTitle : me ? t.races.circuitNearTitle : t.races.mapNoPos}</Label>
@@ -231,7 +264,14 @@ const styles = StyleSheet.create({
   locate: { marginLeft: 'auto', paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderRadius: radius.sharp, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
   locateTxt: { color: colors.accent, fontWeight: '700' },
   geoErr: { marginTop: spacing.xs },
-  mapBox: { height: 320, marginTop: spacing.sm, borderRadius: radius.card, overflow: 'hidden', borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
+  segment: { flexDirection: 'row', gap: 1, borderRadius: radius.sharp, overflow: 'hidden', alignSelf: 'flex-start' },
+  segItem: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md, backgroundColor: colors.surface },
+  segItemOn: { backgroundColor: colors.accent },
+  segTxt: { color: colors.inkDim },
+  segTxtOn: { color: '#fff', fontWeight: '700' },
+  // 260 px : assez pour situer, assez peu pour laisser voir la liste dessous
+  // et comprendre qu'il y a autre chose à atteindre.
+  mapBox: { height: 260, borderRadius: radius.card, overflow: 'hidden', borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   sel: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   selName: { fontWeight: '700' },

@@ -46,7 +46,12 @@ export function currentPosition(): Promise<Position> {
           err?.code === 1 ? 'denied' : err?.code === 3 ? 'timeout' : 'unavailable';
         reject(new GeoError(code));
       },
-      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 5 * 60_000 },
+      // 45 s, pas 10 : le délai court PENDANT que la fenêtre d'autorisation
+      // est affichée. Sur iPhone, le temps de lire « Autoriser une fois /
+      // Pendant l'utilisation / Refuser » et de choisir dépassait largement
+      // dix secondes — on abandonnait donc en annonçant « position
+      // indisponible » alors que le pilote était en train d'accepter.
+      { enableHighAccuracy: false, timeout: 45_000, maximumAge: 5 * 60_000 },
     );
   });
 }

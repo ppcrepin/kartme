@@ -95,11 +95,16 @@ export const fr = {
     mapNoPos: 'Quelques kartings',
     mapSearch: 'Chercher un karting par nom ou par ville…',
     mapNone: 'Aucun karting ne correspond.',
+    mapViewMap: 'Carte',
+    mapViewList: 'Liste',
     circuitTruncated: '%n circuits affichés sur %t — précise ta recherche (nom ou ville).',
     circuitNearTitle: 'Autour de toi',
     circuitLocating: 'Recherche de ta position…',
     circuitNearEmpty: 'Aucun karting connu à moins de 150 km. Cherche par nom ou par ville.',
-    circuitGeoDenied: 'Position refusée. Tu peux l’autoriser dans les réglages de ton navigateur, ou chercher par nom.',
+    circuitGeoDenied:
+      'Position refusée. Sur iPhone : Réglages → Confidentialité → Service de localisation → Safari, puis dans Safari le bouton « aA » → Réglages du site → Position → Autoriser. Sinon, cherche par nom ci-dessous.',
+    circuitGeoTimeout:
+      'Pas de réponse à la demande de position. Réessaie — et laisse la fenêtre d’autorisation ouverte le temps de choisir.',
     circuitGeoUnavailable: 'Position indisponible pour le moment. Cherche par nom ou par ville.',
     circuitGeoUnsupported: 'Ton navigateur ne sait pas donner ta position. Cherche par nom ou par ville.',
     date: 'Date',

@@ -191,9 +191,11 @@ export function CircuitPicker({
       ? t.races.circuitGeoDenied
       : geoError === 'unsupported'
         ? t.races.circuitGeoUnsupported
-        : geoError
-          ? t.races.circuitGeoUnavailable
-          : null;
+        : geoError === 'timeout'
+          ? t.races.circuitGeoTimeout
+          : geoError
+            ? t.races.circuitGeoUnavailable
+            : null;
 
   return (
     <View style={styles.wrap}>
