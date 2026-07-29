@@ -118,6 +118,16 @@ test.describe('Onglet Kartings', () => {
     await expect(page.getByText(/Merci ! Un modérateur va regarder/)).toBeVisible();
   });
 
+  test('la recherche fait passer la fiche sélectionnée derrière', async ({ page }) => {
+    await ouvrirKartings(page);
+    await page.getByText('Kart Racer', { exact: true }).click();
+    await expect(page.getByText('Créer une course ici', { exact: true })).toBeVisible();
+    // On tape une recherche : la fiche s'efface, les résultats d'abord.
+    await page.getByPlaceholder('Chercher un karting par nom ou par ville…').fill('Nantes');
+    await expect(page.getByText('Créer une course ici', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Le Karting', { exact: true })).toBeVisible();
+  });
+
   test('« Tes circuits » ouvre la liste (décision PO)', async ({ page }) => {
     await ouvrirKartings(page);
     await expect(page.getByText('Tes circuits', { exact: true })).toBeVisible({ timeout: 15_000 });

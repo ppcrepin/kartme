@@ -244,7 +244,10 @@ export function CircuitsExplorer({
         </View>
       ) : null}
 
-      {extra}
+      {/* Chercher, c'est passer à autre chose : la fiche du circuit
+          sélectionné s'efface pendant la saisie — les résultats d'abord.
+          Elle revient telle quelle si on efface la recherche. */}
+      {query ? null : extra}
 
       <View style={styles.list}>
         {!query && recents.length > 0 ? (
