@@ -1,16 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { Field } from '@/components/ui';
 import { Body, Label, Muted } from '@/components/ui/text';
 import { colors, radius, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
-import { listRecentCircuits, searchCircuits, type Circuit } from '@/lib/races';
+import {
+  currentPosition,
+  formatKm,
+  GeoError,
+  kmBetween,
+  type GeoErrorCode,
+  type Position,
+} from '@/lib/geo';
+import {
+  listRecentCircuits,
+  nearbyCircuits,
+  searchCircuits,
+  type Circuit,
+} from '@/lib/races';
 
 /**
  * Sélecteur de circuit — référentiel MAÎTRISÉ (pas d'ajout libre, décision PO :
  * évite les doublons). « Tes circuits » (pistes déjà courues) proposés d'emblée ;
  * recherche tolérante (accents/casse) sur le nom ET la ville, côté serveur.
+ *
+ * « Près de moi » (A12a) : le référentiel importé compte des centaines de
+ * kartings, où une liste alphabétique ne veut plus rien dire. La position
+ * n'est demandée QUE sur un geste explicite du pilote — une fenêtre de
+ * permission qui surgit sans raison se solde par un refus, et sur iOS un
+ * refus ne se redemande pas.
  */
 export function CircuitPicker({
   value,
@@ -26,6 +45,19 @@ export function CircuitPicker({
   // Saisie à laquelle correspondent les résultats : pas de « Aucun circuit »
   // périmé pendant l'anti-rebond.
   const [resultsFor, setResultsFor] = useState<string | null>(null);
+  const [near, setNear] = useState<Circuit[] | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [geoError, setGeoError] = useState<GeoErrorCode | null>(null);
+  // Position gardée en mémoire vive uniquement : elle sert à afficher une
+  // distance à côté des résultats de recherche, jamais à autre chose.
+  const [me, setMe] = useState<Position | null>(null);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
 
   // « Tes circuits » : chargés une fois (l'historique ne bouge pas pendant la saisie).
   useEffect(() => {
@@ -65,6 +97,26 @@ export function CircuitPicker({
     };
   }, [query, value]);
 
+  async function onNear() {
+    setLocating(true);
+    setGeoError(null);
+    try {
+      const pos = await currentPosition();
+      const rows = await nearbyCircuits(pos.lat, pos.lon);
+      if (!alive.current) return;
+      setMe(pos);
+      setNear(rows);
+    } catch (e) {
+      if (!alive.current) return;
+      // Une panne réseau n'est pas un refus de position : ne pas accuser le
+      // pilote d'avoir refusé quand c'est le serveur qui n'a pas répondu.
+      setGeoError(e instanceof GeoError ? e.code : 'unavailable');
+      setNear(null);
+    } finally {
+      if (alive.current) setLocating(false);
+    }
+  }
+
   if (value) {
     return (
       <View style={styles.selected}>
@@ -81,18 +133,43 @@ export function CircuitPicker({
   }
 
   const searching = query.trim().length > 0;
+  const nearIds = new Set((near ?? []).map((c) => c.id));
   // Hors recherche, on retire des suggestions générales les circuits déjà
-  // proposés dans « Tes circuits » (pas de doublon visuel).
+  // proposés au-dessus (pas de doublon visuel).
   const generalResults = searching
     ? results
-    : results.filter((c) => !recents.some((r) => r.id === c.id));
+    : results.filter((c) => !recents.some((r) => r.id === c.id) && !nearIds.has(c.id));
 
-  const Row = ({ c }: { c: Circuit }) => (
-    <Pressable key={c.id} style={styles.row} onPress={() => onChange(c)} accessibilityRole="button">
-      <Body>{c.name}</Body>
-      {c.city ? <Muted>{c.city}</Muted> : null}
-    </Pressable>
-  );
+  /** Distance affichable : celle du serveur, sinon calculée depuis ma position. */
+  const distanceOf = (c: Circuit): string => {
+    if (typeof c.km === 'number') return formatKm(c.km);
+    if (me && c.lat !== null && c.lon !== null) {
+      return formatKm(kmBetween(me, { lat: c.lat, lon: c.lon }));
+    }
+    return '';
+  };
+
+  const Row = ({ c }: { c: Circuit }) => {
+    const km = distanceOf(c);
+    return (
+      <Pressable style={styles.row} onPress={() => onChange(c)} accessibilityRole="button">
+        <View style={styles.flex}>
+          <Body>{c.name}</Body>
+          {c.city ? <Muted>{c.city}</Muted> : null}
+        </View>
+        {km ? <Muted style={styles.km}>{km}</Muted> : null}
+      </Pressable>
+    );
+  };
+
+  const geoMessage =
+    geoError === 'denied'
+      ? t.races.circuitGeoDenied
+      : geoError === 'unsupported'
+        ? t.races.circuitGeoUnsupported
+        : geoError
+          ? t.races.circuitGeoUnavailable
+          : null;
 
   return (
     <View style={styles.wrap}>
@@ -103,8 +180,35 @@ export function CircuitPicker({
         onChangeText={setQuery}
         autoCapitalize="words"
       />
+
+      {/* Le bouton disparaît une fois la position obtenue : il n'a plus rien
+          à apporter, et la section « Autour de toi » le remplace. */}
+      {!near ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onNear}
+          disabled={locating}
+          style={styles.nearBtn}>
+          <Body style={styles.nearBtnTxt}>
+            {locating ? t.races.circuitLocating : `📍 ${t.races.circuitNear}`}
+          </Body>
+        </Pressable>
+      ) : null}
+      {geoMessage ? <Muted style={styles.geoErr}>{geoMessage}</Muted> : null}
+
       <View style={styles.list}>
         {loading ? <ActivityIndicator color={colors.accent} /> : null}
+
+        {!searching && near ? (
+          <>
+            <Label style={styles.sectionLabel}>{t.races.circuitNearTitle}</Label>
+            {near.length === 0 ? (
+              <Muted style={styles.empty}>{t.races.circuitNearEmpty}</Muted>
+            ) : (
+              near.map((c) => <Row key={c.id} c={c} />)
+            )}
+          </>
+        ) : null}
 
         {!searching && recents.length > 0 ? (
           <>
@@ -112,10 +216,11 @@ export function CircuitPicker({
             {recents.map((c) => (
               <Row key={c.id} c={c} />
             ))}
-            {generalResults.length > 0 ? (
-              <Label style={styles.sectionLabel}>{t.races.circuitAll}</Label>
-            ) : null}
           </>
+        ) : null}
+
+        {!searching && generalResults.length > 0 && (recents.length > 0 || near) ? (
+          <Label style={styles.sectionLabel}>{t.races.circuitAll}</Label>
         ) : null}
 
         {generalResults.map((c) => (
@@ -134,7 +239,11 @@ const styles = StyleSheet.create({
   wrap: { gap: spacing.sm },
   list: { gap: 1 },
   sectionLabel: { marginTop: spacing.sm, marginBottom: spacing.xs },
-  row: { paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.sharp, backgroundColor: colors.surface },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.sharp, backgroundColor: colors.surface },
+  km: { fontVariant: ['tabular-nums'] },
+  nearBtn: { alignSelf: 'flex-start', paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderRadius: radius.sharp, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
+  nearBtnTxt: { color: colors.accent, fontWeight: '700' },
+  geoErr: { marginTop: -spacing.xs },
   empty: { paddingVertical: spacing.sm, paddingHorizontal: spacing.sm },
   selected: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderColor: colors.line, borderWidth: 1, borderRadius: radius.card, padding: spacing.md },
   selectedName: { fontWeight: '700' },

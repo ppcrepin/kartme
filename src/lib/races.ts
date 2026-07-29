@@ -12,6 +12,11 @@ export interface Circuit {
   name: string;
   city: string | null;
   is_official: boolean;
+  /** Coordonnées du karting. `null` tant qu'il n'est pas géocodé (les deux ou aucune). */
+  lat: number | null;
+  lon: number | null;
+  /** Distance depuis ma position, en km — renseignée par `nearbyCircuits` seulement. */
+  km?: number;
 }
 
 // 'locked' = grille figée (invitations clôturées), en attente de la saisie.
@@ -56,6 +61,22 @@ export interface Participant {
 /** Recherche tolérante (accents/casse) sur le nom ET la ville. Vide → top 20. */
 export async function searchCircuits(query: string): Promise<Circuit[]> {
   const { data, error } = await supabase.rpc('search_circuits', { q: query.trim() });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Circuit[];
+}
+
+/**
+ * Les circuits les plus proches d'une position, du plus proche au plus loin.
+ *
+ * La position est ARRONDIE avant l'envoi : au centième de degré, soit environ
+ * un kilomètre. Cela ne change pas l'ordre des kartings et évite de confier au
+ * serveur une position au mètre près dont il n'a aucun usage.
+ */
+export async function nearbyCircuits(lat: number, lon: number): Promise<Circuit[]> {
+  const { data, error } = await supabase.rpc('nearby_circuits', {
+    p_lat: Math.round(lat * 100) / 100,
+    p_lon: Math.round(lon * 100) / 100,
+  });
   if (error) throw new Error(error.message);
   return (data ?? []) as Circuit[];
 }

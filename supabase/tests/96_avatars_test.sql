@@ -327,17 +327,15 @@ begin
                    'pilote qui m''a bloqué : hors classement');
   delete from blocks where blocker_id = B and blocked_id = A;
 
-  -- Suspendu : le classement ne l'a JAMAIS filtré (comportement du lot 2.2,
-  -- inchangé ici). On fige donc l'état réel — la ligne sort, le chemin aussi,
-  -- mais can_read_avatar refusera de le signer : l'écran montre les initiales.
-  -- Le jour où l'on voudra sortir les suspendus du classement, ce test dira
-  -- exactement ce qui change.
+  -- Suspendu : hors du classement depuis la décision PO du 2026-07-29. Le
+  -- classement était le dernier écran où un pilote sanctionné restait en
+  -- vitrine (la fiche pilote et la recherche l'excluaient déjà).
   perform set_config('kartsquad.moderate_suspend', '1', true);
   update profiles set suspended_at = now() where id = B;
   perform set_config('kartsquad.moderate_suspend', '', true);
   perform tests.as_uid(A);
-  perform tests.eq((select count(*) from get_leaderboard('global') where profile_id = B), 1,
-                   'suspendu : encore au classement (comportement historique)');
+  perform tests.eq((select count(*) from get_leaderboard('global') where profile_id = B), 0,
+                   'suspendu : hors du classement');
   if public.can_read_avatar(B::text || '/photo3.jpg') then
     raise exception 'ÉCHEC : la photo d''un suspendu serait signée';
   end if;
