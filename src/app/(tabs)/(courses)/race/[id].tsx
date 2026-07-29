@@ -1066,7 +1066,7 @@ const styles = StyleSheet.create({
   friendChipTxt: { fontSize: 13, fontWeight: '700' },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   posNumDnf: { fontSize: 11, fontWeight: '800', color: colors.inkDim2 },
-  posNum: { fontFamily: fonts.serifBlack, fontSize: 18, width: 22, textAlign: 'center', color: colors.ink },
+  posNum: { fontFamily: fonts.serifBlack, fontSize: 18, minWidth: 22, textAlign: 'center', color: colors.ink },
   delta: { fontWeight: '800' },
   cardOpen: { borderColor: colors.line2 },
   pairBox: {

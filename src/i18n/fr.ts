@@ -11,7 +11,9 @@ export const fr = {
   },
   tabs: {
     races: 'Courses',
-    rankings: 'Classements',
+    // Singulier : « Classements » déborde du libellé d'onglet sur iPhone
+    // (390 px → « Classem… »).
+    rankings: 'Classement',
     friends: 'Amis',
     tracks: 'Kartings',
     profile: 'Profil',
@@ -593,5 +595,10 @@ export const fr = {
     grades: 'Médaillons de grade',
     gauge: 'Jauge de progression',
     banners: 'Bandeaux d’état',
+  },
+  notFound: {
+    title: 'Page introuvable',
+    body: 'Cette adresse ne mène à aucun stand. Le lien est peut-être périmé ou mal recopié.',
+    home: 'Retour à l’accueil',
   },
 } as const;

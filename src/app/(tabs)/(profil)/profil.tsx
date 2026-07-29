@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   photoRow: { flexDirection: 'row', gap: spacing.md, marginTop: 2 },
   photoLink: { color: colors.accent, fontWeight: '700', fontSize: 12 },
   photoError: { color: states.err, fontSize: 12, marginTop: 2 },
-  historyPos: { fontFamily: fonts.serifBlack, fontSize: 18, width: 22, textAlign: 'center', color: colors.ink },
+  historyPos: { fontFamily: fonts.serifBlack, fontSize: 18, minWidth: 22, textAlign: 'center', color: colors.ink },
   historyPosDnf: { fontFamily: fonts.sans, fontSize: 10, fontWeight: '800', color: colors.inkDim2 },
   historyElo: { alignItems: 'flex-end' },
   historyDelta: { fontWeight: '800' },

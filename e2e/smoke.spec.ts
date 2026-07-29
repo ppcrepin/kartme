@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { reseauSimule, sceneActive, sessionSimulee } from './harness';
+import { reseauSimule, sceneActive, sessionSimulee, UID } from './harness';
 
 /**
  * Smoke test du shell : l'app démarre et les 5 onglets sont présents.
@@ -12,7 +12,7 @@ test('le shell affiche les 5 onglets', async ({ page }) => {
   await reseauSimule(page);
   await page.goto('/');
 
-  for (const label of ['Courses', 'Classements', 'Amis', 'Kartings', 'Profil']) {
+  for (const label of ['Courses', 'Classement', 'Amis', 'Kartings', 'Profil']) {
     await expect(page.getByText(label, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
   }
 });
@@ -43,7 +43,7 @@ test('la barre d’onglets reste visible sur un écran de détail', async ({ pag
   // fichier route égaré directement sous (tabs) deviendrait un 6e bouton.
   // Par RÔLE : la liste Kartings est montée sous la fiche dans la pile, et
   // son TITRE caché ferait trébucher un repérage par texte.
-  for (const label of ['Courses', 'Classements', 'Amis', 'Kartings', 'Profil']) {
+  for (const label of ['Courses', 'Classement', 'Amis', 'Kartings', 'Profil']) {
     await expect(page.getByRole('tab', { name: label })).toBeVisible();
   }
   await expect(page.getByRole('tab')).toHaveCount(5);
@@ -52,5 +52,41 @@ test('la barre d’onglets reste visible sur un écran de détail', async ({ pag
   await page.getByRole('tab', { name: 'Courses' }).click();
   await expect(
     page.getByText('Créer une course', { exact: true }).and(sceneActive(page)).first(),
+  ).toBeVisible({ timeout: 20_000 });
+});
+
+test('une URL inconnue tombe sur la 404 maison, en français', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page);
+  await page.goto('/nimporte-quoi-404');
+
+  await expect(page.getByText('Page introuvable', { exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
+  await page.getByText('Retour à l’accueil', { exact: true }).click();
+  await expect(
+    page.getByText('Créer une course', { exact: true }).and(sceneActive(page)).first(),
+  ).toBeVisible({ timeout: 20_000 });
+});
+
+test('« ← » d’une sous-page Réglages en lien profond remonte au hub', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, {
+    // L'écran Compte lit un profil COMPLET (le défaut inerte du harnais n'a
+    // pas de username, et username.trim() planterait le rendu).
+    'rest/v1/profiles': {
+      id: UID, username: 'Moi', elo: 1234, is_private: false,
+      is_moderator: false, avatar_path: null, deleted_at: null,
+    },
+  });
+  // Arrivée directe (PWA relancée) : la pile des Réglages injecte son hub
+  // sous la sous-page — chaque « ← » remonte d'UN cran, sans sauter au Profil.
+  await page.goto('/settings/compte');
+  await expect(page.getByText('Compte', { exact: true }).and(sceneActive(page)).first()).toBeVisible(
+    { timeout: 20_000 },
+  );
+  await page.getByRole('button', { name: 'Retour' }).click();
+  await expect(
+    page.getByText('Réglages', { exact: true }).and(sceneActive(page)).first(),
   ).toBeVisible({ timeout: 20_000 });
 });

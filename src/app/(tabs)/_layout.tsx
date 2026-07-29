@@ -27,7 +27,11 @@ export default function TabsLayout() {
           backgroundColor: colors.bg,
           borderTopColor: colors.line,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
+        // 10 px : à 11 px, « Classement » (72 px) débordait des 68 px que le
+        // bouton d'onglet laisse au libellé sur un iPhone de 390 px —
+        // tronqué en « Classem… ». Le padding du bouton est codé en dur dans
+        // expo-router, la taille de police est le seul levier fiable.
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '700' },
       }}>
       <Tabs.Screen
         name="(courses)"

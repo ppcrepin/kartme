@@ -3,17 +3,21 @@ import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native'
 
 import { colors, fonts, radius, spacing, states } from '@/constants/theme';
 
-/** Champ de saisie étiqueté, avec message d'erreur optionnel. */
+/**
+ * Champ de saisie étiqueté, avec message d'erreur optionnel. Sans `label`,
+ * seul le placeholder porte l'intitulé (évite le doublon visuel quand les
+ * deux diraient la même chose, ex. la recherche de kartings).
+ */
 export function Field({
   label,
   error,
   style,
   ...rest
-}: TextInputProps & { label: string; error?: string | null }) {
+}: TextInputProps & { label?: string; error?: string | null }) {
   const [focused, setFocused] = useState(false);
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>{label}</Text>
+      {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         placeholderTextColor={colors.inkDim2}
         selectionColor={colors.accent}

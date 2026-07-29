@@ -202,7 +202,6 @@ export function CircuitsExplorer({
       {geoMessage ? <Muted style={styles.geoErr}>{geoMessage}</Muted> : null}
 
       <Field
-        label={t.races.mapSearch}
         placeholder={t.races.mapSearch}
         value={query}
         onChangeText={setQuery}
