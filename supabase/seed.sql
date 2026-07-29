@@ -3,8 +3,7 @@
 -- Source : OpenStreetMap (Overpass, `sport=karting`, France, juillet 2026),
 -- sous licence ODbL. Regroupement géographique des tracés d'un même complexe,
 -- filtrage de ce qui n'est pas du karting, ville par géocodage inverse
--- (Nominatim). Voir la migration `20260729120000_import_kartings_fr.sql` et
--- `docs/credits.md`.
+-- (Nominatim). Voir `20260729120000_import_kartings_fr.sql` et docs/credits.md.
 --
 -- Le référentiel est FERMÉ côté client depuis A4 : il ne s'enrichit plus par
 -- les ajouts des pilotes, uniquement par ce canal. Idempotent.
@@ -38,6 +37,7 @@ from (values
   ('Circuit Beltoise-Trappes', 'Trappes', 48.75988, 1.99302),
   ('Circuit Berderry', 'Lescar', 43.35487, -0.44144),
   ('Circuit de Barcelonnette', 'Saint-Pons', 44.38822, 6.59437),
+  ('Circuit de Bucy', 'Bucy-le-Long', 49.37621, 3.42395),
   ('Circuit de Cabourg - Team Active', 'Cabourg', 49.27669, -0.13717),
   ('Circuit de Deauville - Team Active', 'Saint-Arnoult', 49.327, 0.0797),
   ('Circuit de Kart', 'Lédenon', 43.92244, 4.50117),
@@ -57,7 +57,7 @@ from (values
   ('Circuit de l''Europe', 'Sotteville-sous-le-Val', 49.31462, 1.11595),
   ('Circuit de l''Indre', 'Clion', 46.97006, 1.18146),
   ('Circuit de la Calmette', 'La Calmette', 43.94582, 4.26588),
-  ('Circuit de la Jamaïque', 'Saiinte-Clotilde', -20.89098, 55.50251),
+  ('Circuit de la Jamaïque', 'Sainte-Clotilde', -20.89098, 55.50251),
   ('Circuit de Ouistreham - Team Active', 'Ouistreham', 49.28924, -0.25379),
   ('Circuit de Plan de Dieu', 'Travaillan', 44.17628, 4.92369),
   ('Circuit du Bicêtre', 'Savigneux', 45.61694, 4.07703),
@@ -67,7 +67,7 @@ from (values
   ('Circuit du Val d''Argenton', 'Argentonnay', 47.00776, -0.43239),
   ('Circuit Eisen - Kart 90', 'Pérouse', 47.63547, 6.90694),
   ('Circuit Espace Plus', 'Ollainville', 48.62125, 2.22206),
-  ('Circuit International de Karting d’Aunay-les-Bois', 'Aunay-les-Bois', 48.5528, 0.27469),
+  ('Circuit International de Karting d''Aunay-les-Bois', 'Aunay-les-Bois', 48.5528, 0.27469),
   ('Circuit International de Lavelanet', 'Aigues-Vives', 43.00568, 1.88073),
   ('Circuit International de Saint-Amand', 'Colombiers', 46.69237, 2.54363),
   ('Circuit Jean Brun', 'Paray-sous-Briailles', 46.32219, 3.35973),
@@ -78,7 +78,6 @@ from (values
   ('Circuit national de la Boule d''Or', 'Bournand', 47.06431, 0.0716),
   ('Circuit Pro''Kart', 'Dreux', 48.76046, 1.37046),
   ('Circuit Vendée Kart Center', 'Fontenay-le-Comte', 46.4387, -0.78885),
-  ('Circut de Bucy', 'Bucy-le-Long', 49.37621, 3.42395),
   ('City Kart', 'Saint-Sébastien-sur-Loire', 47.1902, -1.48975),
   ('City Kart', 'Sautron', 47.26409, -1.70167),
   ('ClotKart', 'Vaudoy-en-Brie', 48.69274, 3.10359),
@@ -112,12 +111,11 @@ from (values
   ('K1 Speed', 'Le Mans', 47.9628, 0.21791),
   ('Kart 56', 'Ploemel', 47.66823, -3.06249),
   ('Kart Center', 'Migné-Auxances', 46.61438, 0.31972),
-  ('Kart Center Biscarosse', 'Biscarrosse', 44.4098, -1.0827),
+  ('Kart Center Biscarrosse', 'Biscarrosse', 44.4098, -1.0827),
   ('Kart-Circuit des Renardières', 'Pageas', 45.69051, 1.02059),
   ('Kart de Foulain', 'Foulain', 48.03794, 5.22343),
   ('Kart Escale', 'Bort-l''Étang', 45.7932, 3.43789),
-  ('Kart Expo', 'Bruz', 48.05478, -1.7307),
-  ('Kart Expo', 'Chartres-de-Bretagne', 48.0663, -1.71344),
+  ('Kart Expo', 'Bruz', 48.06054, -1.72207),
   ('Kart''In', 'Nancy', 48.70299, 6.18383),
   ('Kart indoor', 'Appoigny', 47.86499, 3.53651),
   ('Kart One', 'Saint-Jean-de-Monts', 46.78714, -2.07015),
@@ -126,7 +124,7 @@ from (values
   ('Kart Race', 'Witry-lès-Reims', 49.28247, 4.13666),
   ('Kart Racer', 'Saran', 47.95802, 1.89454),
   ('Kart System Indoor', 'Bordeaux', 44.88902, -0.56225),
-  ('Kart’Up', 'Vitrolles', 43.43763, 5.24267),
+  ('Kart''Up', 'Vitrolles', 43.43763, 5.24267),
   ('Kart71', 'Dracy-le-Fort', 46.79789, 4.79364),
   ('KartCenter', 'Pluméliau-Bieuzy', 47.96938, -2.99108),
   ('Karthors', 'Cieurac', 44.34592, 1.48237),
@@ -166,7 +164,6 @@ from (values
   ('Karting du Laquais', 'Champier', 45.46621, 5.29831),
   ('Karting du Mont-Blanc', 'Passy', 45.92198, 6.66061),
   ('Karting du Sundgau', 'Steinsoultz', 47.57154, 7.3661),
-  ('Karting Enfants', 'Trappes', 48.78239, 2.00713),
   ('Karting Family Fun Park', 'Meschers-sur-Gironde', 45.56442, -0.95535),
   ('Karting l''Anneau du Rhin', 'Biltzheim', 47.95104, 7.41414),
   ('Karting Manosque', 'Manosque', 43.80693, 5.82015),
@@ -199,7 +196,7 @@ from (values
   ('Les Amis de l''UFOLEP', 'Joué-lès-Tours', 47.35654, 0.66609),
   ('LF Karting', 'Layrac', 44.1071, 0.65325),
   ('Lille Karting', 'Ennetières-en-Weppes', 50.63508, 2.97005),
-  ('Loisirs O’ d’Espoey', 'Espoey', 43.25608, -0.13866),
+  ('Loisirs O'' d''Espoey', 'Espoey', 43.25608, -0.13866),
   ('Ludi Kart', 'Argelès-sur-Mer', 42.57731, 3.03535),
   ('Made In Kart', 'Joigny', 47.96683, 3.40209),
   ('Manacha Kart', 'Gerbépal', 48.16427, 6.91768),
@@ -236,7 +233,6 @@ from (values
   ('Piste de Karting de Lessay', 'Lessay', 49.20429, -1.51103),
   ('Piste de Karting Extérieur', 'Moirans-en-Montagne', 46.42765, 5.71442),
   ('Piste de Karting Indoor', 'Toulouse', 43.56942, 1.49727),
-  ('Pit-Bike Factory', 'Hirson', 49.90232, 4.09507),
   ('Planet Karting', 'Saint-Martin-lez-Tatinghem', 50.76322, 2.22151),
   ('Pro Kart Figari', 'Figari', 41.48814, 9.11604),
   ('Puissance Kart Indoor', 'Audincourt', 47.48706, 6.8281),
@@ -245,7 +241,7 @@ from (values
   ('RKC Karting', 'Cormeilles-en-Vexin', 49.10374, 2.03785),
   ('RMT Karting', 'Limoges', 45.8132, 1.26782),
   ('Roazhon Kart', 'Montgerval', 48.20174, -1.73342),
-  ('Rouen Espace LoisirsV', 'Rouen', 49.44263, 1.04287),
+  ('Rouen Espace Loisirs', 'Rouen', 49.44263, 1.04287),
   ('Saint-Paul Kart Team', 'Saint-Paul-lès-Romans', 45.05747, 5.10393),
   ('Selest''Kart''in', 'Sélestat', 48.25231, 7.43205),
   ('Sologne Karting', 'Salbris', 47.36013, 2.04984),
@@ -269,6 +265,7 @@ from (values
 ) as v(name, city, lat, lon)
 where not exists (
   select 1 from public.circuits c
-   where public.kart_normalize(c.name) = public.kart_normalize(v.name)
+   where c.is_official
+     and public.kart_normalize(c.name) = public.kart_normalize(v.name)
      and public.kart_normalize(coalesce(c.city, '')) = public.kart_normalize(v.city)
 );

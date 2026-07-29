@@ -3,6 +3,7 @@
  * La sécurité (seul l'admin écrit) est garantie par la RLS ; ici on décrit
  * seulement les opérations.
  */
+import { coarse } from '@/lib/geo';
 import { supabase } from '@/lib/supabase';
 
 export const MAX_RACES_PER_DAY = 10;
@@ -17,6 +18,8 @@ export interface Circuit {
   lon: number | null;
   /** Distance depuis ma position, en km — renseignée par `nearbyCircuits` seulement. */
   km?: number;
+  /** Nombre TOTAL de circuits correspondants — renseigné par `searchCircuits`. */
+  total?: number;
 }
 
 // 'locked' = grille figée (invitations clôturées), en attente de la saisie.
@@ -73,10 +76,8 @@ export async function searchCircuits(query: string): Promise<Circuit[]> {
  * serveur une position au mètre près dont il n'a aucun usage.
  */
 export async function nearbyCircuits(lat: number, lon: number): Promise<Circuit[]> {
-  const { data, error } = await supabase.rpc('nearby_circuits', {
-    p_lat: Math.round(lat * 100) / 100,
-    p_lon: Math.round(lon * 100) / 100,
-  });
+  const { lat: p_lat, lon: p_lon } = coarse({ lat, lon });
+  const { data, error } = await supabase.rpc('nearby_circuits', { p_lat, p_lon });
   if (error) throw new Error(error.message);
   return (data ?? []) as Circuit[];
 }

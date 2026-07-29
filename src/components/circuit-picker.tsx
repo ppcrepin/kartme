@@ -6,6 +6,7 @@ import { Body, Label, Muted } from '@/components/ui/text';
 import { colors, radius, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import {
+  coarse,
   currentPosition,
   formatKm,
   GeoError,
@@ -19,6 +20,31 @@ import {
   searchCircuits,
   type Circuit,
 } from '@/lib/races';
+
+/**
+ * Une ligne de la liste. Définie HORS du composant : à l'intérieur, son type
+ * changeait à chaque rendu, et React démontait puis remontait toutes les
+ * lignes à chaque frappe dans le champ de recherche.
+ */
+function CircuitRow({
+  circuit,
+  km,
+  onPick,
+}: {
+  circuit: Circuit;
+  km: string;
+  onPick: (c: Circuit) => void;
+}) {
+  return (
+    <Pressable style={styles.row} onPress={() => onPick(circuit)} accessibilityRole="button">
+      <View style={styles.flex}>
+        <Body>{circuit.name}</Body>
+        {circuit.city ? <Muted>{circuit.city}</Muted> : null}
+      </View>
+      {km ? <Muted style={styles.km}>{km}</Muted> : null}
+    </Pressable>
+  );
+}
 
 /**
  * Sélecteur de circuit — référentiel MAÎTRISÉ (pas d'ajout libre, décision PO :
@@ -104,7 +130,10 @@ export function CircuitPicker({
       const pos = await currentPosition();
       const rows = await nearbyCircuits(pos.lat, pos.lon);
       if (!alive.current) return;
-      setMe(pos);
+      // On garde la position ARRONDIE, celle-là même que le serveur a utilisée
+      // pour trier : sinon le même circuit s'annonce « 1,1 km » ici et
+      // « 300 m » après une recherche par nom.
+      setMe(coarse(pos));
       setNear(rows);
     } catch (e) {
       if (!alive.current) return;
@@ -133,6 +162,8 @@ export function CircuitPicker({
   }
 
   const searching = query.trim().length > 0;
+  // `total` vient du serveur (compté AVANT la troncature à 20).
+  const tronque = (results[0]?.total ?? 0) - results.length;
   const nearIds = new Set((near ?? []).map((c) => c.id));
   // Hors recherche, on retire des suggestions générales les circuits déjà
   // proposés au-dessus (pas de doublon visuel).
@@ -149,21 +180,14 @@ export function CircuitPicker({
     return '';
   };
 
-  const Row = ({ c }: { c: Circuit }) => {
-    const km = distanceOf(c);
-    return (
-      <Pressable style={styles.row} onPress={() => onChange(c)} accessibilityRole="button">
-        <View style={styles.flex}>
-          <Body>{c.name}</Body>
-          {c.city ? <Muted>{c.city}</Muted> : null}
-        </View>
-        {km ? <Muted style={styles.km}>{km}</Muted> : null}
-      </Pressable>
-    );
-  };
 
-  const geoMessage =
-    geoError === 'denied'
+  // Chercher par nom, c'est passer à autre chose : le message de position
+  // n'a plus lieu d'être. On le DÉRIVE au lieu de remettre l'état à zéro dans
+  // un effet — un setState synchrone dans un effet déclenche un rendu en
+  // cascade, et l'information « la position a été refusée » reste vraie.
+  const geoMessage = searching
+    ? null
+    : geoError === 'denied'
       ? t.races.circuitGeoDenied
       : geoError === 'unsupported'
         ? t.races.circuitGeoUnsupported
@@ -205,7 +229,7 @@ export function CircuitPicker({
             {near.length === 0 ? (
               <Muted style={styles.empty}>{t.races.circuitNearEmpty}</Muted>
             ) : (
-              near.map((c) => <Row key={c.id} c={c} />)
+              near.map((c) => <CircuitRow key={c.id} circuit={c} km={distanceOf(c)} onPick={onChange} />)
             )}
           </>
         ) : null}
@@ -214,7 +238,7 @@ export function CircuitPicker({
           <>
             <Label style={styles.sectionLabel}>{t.races.circuitRecents}</Label>
             {recents.map((c) => (
-              <Row key={c.id} c={c} />
+              <CircuitRow key={c.id} circuit={c} km={distanceOf(c)} onPick={onChange} />
             ))}
           </>
         ) : null}
@@ -224,8 +248,19 @@ export function CircuitPicker({
         ) : null}
 
         {generalResults.map((c) => (
-          <Row key={c.id} c={c} />
+          <CircuitRow key={c.id} circuit={c} km={distanceOf(c)} onPick={onChange} />
         ))}
+
+        {/* Le référentiel compte des centaines de kartings et la recherche en
+            rend 20 : sans cette ligne, l'écran laisse croire qu'il n'y a que
+            ça. Avec 24 circuits, la question ne se posait pas. */}
+        {tronque > 0 && !loading ? (
+          <Muted style={styles.empty}>
+            {t.races.circuitTruncated
+              .replace('%n', String(results.length))
+              .replace('%t', String(results[0]?.total ?? 0))}
+          </Muted>
+        ) : null}
 
         {searching && resultsFor === query && !loading && results.length === 0 ? (
           <Muted style={styles.empty}>{t.races.circuitEmpty}</Muted>

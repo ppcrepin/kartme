@@ -49,6 +49,15 @@ export default function AideScreen() {
             </Card>
           </Pressable>
         </View>
+
+        {/* Attribution ODbL : la licence des données des circuits exige que la
+            source reste visible dans l'application. Une mention dans un
+            fichier du dépôt ne suffirait pas. */}
+        <View style={styles.credits}>
+          <Body style={styles.q}>{t.help.creditsTitle}</Body>
+          <Muted style={styles.a}>{t.help.creditsOsm}</Muted>
+          <Muted style={styles.a}>{t.help.creditsFont}</Muted>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -61,6 +70,7 @@ const styles = StyleSheet.create({
   q: { fontWeight: '800' },
   a: { marginTop: spacing.xs },
   links: { gap: spacing.sm, marginTop: spacing.md },
+  credits: { marginTop: spacing.xl, gap: spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   flex: { flex: 1 },
   chevron: { fontSize: 20, color: colors.inkDim },

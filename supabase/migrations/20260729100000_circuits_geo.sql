@@ -178,12 +178,17 @@ alter table public.circuits add constraint circuits_coords_shape check (
 -- Elles sont renvoyées pour que la carte (phase b) et l'affichage de la
 -- distance n'exigent pas un second aller-retour. Une position de karting
 -- n'est pas une donnée sensible : c'est un commerce, il est sur la carte.
+-- `total` : le nombre de circuits qui CORRESPONDENT, avant la troncature à 20.
+-- Avec 24 circuits au référentiel, une liste de 20 était quasi complète ;
+-- avec 251, c'est une troncature muette — l'écran doit pouvoir dire « 20 sur
+-- 251, affine ta recherche » plutôt que de laisser croire que c'est tout.
+-- Une fonction de fenêtrage s'évalue AVANT le LIMIT : le compte est juste.
 drop function if exists public.search_circuits(text);
 create function public.search_circuits(q text)
 returns table (id uuid, name text, city text, is_official boolean,
-               lat double precision, lon double precision)
+               lat double precision, lon double precision, total bigint)
 language sql stable security definer set search_path = public as $$
-  select c.id, c.name, c.city, c.is_official, c.lat, c.lon
+  select c.id, c.name, c.city, c.is_official, c.lat, c.lon, count(*) over () as total
   from circuits c
   where coalesce(trim(q), '') = ''
      or public.kart_normalize(c.name) like '%' || public.kart_normalize(q) || '%'
@@ -215,9 +220,12 @@ revoke all on function public.my_recent_circuits() from public, anon;
 grant execute on function public.my_recent_circuits() to authenticated;
 
 -- ═══ 4. « Près de moi » ═══════════════════════════════════════════════════
--- Haversine en dur : distance orthodromique en kilomètres. `stable` et sans
--- accès aux tables → `immutable`, ce qui permet à Postgres de la calculer une
--- fois par ligne et non une fois par comparaison de tri.
+-- Haversine en dur : distance orthodromique en kilomètres. `immutable` parce
+-- qu'elle ne lit aucune table et rend toujours la même valeur pour les mêmes
+-- arguments — ce qui autorise son inlining. Elle reste évaluée DEUX fois par
+-- ligne dans nearby_circuits (projection + filtre) : négligeable à quelques
+-- centaines de circuits, et c'est aussi pourquoi il n'y a pas d'index
+-- géographique ici. À revoir si le référentiel change d'ordre de grandeur.
 create or replace function public.km_between(
   lat1 double precision, lon1 double precision,
   lat2 double precision, lon2 double precision
@@ -235,13 +243,26 @@ language sql immutable parallel safe as $$
   ));
 $$;
 
+-- Calcul pur, sans accès aux tables : rien à protéger sur le fond. Mais la
+-- laisser exécutable par PUBLIC l'expose en /rpc/km_between à `anon`, et rien
+-- dans ce lot n'a de raison d'être joignable sans compte.
+revoke all on function public.km_between(double precision, double precision,
+                                         double precision, double precision)
+  from public, anon;
+grant execute on function public.km_between(double precision, double precision,
+                                            double precision, double precision)
+  to authenticated;
+
 /**
  * Les circuits les plus proches d'une position.
  *
- * La position vient du navigateur et n'est ni stockée ni journalisée : elle
- * ne vit que le temps de l'appel. Le client l'arrondit avant de l'envoyer
- * (≈ 100 m), ce qui ne change rien au classement des circuits mais évite de
- * confier une position au mètre près à un serveur qui n'en a pas besoin.
+ * La position vient du navigateur et n'est jamais stockée : elle ne vit que le
+ * temps de l'appel. Une réserve à connaître : PostgREST passe les paramètres
+ * de façon liée (donc absents de pg_stat_statements), mais si le journal des
+ * requêtes lentes est actif, un appel lent écrit `p_lat`/`p_lon` en clair dans
+ * les logs Postgres. C'est précisément pourquoi le client ARRONDIT la position
+ * avant l'envoi (au centième de degré, ≈ 1 km) : ce qui peut atterrir dans un
+ * journal ne désigne pas un domicile.
  *
  * `p_max_km` borne le résultat : sans lui, un pilote en Alsace se verrait
  * proposer un karting breton sous l'étiquette « près de moi ».

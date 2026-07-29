@@ -62,10 +62,27 @@ export function kmBetween(a: Position, b: Position): number {
   return 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, h)));
 }
 
+/**
+ * Arrondi de la position AVANT tout usage — envoi au serveur comme calcul
+ * local. Au centième de degré, soit environ un kilomètre.
+ *
+ * Il doit être appliqué des deux côtés : le serveur trie sur la position
+ * arrondie, et si le client calculait la distance sur la position brute, le
+ * même circuit s'annonçait « 1,1 km » dans « Autour de toi » et « 300 m »
+ * après une recherche par nom.
+ */
+export function coarse(p: Position): Position {
+  return { lat: Math.round(p.lat * 100) / 100, lon: Math.round(p.lon * 100) / 100 };
+}
+
 /** « 850 m », « 12 km », « 140 km » — jamais « 12,4718 km ». */
 export function formatKm(km: number): string {
   if (!Number.isFinite(km) || km < 0) return '';
-  if (km < 1) return `${Math.round(km * 1000 / 50) * 50} m`;
+  const metres = Math.round((km * 1000) / 50) * 50;
+  // Sous 50 m, l'arrondi donnait « 0 m » — et à 980 m, « 1000 m » au lieu de
+  // « 1,0 km ». Les deux bornes se voyaient à l'écran.
+  if (metres < 50) return '< 50 m';
+  if (metres < 1000) return `${metres} m`;
   if (km < 10) return `${km.toFixed(1).replace('.', ',')} km`;
   return `${Math.round(km)} km`;
 }

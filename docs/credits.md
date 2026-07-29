@@ -34,7 +34,9 @@ L'ODbL est une licence **share-alike**. Concrètement, pour KartSquad :
 
 ### Ce qui reste à faire
 
-- [ ] Afficher la mention OpenStreetMap dans l'écran **Aide & légal** (lot 3.3).
+- [x] Afficher la mention OpenStreetMap dans l'écran **Aide & légal** — fait
+      le 2026-07-29, en même temps que l'import (la relecture a rappelé qu'une
+      donnée livrée sans sa mention est une non-conformité, pas une dette).
 - [ ] Décider d'un canal pour remonter les corrections en amont quand un
       pilote signale un karting fermé ou mal nommé.
 

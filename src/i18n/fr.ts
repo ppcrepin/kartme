@@ -80,6 +80,7 @@ export const fr = {
     // « Près de moi » (A12a) : la position n'est demandée QUE sur ce bouton,
     // pour que la fenêtre du navigateur arrive quand le pilote l'a voulue.
     circuitNear: 'Près de moi',
+    circuitTruncated: '%n circuits affichés sur %t — précise ta recherche (nom ou ville).',
     circuitNearTitle: 'Autour de toi',
     circuitLocating: 'Recherche de ta position…',
     circuitNearEmpty: 'Aucun karting connu à moins de 150 km. Cherche par nom ou par ville.',
@@ -439,6 +440,12 @@ export const fr = {
   },
   help: {
     title: 'Aide & légal',
+    // Obligation de licence ODbL, pas une politesse : les données des circuits
+    // viennent d'OpenStreetMap, la source doit rester visible pour l'utilisateur.
+    creditsTitle: 'Sources des données',
+    creditsOsm:
+      'Les circuits de karting proviennent d’OpenStreetMap, sous licence ODbL. Un karting manquant, fermé ou mal nommé ? La correction se fait sur openstreetmap.org — elle profite à tout le monde, KartSquad compris.',
+    creditsFont: 'Police Fraunces, sous licence SIL Open Font License.',
     faqTitle: 'Questions fréquentes',
     faq: [
       { q: 'Comment mon Elo est-il calculé ?', a: 'À chaque course, tu échanges des points avec les autres pilotes inscrits selon votre classement d’arrivée : battre plus fort rapporte plus. Les scores sont à somme nulle entre inscrits.' },
