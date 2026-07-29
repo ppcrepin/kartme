@@ -97,6 +97,8 @@ export const fr = {
     mapNone: 'Aucun karting ne correspond.',
     mapViewMap: 'Carte',
     mapViewList: 'Liste',
+    mapPickTitle: 'Choisir un karting',
+    mapChooseOnMap: 'Choisir sur la carte',
     // Signalement de circuit (demande PO 2026-07-29) : le référentiel vient
     // d'OpenStreetMap, il est incomplet par nature et il vieillit. Les
     // pilotes, eux, savent.

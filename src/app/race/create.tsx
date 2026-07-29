@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui';
 import { Body, Muted, Title } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
+import { takePickedCircuit } from '@/lib/circuit-pick';
 import { defaultRaceDate } from '@/lib/datetime';
 import {
   countMyRacesToday,
@@ -30,6 +31,15 @@ export default function CreateRaceScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [limited, setLimited] = useState(false);
+
+  // Retour de « Choisir sur la carte » : le circuit déposé est ramassé au
+  // focus, et le reste du formulaire (la date saisie) n'a pas bougé.
+  useFocusEffect(
+    useCallback(() => {
+      const depose = takePickedCircuit();
+      if (depose) setCircuit(depose);
+    }, []),
+  );
 
   useEffect(() => {
     if (!circuitId) return;

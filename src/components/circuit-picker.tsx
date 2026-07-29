@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
@@ -64,6 +65,7 @@ export function CircuitPicker({
   value: Circuit | null;
   onChange: (c: Circuit) => void;
 }) {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Circuit[]>([]);
   const [recents, setRecents] = useState<Circuit[]>([]);
@@ -207,19 +209,30 @@ export function CircuitPicker({
         autoCapitalize="words"
       />
 
-      {/* Le bouton disparaît une fois la position obtenue : il n'a plus rien
-          à apporter, et la section « Autour de toi » le remplace. */}
-      {!near ? (
+      <View style={styles.quickRow}>
+        {/* « Près de moi » disparaît une fois la position obtenue : la section
+            « Autour de toi » le remplace. « Choisir sur la carte » reste — on
+            peut toujours vouloir explorer. Le formulaire (la date déjà saisie)
+            survit à l'aller-retour : le circuit revient par un dépôt, pas par
+            un paramètre d'URL qui remonterait l'écran. */}
+        {!near ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={onNear}
+            disabled={locating}
+            style={styles.nearBtn}>
+            <Body style={styles.nearBtnTxt}>
+              {locating ? t.races.circuitLocating : `📍 ${t.races.circuitNear}`}
+            </Body>
+          </Pressable>
+        ) : null}
         <Pressable
           accessibilityRole="button"
-          onPress={onNear}
-          disabled={locating}
+          onPress={() => router.push('/circuit-map-picker')}
           style={styles.nearBtn}>
-          <Body style={styles.nearBtnTxt}>
-            {locating ? t.races.circuitLocating : `📍 ${t.races.circuitNear}`}
-          </Body>
+          <Body style={styles.nearBtnTxt}>{`🗺 ${t.races.mapChooseOnMap}`}</Body>
         </Pressable>
-      ) : null}
+      </View>
       {geoMessage ? <Muted style={styles.geoErr}>{geoMessage}</Muted> : null}
 
       <View style={styles.list}>
@@ -278,6 +291,7 @@ const styles = StyleSheet.create({
   sectionLabel: { marginTop: spacing.sm, marginBottom: spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.sharp, backgroundColor: colors.surface },
   km: { fontVariant: ['tabular-nums'] },
+  quickRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   nearBtn: { alignSelf: 'flex-start', paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderRadius: radius.sharp, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
   nearBtnTxt: { color: colors.accent, fontWeight: '700' },
   geoErr: { marginTop: -spacing.xs },

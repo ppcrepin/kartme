@@ -31,6 +31,9 @@ async function ouvrirKartings(page: Page) {
   await sessionSimulee(page);
   await reseauSimule(page, {
     'rpc/nearby_circuits': CIRCUITS,
+    'rpc/my_recent_circuits': [
+      { id: 'r1', name: 'Mon Karting Habituel', city: 'Chez Moi', is_official: true, lat: 48.0, lon: 2.0 },
+    ],
     'rpc/suggest_circuit': '00000000-0000-0000-0000-000000000001',
   });
   await page.goto('/kartings');
@@ -113,6 +116,15 @@ test.describe('Onglet Kartings', () => {
     await page.getByText('Le nom ou la ville sont faux', { exact: true }).click();
     await page.getByText('Envoyer le signalement', { exact: true }).click();
     await expect(page.getByText(/Merci ! Un modérateur va regarder/)).toBeVisible();
+  });
+
+  test('« Tes circuits » ouvre la liste (décision PO)', async ({ page }) => {
+    await ouvrirKartings(page);
+    await expect(page.getByText('Tes circuits', { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Mon Karting Habituel', { exact: true })).toBeVisible();
+    // Et une recherche les efface : on cherche dans TOUT le référentiel.
+    await page.getByPlaceholder('Chercher un karting par nom ou par ville…').fill('Nantes');
+    await expect(page.getByText('Tes circuits', { exact: true })).toHaveCount(0);
   });
 
   test('la recherche trouve par nom, par ville et par sigle', async ({ page }) => {
