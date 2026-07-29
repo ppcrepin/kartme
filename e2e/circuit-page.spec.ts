@@ -20,13 +20,13 @@ const PAGE_ACTIVE = {
 
 const TOP = [
   { rank: 1, pilot_id: 'p1', username: 'Martin_R', best_lap_ms: 47312, achieved_at: '2026-01-12T10:00:00Z', is_me: false },
-  { rank: 2, pilot_id: null, username: null, best_lap_ms: 48101, achieved_at: '2026-03-03T10:00:00Z', is_me: false },
+  { rank: 2, pilot_id: 'p2', username: 'Sophie_K', best_lap_ms: 48101, achieved_at: '2026-03-03T10:00:00Z', is_me: false },
   { rank: 3, pilot_id: '11111111-1111-1111-1111-111111111111', username: 'Moi', best_lap_ms: 49870, achieved_at: '2026-07-12T10:00:00Z', is_me: true },
 ];
 
 test.use({ viewport: { width: 390, height: 844 } });
 
-test('la fiche affiche record, tableau, et anonymise le privé', async ({ page }) => {
+test('la fiche affiche record, tableau et vie du circuit', async ({ page }) => {
   await sessionSimulee(page);
   await reseauSimule(page, {
     'rpc/get_circuit_page': [PAGE_ACTIVE],
@@ -39,9 +39,8 @@ test('la fiche affiche record, tableau, et anonymise le privé', async ({ page }
   // .first() : le temps du record apparaît deux fois, en grand ET au rang 1.
   await expect(page.getByText('0:47.312', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Martin_R', { exact: true }).first()).toBeVisible();
-  // Le privé : son temps est là, son nom est « Pilote privé ».
   await expect(page.getByText('0:48.101', { exact: true })).toBeVisible();
-  await expect(page.getByText('Pilote privé', { exact: true })).toBeVisible();
+  await expect(page.getByText('Sophie_K', { exact: true })).toBeVisible();
   // Ma ligne et mon meilleur perso.
   await expect(page.getByText('Ton meilleur tour ici : 0:49.870')).toBeVisible();
   // La vie du circuit.

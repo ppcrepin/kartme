@@ -1,6 +1,8 @@
--- Tests de la fiche circuit (A11) — décisions PO 2026-07-29 :
--- temps d'un privé affiché SANS son nom · courses ≥ 2 inscrits seulement ·
--- invités hors tableau · record harmonisé sur les mêmes règles.
+-- Tests de la fiche circuit (A11) — décisions PO 2026-07-29/30 :
+-- tous les pilotes sont NOMMÉS (le masque « Pilote privé » a été retiré :
+-- l'anonymat n'était qu'une protection d'écran, on ne promet pas ce qu'on ne
+-- tient pas) · courses ≥ 2 inscrits seulement · invités hors tableau ·
+-- record harmonisé sur les mêmes règles.
 
 begin;
 
@@ -82,25 +84,17 @@ begin
   perform tests.eq(r.best_lap_ms, 45000, 'le record vient de la vieille course qui compte');
   perform tests.eq((r.is_me)::int, 1, 'et c''est moi');
 
-  -- Bela est privée et pas mon amie : son TEMPS sort, pas son nom, pas son id.
+  -- Bela est privée : elle est NOMMÉE comme tout le monde (décision PO
+  -- 2026-07-30 — pas de fausse promesse d'anonymat).
   select * into r from get_circuit_top_times(X, 'all') where rank = 2;
   perform tests.eq(r.best_lap_ms, 47000, 'le temps de la privée est affiché');
-  if r.username is not null or r.pilot_id is not null then
-    raise exception 'ÉCHEC : le nom ou l''identifiant d''un profil privé fuit au tableau';
+  if r.username is distinct from 'Bela' then
+    raise exception 'ÉCHEC : Bela devrait être nommée (obtenu %)', r.username;
   end if;
 
   -- « Cette année » : la course d'il y a 2 ans sort → mon meilleur devient 52.000.
   select * into r from get_circuit_top_times(X, 'year') where is_me;
   perform tests.eq(r.best_lap_ms, 52000, 'la période « année » écarte la vieille course');
-
-  -- L'amitié lève le masque.
-  insert into friendships (requester_id, addressee_id, status)
-    values (A, 'ab000000-0000-0000-0000-00000000000b', 'accepted');
-  select * into r from get_circuit_top_times(X, 'all') where rank = 2;
-  if r.username is distinct from 'Bela' then
-    raise exception 'ÉCHEC : une amie devrait être nommée (obtenu %)', r.username;
-  end if;
-  delete from friendships where requester_id = A;
 
   -- Période inconnue : refusée.
   begin
@@ -150,12 +144,12 @@ begin
     raise exception 'ÉCHEC : détenteur attendu Aroa, obtenu %', r.holder;
   end if;
 
-  -- Si la détentrice passe en privé, le temps reste, le nom part.
+  -- Une détentrice privée reste nommée (décision PO 2026-07-30).
   update profiles set is_private = true where id = 'ab000000-0000-0000-0000-00000000000a';
   select * into r from get_circuit_record(X);
   perform tests.eq(r.best_lap_ms, 45000, 'le record d''une privée reste affiché');
-  if r.holder is not null then
-    raise exception 'ÉCHEC : le nom d''une détentrice privée fuit (%)', r.holder;
+  if r.holder is distinct from 'Aroa' then
+    raise exception 'ÉCHEC : détentrice attendue Aroa, obtenu %', r.holder;
   end if;
   update profiles set is_private = false where id = 'ab000000-0000-0000-0000-00000000000a';
   raise notice 'Scénario 3 (record harmonisé) ✔';

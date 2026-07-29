@@ -1,9 +1,13 @@
 -- KartSquad — A11 : la fiche circuit et les meilleurs temps.
 --
--- Décisions PO 2026-07-29 :
---   · VIE PRIVÉE : le temps d'un profil privé APPARAÎT au tableau, mais sans
---     son nom (« Pilote privé »). Un chrono est une donnée de course ; le
---     pseudo est une donnée de personne. Les amis, eux, voient le nom.
+-- Décisions PO 2026-07-29, révisée le 2026-07-30 :
+--   · VIE PRIVÉE : les tableaux affichent le NOM de tous les pilotes. La
+--     première décision (« temps affiché, nom masqué ») a été retirée par le
+--     PO quand la revue a montré que l'anonymat n'était qu'une protection
+--     d'écran : les tables de résultats sont lisibles par tout inscrit depuis
+--     le lot 0.3, et le pseudo est public par nécessité produit (la
+--     recherche). On ne promet pas ce qu'on ne peut pas tenir. Le
+--     verrouillage de fond (RLS + RPC) reste un chantier de roadmap.
 --   · ANTI-TRICHE : seuls les chronos de courses « qui comptent » (≥ 2
 --     inscrits) alimentent les tableaux publics — la règle des badges,
 --     réutilisée mot pour mot. Un temps saisi seul dans son canapé ne coiffe
@@ -206,23 +210,6 @@ update public.circuits c
 create index if not exists participations_race_idx on public.participations (race_id);
 create index if not exists races_circuit_idx on public.races (circuit_id);
 
--- ═══ 2. Qui a le droit de voir quel nom ═══════════════════════════════════
--- LE prédicat du lot, factorisé : le nom d'un pilote au tableau d'un circuit
--- est visible si le profil est public, si c'est moi, ou si nous sommes amis.
-create or replace function public.can_name_pilot(p_pilot uuid)
-returns boolean language sql stable set search_path = public as $$
-  select exists (
-    select 1 from profiles p
-    where p.id = p_pilot
-      and (not p.is_private
-           or p.id = auth.uid()
-           or exists (select 1 from friendships f
-                       where f.status = 'accepted'
-                         and ((f.requester_id = p.id and f.addressee_id = auth.uid())
-                           or (f.addressee_id = p.id and f.requester_id = auth.uid()))))
-  );
-$$;
-
 -- ═══ 3. La fiche : une ligne, tout le contexte ════════════════════════════
 create or replace function public.get_circuit_page(p_circuit_id uuid)
 returns table (
@@ -317,12 +304,8 @@ begin
     order by b.profile_id, b.lap asc, b.completed_at asc
   )
   select row_number() over (order by m.lap asc, m.completed_at asc) as rank,
-         -- Profil privé non-ami : le TEMPS sort, le NOM et l'identifiant non.
-         -- Renvoyer l'identifiant permettrait d'ouvrir la fiche du pilote et
-         -- de lever l'anonymat en un tap.
-         case when public.can_name_pilot(m.profile_id) then m.profile_id end,
-         case when public.can_name_pilot(m.profile_id)
-              then (select p.username from profiles p where p.id = m.profile_id) end,
+         m.profile_id,
+         (select p.username from profiles p where p.id = m.profile_id),
          m.lap, m.completed_at, (m.profile_id = auth.uid())
   from meilleurs m
   order by m.lap asc, m.completed_at asc
@@ -333,15 +316,13 @@ revoke all on function public.get_circuit_top_times(uuid, text) from public, ano
 grant execute on function public.get_circuit_top_times(uuid, text) to authenticated;
 
 -- ═══ 5. Le record existant s'aligne sur les mêmes règles ══════════════════
--- Avant : le record incluait les fantômes et nommait les profils privés
--- (« contournement assumé pour UN record »). Un tableau permanent rend
--- l'exception indéfendable : mêmes règles partout. L'écran de course affiche
--- « Pilote privé » quand le détenteur est masqué.
+-- Le record suit l'éligibilité des tableaux : inscrits seulement (plus de
+-- fantômes), courses qui comptent, comptes ni supprimés ni suspendus. Le nom
+-- est toujours affiché — décision PO du 2026-07-30.
 create or replace function public.get_circuit_record(p_circuit_id uuid)
 returns table (best_lap_ms integer, holder text)
 language sql stable security definer set search_path = public as $$
-  select res.best_lap_ms,
-         case when public.can_name_pilot(pp.profile_id) then pr.username end
+  select res.best_lap_ms, pr.username
   from results res
   join races ra on ra.id = res.race_id
   join participations pp on pp.id = res.participation_id
