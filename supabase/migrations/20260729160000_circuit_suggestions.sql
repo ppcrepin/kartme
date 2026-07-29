@@ -58,7 +58,10 @@ create policy suggestions_select_mod on public.circuit_suggestions
 
 drop policy if exists suggestions_insert on public.circuit_suggestions;
 create policy suggestions_insert on public.circuit_suggestions
-  for insert to authenticated with check (author_id = auth.uid());
+  -- `status = 'open'` : sans lui, un INSERT direct pouvait naître déjà classé
+  -- « traité » — l'auteur sortait sa propre ligne de la file du modérateur.
+  -- Auto-préjudice, mais une file de modération doit voir TOUT ce qui entre.
+  for insert to authenticated with check (author_id = auth.uid() and status = 'open');
 
 -- ═══ 2. Garde-fous ════════════════════════════════════════════════════════
 -- Filtre de mots : le nom d'un karting est LU par les modérateurs et finira
@@ -119,10 +122,16 @@ begin
   -- aurait rempli la cloche mais jamais déclenché de push, en silence. Et
   -- c'est sémantiquement juste : comme un signalement, cette notification de
   -- modération est toujours envoyée, sans interrupteur de préférence.
+  -- « ?circuits » : la boîte déduplique les non-lus sur (type, url, acteur),
+  -- et notify_report émet exactement ('report', 'settings/moderation',
+  -- auteur). Sans discriminant, un pilote qui signale un comportement PUIS un
+  -- karting voyait sa seconde alerte silencieusement avalée — et trois
+  -- kartings signalés d'affilée ne faisaient qu'une ligne de cloche. Le
+  -- paramètre ne change rien à la navigation : l'écran de modération l'ignore.
   perform public.enqueue_push('report', p.id,
       'Référentiel à mettre à jour 🏁',
       v_quoi || ' : ' || new.name || coalesce(' (' || new.city || ')', '') || '.',
-      'settings/moderation',
+      'settings/moderation?circuits',
       new.author_id)
   from profiles p
   where p.is_moderator
@@ -156,9 +165,16 @@ begin
     raise exception 'Type de signalement inconnu : %', p_kind;
   end if;
   -- Une correction doit désigner une fiche existante, sinon le modérateur
-  -- reçoit « le nom est faux » sans savoir de quoi on parle.
-  if p_kind <> 'manquant' and p_circuit_id is null then
-    raise exception 'Indique le karting concerné';
+  -- reçoit « le nom est faux » sans savoir de quoi on parle. La vérification
+  -- d'existence évite aussi qu'un identifiant forgé ne remonte l'erreur de
+  -- clé étrangère de Postgres, brute, jusqu'à l'écran du pilote.
+  if p_kind <> 'manquant' then
+    if p_circuit_id is null then
+      raise exception 'Indique le karting concerné';
+    end if;
+    if not exists (select 1 from public.circuits c where c.id = p_circuit_id) then
+      raise exception 'Fiche introuvable — elle a peut-être été retirée';
+    end if;
   end if;
 
   insert into public.circuit_suggestions (author_id, kind, name, city, circuit_id)

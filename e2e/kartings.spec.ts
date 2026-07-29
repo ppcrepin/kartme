@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { reseauSimule, sessionSimulee } from './harness';
+
 /**
  * Tests de l'onglet Kartings dans un VRAI navigateur.
  *
@@ -26,38 +28,11 @@ const CIRCUITS = [
 ];
 
 async function ouvrirKartings(page: Page) {
-  // Session simulée : la garde de routes renvoie sinon vers la connexion.
-  await page.addInitScript(() => {
-    const dans1h = Math.floor(Date.now() / 1000) + 3600;
-    const session = {
-      access_token: 'faux', refresh_token: 'faux', token_type: 'bearer',
-      expires_in: 3600, expires_at: dans1h,
-      user: { id: '11111111-1111-1111-1111-111111111111', aud: 'authenticated', role: 'authenticated', email: 'test@kartsquad.test', app_metadata: {}, user_metadata: {}, created_at: new Date(0).toISOString() },
-    };
-    for (const k of Object.keys(localStorage)) {
-      if (k.startsWith('sb-')) localStorage.removeItem(k);
-    }
-    // Format de supabase-js v2 : la session est stockée TELLE QUELLE, sans
-    // enveloppe `currentSession` (qui, elle, est la forme de la v1).
-    localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(session));
+  await sessionSimulee(page);
+  await reseauSimule(page, {
+    'rpc/nearby_circuits': CIRCUITS,
+    'rpc/suggest_circuit': '00000000-0000-0000-0000-000000000001',
   });
-
-  await page.route('**/*.supabase.co/**', async (route) => {
-    const url = route.request().url();
-    const json = (body: unknown) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
-    if (url.includes('/rest/v1/rpc/nearby_circuits')) return json(CIRCUITS);
-    if (url.includes('/rest/v1/rpc/suggest_circuit')) return json('00000000-0000-0000-0000-000000000001');
-    if (url.includes('/rest/v1/profiles')) return json({ id: '11111111-1111-1111-1111-111111111111', deleted_at: null });
-    if (url.includes('/auth/v1/user')) return json({ id: '11111111-1111-1111-1111-111111111111' });
-    return json([]);
-  });
-
-  // Les tuiles ne doivent pas partir sur Internet pendant un test.
-  await page.route('**/tile.openstreetmap.org/**', (route) =>
-    route.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from([]) }),
-  );
-
   await page.goto('/kartings');
   await expect(page.getByText('Kartings', { exact: true }).first()).toBeVisible({ timeout: 20_000 });
 }

@@ -11,10 +11,18 @@ import type { Circuit } from '@/lib/races';
 // depuis la fabrique de `jest.mock`, qui est hissée en haut du fichier.
 const mockMarqueurs: any[] = [];
 const mockCouche: any = { addTo: jest.fn(() => mockCouche), clearLayers: jest.fn() };
+const mockConteneur = { dataset: {} as Record<string, string> };
 const mockCarte: any = {
   setView: jest.fn(() => mockCarte),
   invalidateSize: jest.fn(),
   remove: jest.fn(),
+  // Le dimensionnement des épingles selon le zoom lit ces trois-là. Leur
+  // absence faisait lever `taille()` AVANT setReady — zéro marqueur posé,
+  // quatre tests rouges, et une CI qui l'aurait dit si je n'avais pas tronqué
+  // la sortie de jest avec un `tail`.
+  getZoom: jest.fn(() => 5),
+  on: jest.fn(),
+  getContainer: jest.fn(() => mockConteneur),
 };
 
 jest.mock(
@@ -49,6 +57,20 @@ describe('CircuitsMap', () => {
   beforeEach(() => {
     mockMarqueurs.length = 0;
     jest.clearAllMocks();
+  });
+
+  it('classe le conteneur selon le zoom (taille des épingles)', async () => {
+    const { CircuitsMap } = await import('./circuits-map.web');
+    let arbre: TestRenderer.ReactTestRenderer;
+    await act(async () => {
+      arbre = TestRenderer.create(
+        <CircuitsMap circuits={CIRCUITS} me={null} selectedId={null} onSelect={() => {}} />,
+      );
+    });
+    // Zoom 5 = France entière : les épingles doivent être en mode « loin ».
+    expect(mockConteneur.dataset.zoom).toBe('loin');
+    expect(mockCarte.on).toHaveBeenCalledWith('zoomend', expect.any(Function));
+    await act(async () => arbre!.unmount());
   });
 
   it('pose les marqueurs DÈS le premier affichage', async () => {

@@ -50,11 +50,19 @@ begin
   -- lien vers l'écran de modération. L'auteur, lui, n'est pas notifié.
   perform tests.eq((select count(*) from notifications
                     where profile_id = M and actor_id = A
-                      and url = 'settings/moderation'
+                      and url = 'settings/moderation?circuits'
                       and body like '%Karting du Bocage%'),
                    1, 'le modérateur est notifié');
   perform tests.eq((select count(*) from notifications where profile_id = A), 0,
                    'l''auteur n''est pas notifié de son propre signalement');
+
+  -- La clé de déduplication de la boîte NE collisionne PAS avec les
+  -- signalements de comportement : même type, même acteur, mais URL
+  -- discriminée. Sans le « ?circuits », l'une des deux alertes non lues
+  -- était silencieusement avalée.
+  insert into reports (reporter_id, category) values (A, 'autre');
+  perform tests.eq((select count(*) from notifications where profile_id = M and actor_id = A), 2,
+                   'signalement de comportement ET de circuit : deux lignes de cloche');
   raise notice 'Scénario 1 (signalement + notification) ✔';
 end $$;
 
@@ -91,6 +99,29 @@ begin
   exception when others then refuse := true;
   end;
   if not refuse then raise exception 'ÉCHEC : correction sans circuit acceptée'; end if;
+
+  -- Cible forgée : un message en français, pas l'erreur de clé étrangère
+  -- brute de Postgres sur l'écran du pilote.
+  refuse := false;
+  begin
+    perform public.suggest_circuit('ferme', 'Un karting', null,
+                                   '00000000-0000-0000-0000-00000000dead');
+  exception when others then
+    refuse := sqlerrm like '%Fiche introuvable%';
+  end;
+  if not refuse then raise exception 'ÉCHEC : cible forgée mal rejetée'; end if;
+
+  -- INSERT direct déjà classé : refusé — une file de modération doit voir
+  -- TOUT ce qui entre.
+  refuse := false;
+  begin
+    set local role authenticated;
+    insert into circuit_suggestions (author_id, kind, name, status)
+      values (A, 'manquant', 'Karting préclassé', 'done');
+  exception when others then refuse := true;
+  end;
+  reset role;
+  if not refuse then raise exception 'ÉCHEC : un signalement peut naître déjà classé'; end if;
 
   -- Type inconnu.
   refuse := false;
