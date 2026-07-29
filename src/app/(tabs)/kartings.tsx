@@ -1,10 +1,10 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { CircuitsMap } from '@/components/circuits-map';
 import { Screen } from '@/components/screen';
-import { Button, Card } from '@/components/ui';
+import { Button, Card, Field } from '@/components/ui';
 import { Body, Label, Muted } from '@/components/ui/text';
 import { colors, radius, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -44,36 +44,45 @@ export default function KartingsScreen() {
   const [locating, setLocating] = useState(false);
   const [geoError, setGeoError] = useState<GeoErrorCode | null>(null);
   const [selected, setSelected] = useState<Circuit | null>(null);
-  const alive = useRef(true);
+  const [query, setQuery] = useState('');
+  // Garde de MONTAGE : ne pas écrire dans l'état d'un écran démonté. À ne pas
+  // confondre avec le focus — une réponse partie avant un changement d'onglet
+  // et revenue après doit encore pouvoir s'afficher.
+  const monte = useRef(true);
+  useEffect(() => {
+    monte.current = true;
+    return () => {
+      monte.current = false;
+    };
+  }, []);
+  // Le référentiel ne bouge pas : un seul chargement pour toute la session.
+  const charge = useRef(false);
 
   const load = useCallback((center: Position) => {
     setFailed(false);
     allCircuitsOnMap(center)
       .then((rows) => {
-        if (!alive.current) return;
+        if (!monte.current) return;
         setCircuits(rows);
         setLoading(false);
       })
       .catch(() => {
-        if (!alive.current) return;
+        if (!monte.current) return;
+        charge.current = false; // un échec doit pouvoir être retenté
         setFailed(true);
         setLoading(false);
       });
   }, []);
 
+  // Un ref de garde, PAS un effet de bord dans un updater de setState : React
+  // se réserve le droit de rejouer un updater, ce qui partait en double
+  // chargement de 250 lignes — et en mise à jour d'état pendant le rendu.
   useFocusEffect(
     useCallback(() => {
-      alive.current = true;
-      // Le référentiel ne bouge pas d'une visite à l'autre : on ne recharge que
-      // si on n'a rien, pour ne pas repayer 250 lignes à chaque retour d'onglet.
-      setCircuits((cur) => {
-        if (cur.length === 0) load(me ?? FRANCE);
-        return cur;
-      });
-      return () => {
-        alive.current = false;
-      };
-    }, [load, me]),
+      if (charge.current) return;
+      charge.current = true;
+      load(FRANCE);
+    }, [load]),
   );
 
   async function onLocate() {
@@ -81,16 +90,17 @@ export default function KartingsScreen() {
     setGeoError(null);
     try {
       const pos = await currentPosition();
-      if (!alive.current) return;
+      if (!monte.current) return;
       setMe(pos);
       // On retrie depuis MA position : la liste sous la carte doit s'ouvrir sur
       // les kartings les plus proches, pas sur ceux du centre de la France.
+      charge.current = true;
       load(pos);
     } catch (e) {
-      if (!alive.current) return;
+      if (!monte.current) return;
       setGeoError(e instanceof GeoError ? e.code : 'unavailable');
     } finally {
-      if (alive.current) setLocating(false);
+      if (monte.current) setLocating(false);
     }
   }
 
@@ -103,12 +113,25 @@ export default function KartingsScreen() {
           ? t.races.circuitGeoUnavailable
           : null;
 
-  const proches = circuits.slice(0, LISTE);
+  // Recherche : sans elle, seuls les 12 premiers kartings sont atteignables
+  // autrement qu'en pointant sur la carte — donc rien pour qui navigue au
+  // clavier ou au lecteur d'écran, et 239 pistes invisibles.
+  const filtre = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return circuits.slice(0, LISTE);
+    const sansAccent = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const cible = sansAccent(q);
+    return circuits
+      .filter((c) => sansAccent(c.name).includes(cible) || sansAccent(c.city ?? '').includes(cible))
+      .slice(0, 40);
+  }, [circuits, query]);
 
   return (
     <Screen title={t.races.mapTitle}>
       <View style={styles.head}>
-        <Muted>{t.races.mapSubtitle.replace('%n', String(circuits.length))}</Muted>
+        <Muted>
+          {loading ? t.races.mapLoading : t.races.mapSubtitle.replace('%n', String(circuits.length))}
+        </Muted>
         <Pressable
           accessibilityRole="button"
           onPress={onLocate}
@@ -149,17 +172,38 @@ export default function KartingsScreen() {
               <Body style={styles.selName}>{selected.name}</Body>
               <Muted>
                 {selected.city ?? ''}
-                {typeof selected.km === 'number' ? ` · ${formatKm(selected.km)}` : ''}
+                {/* La distance n'a de sens que si on connaît MA position :
+                    sans elle, le tri part du centre de la France, et afficher
+                    ce chiffre reviendrait à annoncer la distance à Bourges. */}
+                {typeof selected.km === 'number' && me ? ` · ${formatKm(selected.km)}` : ''}
               </Muted>
             </View>
-            <Button label={t.races.mapCreateHere} onPress={() => router.push('/race/create')} />
+            <Button
+              label={t.races.mapCreateHere}
+              onPress={() =>
+                router.push({
+                  pathname: '/race/create',
+                  params: { circuitId: selected.id },
+                })
+              }
+            />
           </View>
         </Card>
       ) : null}
 
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-        <Label>{t.races.circuitNearTitle}</Label>
-        {proches.map((c) => (
+        <Field
+          label={t.races.mapSearch}
+          placeholder={t.races.mapSearch}
+          value={query}
+          onChangeText={setQuery}
+          autoCapitalize="words"
+        />
+        {/* « Autour de toi » serait un mensonge sans position : le tri part
+            alors du centre de la France. */}
+        <Label>{query ? t.races.mapTitle : me ? t.races.circuitNearTitle : t.races.mapNoPos}</Label>
+        {filtre.length === 0 && !loading ? <Muted>{t.races.mapNone}</Muted> : null}
+        {filtre.map((c) => (
           <Pressable
             key={c.id}
             style={styles.row}

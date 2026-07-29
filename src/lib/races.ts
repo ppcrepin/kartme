@@ -103,6 +103,17 @@ export async function allCircuitsOnMap(center: { lat: number; lon: number }): Pr
   return nearbyCircuits(center.lat, center.lon, { limit: 5000, maxKm: 20_000 });
 }
 
+/** Un circuit par son identifiant (arrivée depuis la carte, lien partagé). */
+export async function getCircuit(id: string): Promise<Circuit | null> {
+  const { data, error } = await supabase
+    .from('circuits')
+    .select('id, name, city, is_official, lat, lon')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as Circuit | null) ?? null;
+}
+
 /** Les circuits où J'AI déjà couru, du plus récent au plus ancien. */
 export async function listRecentCircuits(): Promise<Circuit[]> {
   const { data, error } = await supabase.rpc('my_recent_circuits');

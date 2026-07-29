@@ -1,9 +1,10 @@
 import 'leaflet/dist/leaflet.css';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
+import { t } from '@/i18n';
 import type { Position } from '@/lib/geo';
 import type { Circuit } from '@/lib/races';
 
@@ -33,10 +34,16 @@ export function CircuitsMap({
   selectedId: string | null;
   onSelect: (c: Circuit) => void;
 }) {
-  const host = useRef<View | null>(null);
+  const host = useRef<HTMLElement | null>(null);
   const map = useRef<any>(null);
   const layer = useRef<any>(null);
   const leaflet = useRef<any>(null);
+  const markers = useRef<Map<string, any>>(new Map());
+  // ÉTAT, pas ref : Leaflet est chargé après un `await`, donc l'effet des
+  // marqueurs s'exécute AVANT que l'import ne rende la main. Avec un ref, il
+  // lisait « pas encore prêt », sortait, et rien ne le relançait — la carte
+  // restait vide jusqu'à ce qu'on touche la liste. Un état, lui, redéclenche.
+  const [ready, setReady] = useState(false);
   // Le dernier gestionnaire connu, pour que les marqueurs déjà posés appellent
   // toujours la version à jour. Mis à jour dans un effet, pas pendant le rendu.
   const pick = useRef(onSelect);
@@ -46,10 +53,14 @@ export function CircuitsMap({
 
   useEffect(() => {
     let alive = true;
+    let resize: ReturnType<typeof setTimeout> | null = null;
+    // Copie locale : le nettoyage ne doit pas relire `markers.current`, qui
+    // aura pu être remplacé entre-temps (avertissement react-hooks).
+    const poses = markers.current;
     (async () => {
       const L = await import('leaflet');
       if (!alive || !host.current || map.current) return;
-      const m = L.map(host.current as unknown as HTMLElement, {
+      const m = L.map(host.current, {
         zoomControl: true,
         attributionControl: true,
       }).setView([FRANCE.lat, FRANCE.lon], 5);
@@ -57,50 +68,74 @@ export function CircuitsMap({
         maxZoom: 18,
         // Attribution obligatoire (politique d'usage des tuiles ET licence
         // ODbL des données) : Leaflet l'affiche en bas à droite de la carte.
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(m);
       leaflet.current = L;
       map.current = m;
       layer.current = L.layerGroup().addTo(m);
       // La carte est créée après le premier rendu : sans ce recalcul, Leaflet
       // garde la taille lue à un instant où le conteneur était encore vide.
-      setTimeout(() => m.invalidateSize(), 0);
+      resize = setTimeout(() => m.invalidateSize(), 0);
+      setReady(true);
     })();
     return () => {
       alive = false;
+      if (resize) clearTimeout(resize);
       map.current?.remove();
+      // TOUS les refs, pas seulement la carte : au remontage, un layerGroup
+      // rattaché à une carte détruite avalait les marqueurs en silence.
       map.current = null;
+      layer.current = null;
+      leaflet.current = null;
+      poses.clear();
+      setReady(false);
     };
   }, []);
 
-  // Marqueurs : redessinés quand la liste change, pas à chaque rendu.
+  // Marqueurs : posés une fois par jeu de circuits. La SÉLECTION ne les
+  // recrée pas — 251 icônes détruites et reconstruites à chaque tap faisaient
+  // clignoter toute la carte pour mettre un seul point en évidence.
   useEffect(() => {
     const L = leaflet.current;
-    if (!L || !layer.current) return;
+    if (!ready || !L || !layer.current) return;
     layer.current.clearLayers();
+    markers.current.clear();
     for (const c of circuits) {
       if (c.lat === null || c.lon === null) continue;
-      const actif = c.id === selectedId;
       const marker = L.marker([c.lat, c.lon], {
-        title: c.name,
-        keyboard: true,
-        alt: c.city ? `${c.name}, ${c.city}` : c.name,
+        title: c.city ? `${c.name}, ${c.city}` : c.name,
+        // Sans cela, Leaflet met chaque épingle dans l'ordre de tabulation :
+        // 251 arrêts au clavier avant d'atteindre la suite de la page.
+        keyboard: false,
         icon: L.divIcon({
           className: '',
-          html: `<span class="ks-pin${actif ? ' ks-pin-on' : ''}"></span>`,
+          html: '<span class="ks-pin"></span>',
           iconSize: [16, 16],
           iconAnchor: [8, 8],
         }),
       });
       marker.on('click', () => pick.current(c));
       marker.addTo(layer.current);
+      markers.current.set(c.id, marker);
     }
-  }, [circuits, selectedId]);
+  }, [ready, circuits]);
 
-  // Recentrage sur le pilote dès qu'on connaît sa position.
+  // Mise en évidence : on ne touche QUE les deux épingles concernées.
   useEffect(() => {
-    if (me && map.current) map.current.setView([me.lat, me.lon], 10);
-  }, [me]);
+    if (!ready) return;
+    for (const [id, marker] of markers.current) {
+      const pin = marker.getElement()?.firstChild as HTMLElement | undefined;
+      pin?.classList.toggle('ks-pin-on', id === selectedId);
+    }
+  }, [ready, selectedId]);
+
+  // Recentrage sur le pilote dès qu'on connaît sa position. `ready` en
+  // dépendance : une position obtenue avant la fin du chargement de Leaflet
+  // était sinon perdue pour de bon.
+  useEffect(() => {
+    if (ready && me && map.current) map.current.setView([me.lat, me.lon], 10);
+  }, [ready, me]);
 
   return (
     <>
@@ -117,7 +152,12 @@ export function CircuitsMap({
           `,
         }}
       />
-      <View ref={host} style={styles.map} />
+      <View
+        ref={host as never}
+        style={styles.map}
+        accessibilityRole="none"
+        aria-label={t.races.mapAria}
+      />
     </>
   );
 }

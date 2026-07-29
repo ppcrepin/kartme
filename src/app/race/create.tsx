@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,15 +10,43 @@ import { Body, Muted, Title } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { defaultRaceDate } from '@/lib/datetime';
-import { countMyRacesToday, createRace, MAX_RACES_PER_DAY, type Circuit } from '@/lib/races';
+import {
+  countMyRacesToday,
+  createRace,
+  getCircuit,
+  MAX_RACES_PER_DAY,
+  type Circuit,
+} from '@/lib/races';
 
 export default function CreateRaceScreen() {
   const router = useRouter();
+  // Arrivée depuis la carte (onglet Kartings) : le circuit tapé est
+  // pré-sélectionné. Sans cela, le bouton « Créer une course ici » ouvrait un
+  // formulaire vide et il fallait rechercher à la main la piste qu'on venait
+  // de désigner — une promesse d'interface non tenue.
+  const { circuitId } = useLocalSearchParams<{ circuitId?: string }>();
   const [circuit, setCircuit] = useState<Circuit | null>(null);
   const [when, setWhen] = useState<Date>(defaultRaceDate);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [limited, setLimited] = useState(false);
+
+  useEffect(() => {
+    if (!circuitId) return;
+    let vivant = true;
+    // Lecture directe par identifiant : la recherche est plafonnée à 20
+    // résultats, donc y pêcher un circuit précis échouait dans la quasi-
+    // totalité des cas. Un circuit introuvable laisse simplement le
+    // sélecteur vide plutôt que de bloquer la création.
+    getCircuit(circuitId)
+      .then((c) => {
+        if (vivant && c) setCircuit(c);
+      })
+      .catch(() => {});
+    return () => {
+      vivant = false;
+    };
+  }, [circuitId]);
 
   useEffect(() => {
     countMyRacesToday()
