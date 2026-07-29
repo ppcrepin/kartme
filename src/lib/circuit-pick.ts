@@ -11,14 +11,24 @@ import type { Circuit } from '@/lib/races';
  * `take` CONSOMME la valeur : un second appel rend null. Sans cela, un vieux
  * choix ressurgirait dans la prochaine création de course.
  */
-let picked: Circuit | null = null;
+/**
+ * Durée de vie du dépôt. L'aller-retour légitime carte → formulaire prend
+ * quelques secondes ; au-delà de deux minutes, c'est un choix ABANDONNÉ
+ * (départ sur un lien profond, notification, session expirée) — sans cette
+ * expiration, il ressurgissait silencieusement présélectionné dans la
+ * prochaine création de course, sans aucun rapport avec elle.
+ */
+const TTL_MS = 2 * 60_000;
+
+let picked: { c: Circuit; at: number } | null = null;
 
 export function setPickedCircuit(c: Circuit): void {
-  picked = c;
+  picked = { c, at: Date.now() };
 }
 
 export function takePickedCircuit(): Circuit | null {
-  const c = picked;
+  const d = picked;
   picked = null;
-  return c;
+  if (!d || Date.now() - d.at > TTL_MS) return null;
+  return d.c;
 }

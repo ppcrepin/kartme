@@ -37,7 +37,7 @@ with e(nom, ville, site, tel, indoor) as (values
   ('Brest karting électrique', 'Brest', null, null, true),
   ('Bretagne Karting', 'Combrit', 'http://www.bretagne-karting.fr/', null, false),
   ('Cap Karting', 'Mer', 'https://www.capkarting.com/', null, false),
-  ('Circuit automobile Maurice Tissandier', 'Montgivray', 'https://www.circuitdelachatre.fr/*', null, false),
+  ('Circuit automobile Maurice Tissandier', 'Montgivray', 'https://www.circuitdelachatre.fr', null, false),
   ('Circuit Beausoleil', 'Laval', 'https://www.karting-laval.fr', null, false),
   ('Circuit de Barcelonnette', 'Saint-Pons', 'https://www.passionkart.fr/listings/karting-saint-pons-circuit-barcelonnette/', '+33 6 15 18 74 74', false),
   ('Circuit de Bucy', 'Bucy-le-Long', 'https://www.circuit-de-bucy.com/', null, false),
@@ -180,7 +180,7 @@ with e(nom, ville, site, tel, indoor) as (values
   ('Speed Park', 'Brétigny-sur-Orge', 'https://www.kartingbowling.com/bretigny-sur-orge/page-contact-et-plan-d-acces-11.html', '+331 69 88 34 78', false),
   ('Speed Park', 'Brest', null, null, true),
   ('Speed2Max', 'Clermont-Ferrand', 'https://speed2max.com/', '+33 4 73 14 14 28', false),
-  ('SpeedPark Conflans-Sainte-Honorine', 'Conflans-Sainte-Honorine', 'https://speedpark.fr/?', '+33 1 34 90 23 10', false),
+  ('SpeedPark Conflans-Sainte-Honorine', 'Conflans-Sainte-Honorine', 'https://speedpark.fr', '+33 1 34 90 23 10', false),
   ('Sport-In Park', 'Saint-Berthevin', null, null, true),
   ('Stras Kart', 'Eckbolsheim', 'http://www.straskart.fr/', null, false),
   ('Sud Karting', 'Bouillargues', 'https://sudkarting.fr/fr/', null, false),
@@ -196,6 +196,15 @@ update public.circuits c
  where c.is_official
    and public.kart_normalize(c.name) = public.kart_normalize(e.nom)
    and public.kart_normalize(coalesce(c.city, '')) = public.kart_normalize(e.ville);
+
+-- ═══ 1bis. Les index que la fiche exige ═══════════════════════════════════
+-- `race_is_ranked` compte les participations d'une course — appelée une fois
+-- par ligne de résultat. L'index existant est PARTIEL (where profile_id is
+-- not null) et ne sait pas compter les invités : sans celui-ci, un circuit
+-- chargé paie un balayage complet par appel — mesuré à ~8 s la fiche sur
+-- 10 000 résultats, ~90 ms avec l'index.
+create index if not exists participations_race_idx on public.participations (race_id);
+create index if not exists races_circuit_idx on public.races (circuit_id);
 
 -- ═══ 2. Qui a le droit de voir quel nom ═══════════════════════════════════
 -- LE prédicat du lot, factorisé : le nom d'un pilote au tableau d'un circuit

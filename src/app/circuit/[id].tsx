@@ -139,7 +139,12 @@ export default function CircuitPageScreen() {
               <Button
                 label={t.races.circuitPage.website}
                 variant="ghost"
-                onPress={() => void Linking.openURL(page.website!)}
+                onPress={() => {
+                  // Défense en profondeur : seule la migration écrit `website`
+                  // et elle borne à http(s), mais un openURL aveugle sur une
+                  // valeur de base est le genre de confiance qu'on regrette.
+                  if (/^https?:\/\//.test(page.website!)) void Linking.openURL(page.website!);
+                }}
               />
             ) : null}
             {page.phone ? (

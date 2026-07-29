@@ -192,6 +192,9 @@ begin
                      where website is not null and website !~ '^https?://'), 0,
                    'tous les sites sont des URL http(s)');
   perform tests.eq((select count(*) from circuits
+                     where website is not null and website ~ '[*?#]$'), 0,
+                   'aucune URL ne traîne un caractère parasite final');
+  perform tests.eq((select count(*) from circuits
                      where phone is not null and phone !~ '^\+?[0-9]'), 0,
                    'tous les téléphones commencent par un chiffre ou +');
   raise notice 'Scénario 5 (pratique importé) ✔';
