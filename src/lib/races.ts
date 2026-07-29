@@ -458,10 +458,13 @@ export async function setLapTime(participationId: string, ms: number | null): Pr
 }
 
 /** Record du circuit : meilleur tour jamais enregistré + son auteur. */
-export async function getCircuitRecord(circuitId: string): Promise<{ ms: number; holder: string } | null> {
+/** `holder` null = détenteur au profil privé : afficher « Pilote privé ». */
+export async function getCircuitRecord(
+  circuitId: string,
+): Promise<{ ms: number; holder: string | null } | null> {
   const { data, error } = await supabase.rpc('get_circuit_record', { p_circuit_id: circuitId });
   if (error) throw new Error(error.message);
-  const row = (data as { best_lap_ms: number; holder: string }[] | null)?.[0];
+  const row = (data as { best_lap_ms: number; holder: string | null }[] | null)?.[0];
   return row ? { ms: row.best_lap_ms, holder: row.holder } : null;
 }
 

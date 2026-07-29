@@ -123,7 +123,9 @@ export default function RaceDetailScreen() {
   // périmée (ou « aucun pilote » à tort) pendant l'anti-rebond / le réseau.
   const [pilotResultsFor, setPilotResultsFor] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
-  const [circuitRecord, setCircuitRecord] = useState<{ ms: number; holder: string } | null>(null);
+  const [circuitRecord, setCircuitRecord] = useState<{ ms: number; holder: string | null } | null>(
+    null,
+  );
   const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
   const [lapEditId, setLapEditId] = useState<string | null>(null);
   const [lapInput, setLapInput] = useState('');   // chiffres bruts (pavé numérique)
@@ -668,7 +670,12 @@ export default function RaceDetailScreen() {
                     <Muted style={styles.lapRecord}>
                       {t.races.circuitRecord
                         .replace('%t', formatLap(circuitRecord.ms))
-                        .replace('%n', circuitRecord.holder)}
+                        .replace(
+                          '%n',
+                          // Depuis l'harmonisation A11, le détenteur d'un
+                          // record peut être anonyme (profil privé non-ami).
+                          circuitRecord.holder ?? t.races.circuitPage.privatePilot,
+                        )}
                     </Muted>
                   ) : null}
                   {/* Mode groupé : réservé à l'admin, seul à pouvoir écrire
