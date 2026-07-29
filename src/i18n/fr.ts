@@ -98,6 +98,7 @@ export const fr = {
     mapViewMap: 'Carte',
     mapViewList: 'Liste',
     mapPickTitle: 'Choisir un karting',
+    mapPickConfirm: 'Choisir ce karting',
     mapChooseOnMap: 'Choisir sur la carte',
     // Signalement de circuit (demande PO 2026-07-29) : le référentiel vient
     // d'OpenStreetMap, il est incomplet par nature et il vieillit. Les

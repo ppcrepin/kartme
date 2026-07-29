@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { reseauSimule, sessionSimulee } from './harness';
+import { reseauSimule, sceneActive, sessionSimulee } from './harness';
 
 /**
  * Le pont création de course → carte → retour (décision PO 2026-07-29).
@@ -32,13 +32,32 @@ test('choisir sur la carte préserve la date déjà saisie', async ({ page }) =>
   await expect(champDate).toContainText('28');
   const texteDate = (await champDate.textContent()) ?? '';
 
-  // 2. Aller sur la carte, choisir une piste dans la liste.
+  // 2. Aller sur la carte. SÉLECTION EN DEUX TEMPS (retour PO) : un tap
+  //    montre la fiche, seul « Choisir ce karting » valide et ramène.
   await page.getByText('Choisir sur la carte').click();
   await expect(page.getByText('Choisir un karting', { exact: true })).toBeVisible();
   await page.getByText('Kart Racer', { exact: true }).click();
+  // Toujours sur la carte : rien ne s'est engagé tout seul.
+  await expect(page.getByText('Choisir un karting', { exact: true })).toBeVisible();
+  await page.getByText('Choisir ce karting', { exact: true }).click();
 
-  // 3. Retour au formulaire : la piste est sélectionnée ET la date n'a pas bougé.
-  await expect(page.getByText('Kart Racer', { exact: true })).toBeVisible();
-  await expect(page.getByText('Modifier', { exact: true })).toBeVisible();
-  await expect(page.getByText(texteDate, { exact: true })).toBeVisible();
+  // 3. Retour au formulaire : la piste est sélectionnée ET la date n'a pas
+  //    bougé. `sceneActive` : la carte reste montée derrière le formulaire —
+  //    son marqueur « Kart Racer » déclencherait le mode strict.
+  await expect(page.getByText('Kart Racer', { exact: true }).and(sceneActive(page))).toBeVisible();
+  await expect(page.getByText('Modifier', { exact: true }).and(sceneActive(page))).toBeVisible();
+  await expect(page.getByText(texteDate, { exact: true }).and(sceneActive(page))).toBeVisible();
+});
+
+test('« ← Courses » fonctionne même sans historique (lien profond, PWA relancée)', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, { 'rpc/nearby_circuits': CIRCUITS });
+
+  // Arrivée DIRECTE sur la création : aucun historique derrière. Le bouton
+  // appelait router.back() sans filet — et ne faisait rien.
+  await page.goto('/race/create');
+  await page.getByText('← Courses', { exact: true }).click();
+  await expect(page.getByText('Créer une course', { exact: true }).first()).toBeVisible({
+    timeout: 20_000,
+  });
 });

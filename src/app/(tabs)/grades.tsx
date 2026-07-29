@@ -29,7 +29,7 @@ export default function GradesScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/classements'))}
           accessibilityRole="button"
           accessibilityLabel="Retour"
           hitSlop={10}

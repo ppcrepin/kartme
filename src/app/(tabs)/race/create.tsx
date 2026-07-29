@@ -87,7 +87,7 @@ export default function CreateRaceScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Pressable onPress={() => router.back()} accessibilityRole="button" style={styles.back}>
+        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} accessibilityRole="button" style={styles.back}>
           <Muted>← {t.tabs.races}</Muted>
         </Pressable>
         <Title>{t.races.newRace}</Title>

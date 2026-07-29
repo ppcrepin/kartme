@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
+import { LogBox } from 'react-native';
 
 import { captureReferralFromUrl, logError, track } from '@/lib/analytics';
 import { colors } from '@/constants/theme';
@@ -11,6 +12,11 @@ import { rememberPendingRoute, takePendingRoute } from '@/lib/pending-route';
 
 // Garde le splash affiché tant que la police d'affichage n'est pas prête.
 SplashScreen.preventAutoHideAsync();
+
+// Bruit du framework en dev : les scènes d'onglets font fuiter la prop
+// `importantForAccessibility` vers le DOM, et le toast LogBox qui s'ensuit
+// recouvre la barre d'onglets (il n'existe pas en production).
+LogBox.ignoreLogs([/importantForAccessibility/]);
 
 // Redirige selon l'état d'authentification :
 //  - non connecté           → écrans (auth)
@@ -35,7 +41,9 @@ function RootNavigator() {
     if (initializing) return;
     // Pages légales publiques : accessibles dans tout état d'auth (l'utilisateur
     // doit pouvoir LIRE les CGU/confidentialité qu'il accepte à l'inscription).
-    const path = segments.join('/');
+    // Les segments de groupe — « (tabs) » depuis que les écrans de détail y
+    // vivent — ne font pas partie de l'URL : on compare sans eux.
+    const path = segments.filter((s) => !s.startsWith('(')).join('/');
     if (path === 'settings/cgu' || path === 'settings/confidentialite') return;
     const group = segments[0];
     const inAuth = group === '(auth)';

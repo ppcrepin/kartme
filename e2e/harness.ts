@@ -10,6 +10,20 @@ import type { Page } from '@playwright/test';
  */
 export const UID = '11111111-1111-1111-1111-111111111111';
 
+/**
+ * Restreint un localisateur à la SCÈNE ACTIVE.
+ *
+ * Depuis que les écrans de détail vivent dans le groupe (tabs), chaque scène
+ * visitée reste MONTÉE sur web : empilée derrière l'écran actif (zIndex -1,
+ * aria-hidden), sans display:none. `getByText` traverse ces scènes cachées et
+ * déclenche des violations du mode strict — un « Kart Racer » du formulaire ET
+ * un du marqueur de carte resté derrière, par exemple. À intersecter via
+ * `.and(sceneActive(page))` sur toute assertion qui suit une navigation.
+ */
+export function sceneActive(page: Page) {
+  return page.locator('xpath=//*[not(ancestor-or-self::*[@aria-hidden="true"])]');
+}
+
 export async function sessionSimulee(page: Page) {
   await page.addInitScript(() => {
     const dans1h = Math.floor(Date.now() / 1000) + 3600;
