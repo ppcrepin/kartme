@@ -31,16 +31,28 @@ export default function KartingsScreen() {
         extra={
           selected ? (
             <Card>
-              <View style={styles.sel}>
+              {/* Le corps de la carte OUVRE la fiche (record, meilleurs
+                  temps, pratique) — demande PO : « quand on clique sur un
+                  karting, voir les infos utiles ». */}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push(`/circuit/${selected.id}`)}
+                style={styles.sel}>
                 <View style={styles.flex}>
                   <Body style={styles.selName}>{selected.name}</Body>
                   <Muted>
                     {selected.city ?? ''}
-                    {/* La distance n'a de sens que si on connaît MA position —
-                        l'explorateur ne la renvoie qu'à cette condition. */}
                     {typeof selected.km === 'number' ? ` · ${formatKm(selected.km)}` : ''}
                   </Muted>
                 </View>
+                <Muted style={styles.chevron}>›</Muted>
+              </Pressable>
+              <View style={styles.sel}>
+                <Button
+                  label={t.races.circuitPage.openPage}
+                  variant="ghost"
+                  onPress={() => router.push(`/circuit/${selected.id}`)}
+                />
                 <Button
                   label={t.races.mapCreateHere}
                   onPress={() =>
@@ -75,6 +87,7 @@ const styles = StyleSheet.create({
   sel: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   selName: { fontWeight: '700' },
   reportLink: { marginTop: spacing.sm, color: colors.accent, fontWeight: '700' },
+  chevron: { fontSize: 22, color: colors.inkDim },
   reportBtn: { marginTop: spacing.lg, color: colors.accent, fontWeight: '700' },
   flex: { flex: 1, gap: 2 },
 });
