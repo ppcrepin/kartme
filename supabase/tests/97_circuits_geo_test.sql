@@ -24,6 +24,14 @@ insert into public.profiles (id, username, elo) values
   ('cc000000-0000-0000-0000-00000000000a', 'Ayla', 1200),
   ('cc000000-0000-0000-0000-00000000000b', 'Bono', 1400);
 
+-- `mien` : les circuits créés par CE fichier. Le référentiel réel (254
+-- kartings importés par migration) est présent dans la base de test, et il y a
+-- de vrais kartings à Paris : sans ce filtre, les comptages mesureraient
+-- l'import, pas la fonction.
+create function tests.mien(p uuid) returns boolean language sql immutable as $$
+  select p::text like 'cc000000-0000-0000-0000-0000000000c%';
+$$;
+
 -- Quatre repères réels, coordonnées arrondies : elles servent de distances de
 -- référence, pas d'adresses.
 insert into public.circuits (id, name, city, is_official, lat, lon) values
@@ -82,39 +90,45 @@ begin
   perform tests.as_uid(A);
 
   -- Depuis Paris : Paris d'abord, Versailles ensuite, Lyon hors rayon (392 km).
-  select name into premier from public.nearby_circuits(48.8566, 2.3522) limit 1;
+  select name into premier from public.nearby_circuits(48.8566, 2.3522, 2000)
+   where tests.mien(id) limit 1;
   if premier is distinct from 'Kart Paris' then
     raise exception 'ÉCHEC : le plus proche de Paris est « % »', premier;
   end if;
-  perform tests.eq((select count(*) from public.nearby_circuits(48.8566, 2.3522)), 2,
+  perform tests.eq((select count(*) from public.nearby_circuits(48.8566, 2.3522, 500) where tests.mien(id)), 2,
                    'Lyon est hors du rayon de 150 km');
 
   -- Le circuit sans coordonnées ne doit JAMAIS sortir : une liste « près de
   -- moi » qui contient un circuit dont on ignore la position est un mensonge.
-  perform tests.eq((select count(*) from public.nearby_circuits(48.8566, 2.3522, 100, 20000)
+  perform tests.eq((select count(*) from public.nearby_circuits(48.8566, 2.3522, 2000, 20000)
                     where name = 'Kart Sans Adresse'), 0,
                    'circuit sans coordonnées exclu même à rayon maximal');
 
   -- Rayon élargi : Lyon rentre.
-  perform tests.eq((select count(*) from public.nearby_circuits(48.8566, 2.3522, 100, 500)), 3,
-                   'à 500 km, les trois circuits géocodés');
+  perform tests.eq((select count(*) from public.nearby_circuits(48.8566, 2.3522, 2000, 500) where tests.mien(id)), 3,
+                   'à 500 km, les trois circuits géocodés du test');
 
   -- Depuis Lyon, l'ordre s'inverse.
-  select name into premier from public.nearby_circuits(45.7640, 4.8357, 100, 500) limit 1;
+  select name into premier from public.nearby_circuits(45.7640, 4.8357, 2000, 500)
+   where tests.mien(id) limit 1;
   if premier is distinct from 'Kart Lyon' then
     raise exception 'ÉCHEC : le plus proche de Lyon est « % »', premier;
   end if;
 
   -- Position absente ou aberrante : AUCUN résultat, surtout pas le référentiel
   -- entier trié n'importe comment sous l'étiquette « près de moi ».
-  perform tests.eq((select count(*) from public.nearby_circuits(null, null)), 0,
+  perform tests.eq((select count(*) from public.nearby_circuits(null, null, 2000, 20000)), 0,
                    'position absente : rien');
-  perform tests.eq((select count(*) from public.nearby_circuits(999, 999)), 0,
+  perform tests.eq((select count(*) from public.nearby_circuits(999, 999, 2000, 20000)), 0,
                    'position hors bornes : rien');
 
   -- Bornes de pagination.
   perform tests.eq((select count(*) from public.nearby_circuits(48.8566, 2.3522, 1)), 1,
                    'limite respectée');
+  -- Et le plafond s'applique bien AVANT le rayon : demander 1 circuit à 500 km
+  -- ne doit pas en rendre 2.
+  perform tests.eq((select count(*) from public.nearby_circuits(48.8566, 2.3522, 1, 500)), 1,
+                   'limite respectée quel que soit le rayon');
   perform tests.eq((select count(*) from public.nearby_circuits(48.8566, 2.3522, -5)), 0,
                    'limite négative : rien plutôt qu''une erreur');
   raise notice 'Scénario 3 (près de moi) ✔';
@@ -127,7 +141,7 @@ do $$
 declare A uuid := 'cc000000-0000-0000-0000-00000000000a';
 begin
   perform tests.as_uid(A);
-  perform tests.eq((select count(*) from public.search_circuits('Versailles')
+  perform tests.eq((select count(*) from public.search_circuits('Kart Versailles')
                     where lat is not null and lon is not null), 1,
                    'search_circuits renvoie les coordonnées');
   raise notice 'Scénario 4 (recherche géocodée) ✔';

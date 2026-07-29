@@ -1,14 +1,101 @@
--- Seed KartSquad — référentiel des kartings de France.
+-- KartSquad — import des kartings de France (OpenStreetMap, ODbL).
 --
--- Source : OpenStreetMap (Overpass, `sport=karting`, France, juillet 2026),
--- sous licence ODbL. Regroupement géographique des tracés d'un même complexe,
--- filtrage de ce qui n'est pas du karting, ville par géocodage inverse
--- (Nominatim). Voir la migration `20260729120000_import_kartings_fr.sql` et
--- `docs/credits.md`.
+-- Source : OpenStreetMap via l'API Overpass, objets `sport=karting` en France,
+-- juillet 2026. Données sous licence ODbL — réutilisables, y compris
+-- commercialement, à condition d'en citer la source (voir docs/credits.md).
 --
--- Le référentiel est FERMÉ côté client depuis A4 : il ne s'enrichit plus par
--- les ajouts des pilotes, uniquement par ce canal. Idempotent.
+-- Comment la liste a été construite :
+--   1. 1 214 objets bruts ramenés par Overpass ;
+--   2. REGROUPEMENT GÉOGRAPHIQUE à 600 m : un complexe de karting apparaît en
+--      plusieurs morceaux (le tracé, la voie des stands, le stand, parfois deux
+--      pistes « Pro » et « Amateur ») — c'est UN lieu, pas cinq. Le nom retenu
+--      est le plus explicite du groupe ;
+--   3. filtrage de ce qui n'est pas du karting chronométrable : quad, kart-cross,
+--      buggy, karts à pédales, paintball, une soufflerie de chute libre et une
+--      « piste de kart abandonnée » — 24 groupes écartés ;
+--   4. ville obtenue par géocodage inverse (Nominatim) là où OpenStreetMap ne
+--      la portait pas : 254 kartings, tous avec une ville.
+--
+-- Décisions PO 2026-07-29 :
+--   · les 12 circuits du seed d'origine qui désignent un lieu réel sont MIS À
+--     JOUR EN PLACE (l'identifiant ne bouge pas → les courses déjà jouées
+--     gardent leur circuit) ;
+--   · les 12 autres, qui ne correspondent à aucun karting existant, sont
+--     supprimés ;
+--   · l'outre-mer est inclus : c'est la France.
+--
+-- Le script est IDEMPOTENT : le relancer ne crée pas de doublon.
 
+-- ═══ 1. Fusion : le vrai nom remplace le nom approximatif ═════════════════
+-- On met à jour au lieu d'insérer-puis-supprimer, sinon `races.circuit_id`
+-- (on delete set null) viderait le circuit des courses déjà disputées.
+with fusion(ancien, nom, ville, lat, lon) as (values
+  ('Racing Kart de Cormeilles', 'RKC Karting', 'Cormeilles-en-Vexin', 49.10374, 2.03785),
+  ('Le Mans Karting International', 'Karting des 24h Le Mans', 'Le Mans', 47.94007, 0.21189),
+  ('Circuit Paul Ricard Karting', 'Karting Circuit Paul Ricard', 'Le Castellet', 43.24698, 5.79839),
+  ('Karting de Salbris', 'Sologne Karting', 'Salbris', 47.36013, 2.04984),
+  ('Karting de Trappes', 'Circuit Beltoise-Trappes', 'Trappes', 48.75988, 1.99302),
+  ('Karting de Mornant', 'BattleKart Lyon-Mornant', 'Mornant', 45.6243, 4.70298),
+  ('Circuit de Lavilledieu', 'Karting Philippe Lavilledieu', 'Lavilledieu', 44.58556, 4.44818),
+  ('Karting de Bordeaux Mérignac', 'Circuit de Karting', 'Mérignac', 44.84436, -0.72082),
+  ('Karting de Nantes', 'Le Karting', 'Nantes', 47.20078, -1.57094),
+  ('Karting de Biscarrosse', 'Kart Center Biscarosse', 'Biscarrosse', 44.4098, -1.0827),
+  ('Karting de Fontenay-le-Comte', 'Circuit Vendée Kart Center', 'Fontenay-le-Comte', 46.4387, -0.78885),
+  ('Karting de Dijon-Prenois', 'Circuit de Karting de Dijon-Prenois', 'Prenois', 47.3672, 4.90161)
+)
+update public.circuits c
+   set name = f.nom, city = f.ville, lat = f.lat, lon = f.lon
+  from fusion f
+ where c.is_official
+   and public.kart_normalize(c.name) = public.kart_normalize(f.ancien);
+
+-- ═══ 2. Suppression des circuits sans réalité ═════════════════════════════
+-- Aucun karting derrière ces noms (ou impossible de dire lequel). Une course
+-- qui pointerait dessus perd son circuit — décision PO assumée ; la course et
+-- son Elo, eux, sont intacts.
+do $fantomes$
+declare v_courses int; v_supprimes int;
+begin
+  select count(*) into v_courses
+    from public.races r join public.circuits c on c.id = r.circuit_id
+   where c.is_official and public.kart_normalize(c.name) in (
+    'Karting d''Angerville',
+    'Kart''Up Paris',
+    'RKC Roubaix',
+    'Speed Park Lyon',
+    'Kart Indoor Villebon',
+    'Karting d''Aix-en-Provence',
+    'Karting d''Ancenis',
+    'Kart''in Wittelsheim',
+    'Karting du Val d''Argenton',
+    'Circuit de Croix-en-Ternois',
+    'Karting de Muret',
+    'Karting de Toulouse'
+  );
+
+  delete from public.circuits c
+   where c.is_official and public.kart_normalize(c.name) in (
+    'Karting d''Angerville',
+    'Kart''Up Paris',
+    'RKC Roubaix',
+    'Speed Park Lyon',
+    'Kart Indoor Villebon',
+    'Karting d''Aix-en-Provence',
+    'Karting d''Ancenis',
+    'Kart''in Wittelsheim',
+    'Karting du Val d''Argenton',
+    'Circuit de Croix-en-Ternois',
+    'Karting de Muret',
+    'Karting de Toulouse'
+  );
+  get diagnostics v_supprimes = row_count;
+  raise notice 'Circuits sans réalité supprimés : % (courses ayant perdu leur circuit : %)',
+    v_supprimes, v_courses;
+end $fantomes$;
+
+-- ═══ 3. Import ═══════════════════════════════════════════════════════════
+-- Dédoublonnage sur le nom NORMALISÉ + la ville : après l'étape 1, les 12
+-- circuits fusionnés portent déjà leur vrai nom et ne sont pas réinsérés.
 insert into public.circuits (name, city, is_official, lat, lon)
 select v.name, v.city, true, v.lat, v.lon
 from (values
@@ -272,3 +359,10 @@ where not exists (
    where public.kart_normalize(c.name) = public.kart_normalize(v.name)
      and public.kart_normalize(coalesce(c.city, '')) = public.kart_normalize(v.city)
 );
+
+do $bilan$
+declare n int; g int;
+begin
+  select count(*), count(*) filter (where lat is not null) into n, g from public.circuits;
+  raise notice 'Référentiel : % circuits, dont % géolocalisés', n, g;
+end $bilan$;
