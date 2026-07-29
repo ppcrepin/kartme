@@ -30,6 +30,10 @@ export default function TabsLayout() {
         options={{ title: t.tabs.friends, tabBarIcon: ({ color }) => <TabIcon name="friends" color={color} /> }}
       />
       <Tabs.Screen
+        name="kartings"
+        options={{ title: t.tabs.tracks, tabBarIcon: ({ color }) => <TabIcon name="tracks" color={color} /> }}
+      />
+      <Tabs.Screen
         name="profil"
         options={{ title: t.tabs.profile, tabBarIcon: ({ color }) => <TabIcon name="profile" color={color} /> }}
       />

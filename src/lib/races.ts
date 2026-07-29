@@ -75,11 +75,32 @@ export async function searchCircuits(query: string): Promise<Circuit[]> {
  * un kilomètre. Cela ne change pas l'ordre des kartings et évite de confier au
  * serveur une position au mètre près dont il n'a aucun usage.
  */
-export async function nearbyCircuits(lat: number, lon: number): Promise<Circuit[]> {
+export async function nearbyCircuits(
+  lat: number,
+  lon: number,
+  opts?: { limit?: number; maxKm?: number },
+): Promise<Circuit[]> {
   const { lat: p_lat, lon: p_lon } = coarse({ lat, lon });
-  const { data, error } = await supabase.rpc('nearby_circuits', { p_lat, p_lon });
+  const { data, error } = await supabase.rpc('nearby_circuits', {
+    p_lat,
+    p_lon,
+    ...(opts?.limit === undefined ? {} : { p_limit: opts.limit }),
+    ...(opts?.maxKm === undefined ? {} : { p_max_km: opts.maxKm }),
+  });
   if (error) throw new Error(error.message);
   return (data ?? []) as Circuit[];
+}
+
+/**
+ * Tout le référentiel géolocalisé, pour la carte.
+ *
+ * On réutilise `nearby_circuits` avec un rayon qui couvre la planète plutôt
+ * que d'ajouter une fonction serveur : le tri par distance reste utile (la
+ * liste sous la carte s'ouvre sur les plus proches) et il n'y a aucune règle
+ * de visibilité à dupliquer.
+ */
+export async function allCircuitsOnMap(center: { lat: number; lon: number }): Promise<Circuit[]> {
+  return nearbyCircuits(center.lat, center.lon, { limit: 5000, maxKm: 20_000 });
 }
 
 /** Les circuits où J'AI déjà couru, du plus récent au plus ancien. */

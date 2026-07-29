@@ -1,9 +1,9 @@
 import { ColorValue } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
-export type TabName = 'races' | 'rankings' | 'friends' | 'profile';
+export type TabName = 'races' | 'rankings' | 'friends' | 'profile' | 'tracks';
 
-/** Icônes d'onglet line-art distinctes (drapeau · podium · amis · casque). */
+/** Icônes d'onglet line-art distinctes (drapeau · podium · amis · casque · repère). */
 export function TabIcon({ name, color }: { name: TabName; color: ColorValue }) {
   const stroke = color as string;
   const common = { stroke, strokeWidth: 2, fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
@@ -22,6 +22,12 @@ export function TabIcon({ name, color }: { name: TabName; color: ColorValue }) {
           <Rect x="9" y="6" width="6" height="14" {...common} />
           <Rect x="3" y="11" width="6" height="9" {...common} />
           <Rect x="15" y="9" width="6" height="11" {...common} />
+        </>
+      ) : name === 'tracks' ? (
+        // Repère de carte : la goutte classique, lisible à 24 px.
+        <>
+          <Path d="M12 21c-4-4.6-6-7.6-6-10a6 6 0 1 1 12 0c0 2.4-2 5.4-6 10z" {...common} />
+          <Circle cx="12" cy="11" r="2.2" {...common} />
         </>
       ) : name === 'friends' ? (
         // Deux pilotes.

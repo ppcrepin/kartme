@@ -13,6 +13,7 @@ export const fr = {
     races: 'Courses',
     rankings: 'Classements',
     friends: 'Amis',
+    tracks: 'Kartings',
     profile: 'Profil',
   },
   common: {
@@ -80,6 +81,15 @@ export const fr = {
     // « Près de moi » (A12a) : la position n'est demandée QUE sur ce bouton,
     // pour que la fenêtre du navigateur arrive quand le pilote l'a voulue.
     circuitNear: 'Près de moi',
+    // Onglet Kartings (A12b) — carte Leaflet + fond OpenStreetMap.
+    mapTitle: 'Kartings',
+    mapSubtitle: '%n kartings en France',
+    mapLoading: 'Chargement de la carte…',
+    mapWebOnly: 'La carte n’est disponible que dans le navigateur pour le moment.',
+    mapLocate: 'Me localiser',
+    mapCreateHere: 'Créer une course ici',
+    mapAttribution: 'Fond de carte et données : © contributeurs OpenStreetMap',
+    mapFailed: 'Impossible de charger les kartings.',
     circuitTruncated: '%n circuits affichés sur %t — précise ta recherche (nom ou ville).',
     circuitNearTitle: 'Autour de toi',
     circuitLocating: 'Recherche de ta position…',
