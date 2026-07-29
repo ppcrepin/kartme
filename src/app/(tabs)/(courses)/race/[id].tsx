@@ -338,7 +338,7 @@ export default function RaceDetailScreen() {
     setJoinError(null);
     try {
       await deleteRace(id!);
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch {
       setJoinError(t.races.deleteError);
       setConfirmDelete(false);
@@ -530,7 +530,7 @@ export default function RaceDetailScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
           accessibilityRole="button"
           accessibilityLabel="Retour"
           hitSlop={10}

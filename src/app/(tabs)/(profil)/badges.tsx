@@ -30,7 +30,7 @@ export default function BadgesScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
         <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/profil'))}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/profil'))}
           accessibilityRole="button"
           accessibilityLabel="Retour"
           hitSlop={10}

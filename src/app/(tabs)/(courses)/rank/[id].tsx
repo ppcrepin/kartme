@@ -237,7 +237,11 @@ export default function RankScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} scrollEnabled={!dragging}>
         <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
+          onPress={() =>
+            // Sans historique (PWA relancée en plein classement), le retour
+            // naturel est LA COURSE que l'on classait, pas la liste.
+            router.canGoBack() ? router.back() : router.replace(`/race/${id}`)
+          }
           accessibilityRole="button"
           accessibilityLabel="Retour"
           hitSlop={10}

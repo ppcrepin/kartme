@@ -49,6 +49,27 @@ test('choisir sur la carte préserve la date déjà saisie', async ({ page }) =>
   await expect(page.getByText(texteDate, { exact: true }).and(sceneActive(page))).toBeVisible();
 });
 
+test('rouvrir la création après un passage donne un formulaire NEUF', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, { 'rpc/nearby_circuits': CIRCUITS });
+
+  // Premier passage : choisir une piste sur la carte, revenir, quitter.
+  await page.goto('/race/create');
+  await page.getByText('Choisir sur la carte').click();
+  await page.getByText('Kart Racer', { exact: true }).first().click();
+  await page.getByText('Choisir ce karting', { exact: true }).click();
+  await expect(page.getByText('Modifier', { exact: true }).and(sceneActive(page))).toBeVisible();
+  await page.getByText('← Courses', { exact: true }).click();
+
+  // Second passage : l'écran doit être REMONTÉ, pas exhumé avec son état.
+  // C'est le verrou de toute une famille de bugs (busy bloqué, confirmations
+  // déployées, choix résiduels) née quand les écrans de détail restaient
+  // montés à vie dans le navigateur d'onglets.
+  await page.getByText('Créer une course', { exact: true }).and(sceneActive(page)).first().click();
+  await expect(page.getByText('Choisir sur la carte').and(sceneActive(page))).toBeVisible();
+  await expect(page.getByText('Modifier', { exact: true }).and(sceneActive(page))).toHaveCount(0);
+});
+
 test('« ← Courses » fonctionne même sans historique (lien profond, PWA relancée)', async ({ page }) => {
   await sessionSimulee(page);
   await reseauSimule(page, { 'rpc/nearby_circuits': CIRCUITS });
@@ -57,7 +78,9 @@ test('« ← Courses » fonctionne même sans historique (lien profond, PWA rela
   // appelait router.back() sans filet — et ne faisait rien.
   await page.goto('/race/create');
   await page.getByText('← Courses', { exact: true }).click();
-  await expect(page.getByText('Créer une course', { exact: true }).first()).toBeVisible({
-    timeout: 20_000,
-  });
+  // `sceneActive` : le formulaire peut rester monté derrière — seule la liste
+  // des courses de la SCÈNE ACTIVE prouve que le retour a eu lieu.
+  await expect(
+    page.getByText('Créer une course', { exact: true }).and(sceneActive(page)).first(),
+  ).toBeVisible({ timeout: 20_000 });
 });

@@ -24,7 +24,25 @@ export function sceneActive(page: Page) {
   return page.locator('xpath=//*[not(ancestor-or-self::*[@aria-hidden="true"])]');
 }
 
+/**
+ * Neutralise la superposition d'erreurs du serveur de DEV (#error-toast,
+ * @expo/metro-runtime) : un simple avertissement React la fait apparaître
+ * au-dessus de la barre d'onglets où elle GOBE les clics des tests. Elle
+ * n'existe pas dans l'export de production — la masquer ne cache aucun bug
+ * de l'app (les erreurs restent visibles dans la console du navigateur).
+ */
+async function sansToastErreurDev(page: Page) {
+  await page.addInitScript(() => {
+    addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = '#error-toast{display:none!important;pointer-events:none!important}';
+      document.head.appendChild(style);
+    });
+  });
+}
+
 export async function sessionSimulee(page: Page) {
+  await sansToastErreurDev(page);
   await page.addInitScript(() => {
     const dans1h = Math.floor(Date.now() / 1000) + 3600;
     const session = {

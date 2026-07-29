@@ -78,7 +78,7 @@ export default function CircuitPageScreen() {
       .catch(() => {});
   }
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/kartings'));
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/kartings'));
 
   if (loading || failed || !page) {
     return (

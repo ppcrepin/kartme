@@ -94,7 +94,7 @@ export default function PilotScreen() {
     useCallback(() => {
       // Règle « si c'est moi → mon profil (R1) ».
       if (id && session?.user.id === id) {
-        router.replace('/(tabs)/profil');
+        router.replace('/profil');
         return;
       }
       refresh().catch(() => {});
@@ -139,7 +139,7 @@ export default function PilotScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
         <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/amis'))}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/amis'))}
           accessibilityRole="button"
           accessibilityLabel="Retour"
           hitSlop={10}

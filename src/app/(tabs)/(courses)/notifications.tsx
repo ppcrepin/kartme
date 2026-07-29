@@ -91,7 +91,7 @@ export default function NotificationsScreen() {
   return (
     <Screen
       title={t.inbox.title}
-      onBack={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}>
+      onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}>
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         {items === null ? (
           <>

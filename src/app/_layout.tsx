@@ -3,7 +3,6 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
-import { LogBox } from 'react-native';
 
 import { captureReferralFromUrl, logError, track } from '@/lib/analytics';
 import { colors } from '@/constants/theme';
@@ -12,11 +11,6 @@ import { rememberPendingRoute, takePendingRoute } from '@/lib/pending-route';
 
 // Garde le splash affiché tant que la police d'affichage n'est pas prête.
 SplashScreen.preventAutoHideAsync();
-
-// Bruit du framework en dev : les scènes d'onglets font fuiter la prop
-// `importantForAccessibility` vers le DOM, et le toast LogBox qui s'ensuit
-// recouvre la barre d'onglets (il n'existe pas en production).
-LogBox.ignoreLogs([/importantForAccessibility/]);
 
 // Redirige selon l'état d'authentification :
 //  - non connecté           → écrans (auth)
@@ -65,7 +59,7 @@ function RootNavigator() {
       // typées d'expo-router ne peuvent pas la vérifier. `rememberPendingRoute`
       // filtre déjà sur `race/` et `pilot/`, seules formes acceptées.
       if (pending) router.replace(`/${pending}` as Parameters<typeof router.replace>[0]);
-      else if (inAuth || inOnboarding) router.replace('/(tabs)');
+      else if (inAuth || inOnboarding) router.replace('/');
     }
   }, [initializing, session, hasProfile, segments, router]);
 

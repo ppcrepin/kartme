@@ -58,14 +58,14 @@ export default function CircuitReportScreen() {
   return (
     <Screen
       title={t.races.reportTitle}
-      onBack={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/kartings'))}>
+      onBack={() => (router.canGoBack() ? router.back() : router.replace('/kartings'))}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {sent ? (
           <>
             <Banner kind="ok" title={t.races.reportDone} />
             <Button
               label={t.races.reportBack}
-              onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/kartings'))}
+              onPress={() => (router.canGoBack() ? router.back() : router.replace('/kartings'))}
             />
           </>
         ) : (

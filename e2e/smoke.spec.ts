@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { reseauSimule, sessionSimulee } from './harness';
+import { reseauSimule, sceneActive, sessionSimulee } from './harness';
 
 /**
  * Smoke test du shell : l'app démarre et les 5 onglets sont présents.
@@ -40,14 +40,17 @@ test('la barre d’onglets reste visible sur un écran de détail', async ({ pag
   });
 
   // Les 5 onglets sont là, SUR la fiche circuit — et RIEN QUE ces 5 : un
-  // écran oublié dans ECRANS_SANS_ONGLET deviendrait un 6e bouton d'onglet.
+  // fichier route égaré directement sous (tabs) deviendrait un 6e bouton.
+  // Par RÔLE : la liste Kartings est montée sous la fiche dans la pile, et
+  // son TITRE caché ferait trébucher un repérage par texte.
   for (const label of ['Courses', 'Classements', 'Amis', 'Kartings', 'Profil']) {
-    await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('tab', { name: label })).toBeVisible();
   }
   await expect(page.getByRole('tab')).toHaveCount(5);
 
-  // Et ils fonctionnent : un tap sur « Kartings » quitte la fiche pour l'onglet.
-  await page.getByText('Kartings', { exact: true }).first().click();
-  // Le libellé complet est « 📍 Me localiser » (un seul nœud texte) : pas d'exact.
-  await expect(page.getByText(/Me localiser/).first()).toBeVisible({ timeout: 20_000 });
+  // Et ils fonctionnent : sauter DIRECTEMENT de la fiche vers Courses.
+  await page.getByRole('tab', { name: 'Courses' }).click();
+  await expect(
+    page.getByText('Créer une course', { exact: true }).and(sceneActive(page)).first(),
+  ).toBeVisible({ timeout: 20_000 });
 });

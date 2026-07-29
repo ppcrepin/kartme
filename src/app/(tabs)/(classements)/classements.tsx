@@ -136,7 +136,7 @@ export default function ClassementsScreen() {
   }
 
   function openPilot(row: LeaderboardRow) {
-    if (row.isMe) router.push('/(tabs)/profil');
+    if (row.isMe) router.push('/profil');
     else if (row.pilotId) router.push(`/pilot/${row.pilotId}`);
   }
 
