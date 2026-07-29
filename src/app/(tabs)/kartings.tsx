@@ -129,12 +129,28 @@ export default function KartingsScreen() {
     const sansAccent = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     const cible = sansAccent(q);
     return circuits
-      .filter((c) => sansAccent(c.name).includes(cible) || sansAccent(c.city ?? '').includes(cible))
+      .filter(
+        (c) =>
+          sansAccent(c.name).includes(cible) ||
+          sansAccent(c.city ?? '').includes(cible) ||
+          // Les alias : « BRK » doit ramener le karting de Trappes.
+          sansAccent(c.aliases ?? '').includes(cible),
+      )
       .slice(0, 40);
   }, [circuits, query]);
 
   return (
     <Screen title={t.races.mapTitle}>
+      {/* TOUT dans un seul ScrollView. Avant, l'écran était un bloc figé : la
+          carte occupait la hauteur restante et la liste, sous elle, était hors
+          de l'écran — sans aucun moyen d'y arriver, puisque balayer la carte
+          la déplace au lieu de faire défiler la page. Mesuré dans un vrai
+          navigateur : scrollHeight == clientHeight, donc défilement nul. */}
+      <ScrollView
+        style={styles.page}
+        contentContainerStyle={styles.pageContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
       <View style={styles.head}>
         <Muted>
           {loading ? t.races.mapLoading : t.races.mapSubtitle.replace('%n', String(circuits.length))}
@@ -228,10 +244,7 @@ export default function KartingsScreen() {
         </Card>
       ) : null}
 
-      <ScrollView
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled">
+      <View style={styles.list}>
         {/* « Autour de toi » serait un mensonge sans position : le tri part
             alors du centre de la France. */}
         <Label>{query ? t.races.mapTitle : me ? t.races.circuitNearTitle : t.races.mapNoPos}</Label>
@@ -254,12 +267,15 @@ export default function KartingsScreen() {
         {/* Attribution ODbL : elle figure aussi dans le coin de la carte, mais
             la carte peut être remplacée par la liste sur un petit écran. */}
         <Muted style={styles.attrib}>{t.races.mapAttribution}</Muted>
+      </View>
       </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  page: { flex: 1 },
+  pageContent: { gap: spacing.md, paddingBottom: spacing.xxl },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   locate: { marginLeft: 'auto', paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderRadius: radius.sharp, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
   locateTxt: { color: colors.accent, fontWeight: '700' },

@@ -15,7 +15,20 @@ export default defineConfig({
     baseURL: 'http://localhost:8081',
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // Chromium est pré-installé dans l'environnement d'exécution ; sans ce
+        // chemin, Playwright cherche une version qu'il faudrait télécharger.
+        // Chromium est pré-installé dans certains environnements ; PW_CHROMIUM
+        // évite alors un téléchargement inutile. Absent, Playwright utilise sa
+        // propre copie.
+        launchOptions: { executablePath: process.env.PW_CHROMIUM ?? undefined },
+      },
+    },
+  ],
   webServer: {
     command: 'npx expo start --web --port 8081',
     url: 'http://localhost:8081',

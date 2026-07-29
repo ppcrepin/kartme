@@ -20,6 +20,12 @@ export interface Circuit {
   km?: number;
   /** Nombre TOTAL de circuits correspondants — renseigné par `searchCircuits`. */
   total?: number;
+  /**
+   * Noms alternatifs (sigle, enseigne, ancien nom) séparés par « · ». Jamais
+   * affichés : ils servent uniquement à ce qu'une recherche aboutisse. Les
+   * pilotes disent « BRK », pas « Circuit Beltoise-Trappes ».
+   */
+  aliases?: string | null;
 }
 
 // 'locked' = grille figée (invitations clôturées), en attente de la saisie.
@@ -107,7 +113,7 @@ export async function allCircuitsOnMap(center: { lat: number; lon: number }): Pr
 export async function getCircuit(id: string): Promise<Circuit | null> {
   const { data, error } = await supabase
     .from('circuits')
-    .select('id, name, city, is_official, lat, lon')
+    .select('id, name, city, is_official, lat, lon, aliases')
     .eq('id', id)
     .maybeSingle();
   if (error) throw new Error(error.message);

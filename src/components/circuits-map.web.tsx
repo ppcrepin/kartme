@@ -77,6 +77,15 @@ export function CircuitsMap({
       // La carte est créée après le premier rendu : sans ce recalcul, Leaflet
       // garde la taille lue à un instant où le conteneur était encore vide.
       resize = setTimeout(() => m.invalidateSize(), 0);
+      // Taille des épingles selon le zoom. À l'échelle de la France, 277
+      // pastilles de 18 px se recouvrent en une tache rouge illisible — c'est
+      // ce que montrait la capture du PO. On les réduit quand on dézoome.
+      const taille = () => {
+        const z = m.getZoom();
+        m.getContainer().dataset.zoom = z < 7 ? 'loin' : z < 10 ? 'moyen' : 'pres';
+      };
+      taille();
+      m.on('zoomend', taille);
       setReady(true);
     })();
     return () => {
@@ -143,11 +152,15 @@ export function CircuitsMap({
       <style
         dangerouslySetInnerHTML={{
           __html: `
-            .ks-pin{display:block;width:14px;height:14px;border-radius:7px;
+            .ks-pin{display:block;width:14px;height:14px;border-radius:50%;
               background:${colors.accent};border:2px solid #fff;
-              box-shadow:0 1px 3px rgba(0,0,0,.5);cursor:pointer}
-            .ks-pin-on{width:22px;height:22px;border-radius:11px;margin:-4px 0 0 -4px;
-              border-width:3px}
+              box-shadow:0 1px 3px rgba(0,0,0,.5);cursor:pointer;
+              transform:translate(1px,1px)}
+            [data-zoom="loin"] .ks-pin{width:8px;height:8px;border-width:1px;
+              transform:translate(4px,4px)}
+            [data-zoom="moyen"] .ks-pin{width:11px;height:11px;
+              transform:translate(2px,2px)}
+            .ks-pin-on{outline:3px solid ${colors.accent};outline-offset:2px}
             .leaflet-container{background:${colors.surface};font-family:inherit}
           `,
         }}

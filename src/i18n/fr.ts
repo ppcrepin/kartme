@@ -101,8 +101,11 @@ export const fr = {
     circuitNearTitle: 'Autour de toi',
     circuitLocating: 'Recherche de ta position…',
     circuitNearEmpty: 'Aucun karting connu à moins de 150 km. Cherche par nom ou par ville.',
+    // Message volontairement NEUTRE : nommer Safari était faux pour qui
+    // navigue sous Chrome, et prêtait à confusion. La marche à suivre dépend
+    // du navigateur ; on décrit le principe, pas un chemin de menus.
     circuitGeoDenied:
-      'Position refusée. Sur iPhone : Réglages → Confidentialité → Service de localisation → Safari, puis dans Safari le bouton « aA » → Réglages du site → Position → Autoriser. Sinon, cherche par nom ci-dessous.',
+      'Position refusée. Ton navigateur a mémorisé le refus : rouvre-lui l’accès dans ses réglages de site (et vérifie que la localisation lui est autorisée dans les réglages du téléphone). Sinon, cherche par nom ou par ville ci-dessous.',
     circuitGeoTimeout:
       'Pas de réponse à la demande de position. Réessaie — et laisse la fenêtre d’autorisation ouverte le temps de choisir.',
     circuitGeoUnavailable: 'Position indisponible pour le moment. Cherche par nom ou par ville.',
