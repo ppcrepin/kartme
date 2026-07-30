@@ -50,19 +50,36 @@ compris commercial, sans obligation d'attribution visible.
 Les **caractéristiques techniques et pratiques** des circuits — longueur et
 largeur de piste, intérieur/extérieur, motorisation, usage loisir/compétition,
 homologation FFSA ou CIK-FIA, adresse postale — proviennent d'un **relevé
-consolidé** fourni par le PO le 2026-07-30 (généré le 2026-07-21), établi à
-partir de :
+consolidé** fourni par le PO le 2026-07-30 (généré le 2026-07-21).
 
-- la **FFSA**, rubrique « Où pratiquer » (homologations, catégories) ;
-- des **annuaires publics de circuits de karting** français ;
-- des **sites officiels des circuits** eux-mêmes (téléphones, longueurs).
+**Provenance, précisée par le PO le 2026-07-30 :** c'est une **compilation
+personnelle**, faite à partir de recherches sur le web public — sites
+officiels des circuits, rubrique « Où pratiquer » de la FFSA, annuaires de
+karting. Ce n'est donc pas la reprise d'une base tierce, mais un assemblage de
+faits publics (nom commercial, longueur de piste, homologation, téléphone,
+adresse) rassemblés source par source.
 
-Le relevé compte 310 pistes sur 270 lieux (13 régions métropolitaines) et
-suit la convention « cellule vide = non confirmé, jamais inventé ». Il n'a
-**aucune coordonnée** : la géographie de KartSquad reste celle
-d'OpenStreetMap (voir ci-dessus), et les 107 lieux nouveaux ont été géocodés
-via **Nominatim** depuis leur adresse ou leur code postal.
+Ce point compte juridiquement, et il vaut d'être écrit : un **fait** — « cette
+piste mesure 1 200 m » — n'est protégé par aucun droit d'auteur, et c'est la
+*structure* ou l'*investissement* d'une base qui peut l'être. Une compilation
+faite à la main depuis plusieurs sources n'extrait donc pas la substance d'un
+annuaire donné. Le relevé compte 310 pistes sur 270 lieux (13 régions
+métropolitaines) et suit la convention « cellule vide = non confirmé, jamais
+inventé ».
+
+Il n'a **aucune coordonnée** : la géographie de KartSquad reste celle
+d'OpenStreetMap (voir ci-dessus), et les lieux nouveaux ont été géocodés via
+**Nominatim** depuis leur adresse ou leur code postal.
 
 Les deux jeux sont donc complémentaires : OpenStreetMap donne le *où*, ce
 relevé donne le *quoi*. L'attribution ODbL reste due pour l'ensemble des
 coordonnées et de l'import d'origine.
+
+**Portée de la clause ODbL de partage à l'identique.** Les colonnes du relevé
+vivent dans la même table que les coordonnées ODbL. Tant que l'application se
+contente d'**afficher** ces données, la clause ne se déclenche pas : elle porte
+sur la *distribution* d'une base dérivée, pas sur son usage interne. Elle
+deviendrait exigible le jour où KartSquad publierait le référentiel autrement
+qu'à l'écran — une API publique, un export, un jeu de données téléchargeable.
+Ce jour-là, la base dérivée devrait être offerte sous ODbL. À rouvrir avant
+toute ouverture de ce genre, et non avant.

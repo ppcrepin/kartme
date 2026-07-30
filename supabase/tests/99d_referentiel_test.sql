@@ -305,13 +305,19 @@ begin
     raise exception 'ÉCHEC : % couples au même endroit avec un nom emboîté (ex. %) — doublons physiques', v_proches, v_ex;
   end if;
 
-  -- 9d. Reste les couples proches aux noms SANS RAPPORT : ce ne sont pas des
-  --     doublons mais des coordonnées imprécises — deux salles distinctes dont
-  --     l'adresse n'a pas été géocodée à la rue et qui ont hérité du centroïde
-  --     de leur code postal (Kart'Eam et Team Marius Karting partagent au mètre
-  --     celui du 54000). Conséquence produite : « Autour de toi » les annonce à
-  --     la même distance. Dette assumée, PAS masquée — le compte est plafonné,
-  --     donc un futur import qui en ajoute fait échouer ce test.
+  -- 9d. Reste les couples proches aux noms SANS RAPPORT. Deux cas distincts,
+  --     et il a fallu les vérifier un par un plutôt que les ranger ensemble :
+  --       · Kart'Eam et Team Marius Karting partagent au mètre les coordonnées
+  --         de NANCY — le relevé ne les situe qu'à « Est de Nancy », sans
+  --         adresse, donc le géocodage est retombé sur la commune (contrôlé :
+  --         Nominatim rend exactement ce point pour « Nancy »). Deux salles
+  --         bien distinctes, mais qu'on ne sait pas placer. « Autour de toi »
+  --         les annonce à la même distance ;
+  --       · BKI Brest et Speed Park, à 317 m, ne sont PAS un défaut : « 10 rue
+  --         Alain Le Berre, Brest » géocode exactement sur les coordonnées de
+  --         BKI, sa position est donc à la RUE. Deux voisins, rien de plus.
+  --     Dette assumée, PAS masquée : le compte est plafonné, donc un futur
+  --     import qui en ajoute fait échouer ce test.
   select count(*) into v_cp
     from public.circuits a
     join public.circuits b on b.id > a.id
@@ -319,7 +325,7 @@ begin
      and not (public.kart_normalize(a.name) like '%' || public.kart_normalize(b.name) || '%'
            or public.kart_normalize(b.name) like '%' || public.kart_normalize(a.name) || '%');
   if v_cp > 2 then
-    raise exception 'ÉCHEC : % couples proches aux noms distincts (2 connus) — nouvelles coordonnées au centroïde', v_cp;
+    raise exception 'ÉCHEC : % couples proches aux noms distincts (2 connus : Nancy sans adresse, Brest voisins) — coordonnées à vérifier', v_cp;
   end if;
 
   raise notice 'Scénario 9 (géographie : 0 hors cadre, 0 doublon, % coordonnées imprécises connues) ✔', v_cp;
