@@ -289,9 +289,25 @@ from (values
   ('Win''Kart de Carcassonne', 'Carcassonne', 43.21906, 2.30337, null),
   ('Xtreme fun 08', 'Douzy', 49.66236, 5.04519, null)
 ) as v(name, city, lat, lon, aliases)
+-- ⚠️ Le garde-fou est GÉOGRAPHIQUE autant que nominal. Il ne l'était pas, et
+-- l'import du relevé PO (A16) l'a mis en évidence de la pire façon : A16
+-- RENOMME 106 circuits d'après le relevé, si bien qu'aucun de leurs anciens
+-- noms — ceux écrits ici, qui sont la trace de la source OSM — ne se
+-- reconnaissait plus. Le seed les réinsérait donc en lignes NEUVES : 106
+-- doublons physiques, deux fiches par piste, aux coordonnées identiques. Un
+-- lieu ne se dédouble pas parce qu'on l'a rebaptisé.
+--
+-- 300 m : deux relevés d'une même piste divergent de quelques dizaines de
+-- mètres (entrée du complexe contre milieu du tracé) ; deux kartings
+-- réellement distincts à moins de 300 m n'existent pas en France — et le test
+-- 99d interdit désormais toute paire sous 500 m.
 where not exists (
   select 1 from public.circuits c
    where c.is_official
-     and public.kart_normalize(c.name) = public.kart_normalize(v.name)
-     and public.kart_normalize(coalesce(c.city, '')) = public.kart_normalize(v.city)
+     and (
+       (public.kart_normalize(c.name) = public.kart_normalize(v.name)
+        and public.kart_normalize(coalesce(c.city, '')) = public.kart_normalize(v.city))
+       or (c.lat is not null and c.lon is not null
+           and public.km_between(c.lat, c.lon, v.lat, v.lon) < 0.3)
+     )
 );

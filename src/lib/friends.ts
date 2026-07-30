@@ -195,21 +195,30 @@ export async function listFriends(): Promise<FriendEntry[]> {
  */
 export async function getInviter(
   inviterId: string,
-): Promise<{ id: string; username: string; avatarPath: string | null } | null> {
+): Promise<{ id: string; username: string; avatarPath: string | null; isMe: boolean } | null> {
   const { data, error } = await supabase.rpc('get_inviter', { p_inviter: inviterId });
   if (error) throw new Error(error.message);
-  const row = (data as { id: string; username: string; avatar_path: string | null }[])?.[0];
-  return row ? { id: row.id, username: row.username, avatarPath: row.avatar_path } : null;
+  const row = (data as
+    | { id: string; username: string; avatar_path: string | null; is_me: boolean }[]
+    | null)?.[0];
+  return row
+    ? { id: row.id, username: row.username, avatarPath: row.avatar_path, isMe: row.is_me }
+    : null;
 }
 
 /**
- * Devient ami de l'invitant, en un tap. `already` n'est pas une erreur (double
- * tap, lien rouvert, deux onglets) ; `self` non plus (son propre lien).
+ * Devient ami de l'invitant, en un tap. Aucun des codes n'est une panne :
+ * `already` (double tap, lien rouvert, deux onglets), `self` (son propre lien)
+ * et `gone` (lien mort : compte inconnu, parti, suspendu — ou blocage, que le
+ * serveur ne distingue volontairement pas) ont chacun leur écran. Seul le
+ * plafond horaire lève, parce qu'il est transitoire.
  */
-export async function acceptFriendInvite(inviterId: string): Promise<'ok' | 'already' | 'self'> {
+export async function acceptFriendInvite(
+  inviterId: string,
+): Promise<'ok' | 'already' | 'self' | 'gone'> {
   const { data, error } = await supabase.rpc('accept_friend_invite', { p_inviter: inviterId });
   if (error) throw new Error(error.message);
-  return (data as 'ok' | 'already' | 'self') ?? 'ok';
+  return (data as 'ok' | 'already' | 'self' | 'gone') ?? 'ok';
 }
 
 export async function blockPilot(pilotId: string): Promise<void> {

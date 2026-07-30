@@ -22,11 +22,28 @@ function safeLocalStorage(): Storage | null {
   }
 }
 
-/** Capture ?ref=<profileId> depuis l'URL (web) au démarrage, puis la mémorise. */
+/**
+ * Capture le parrain depuis l'URL (web) au démarrage, puis le mémorise. Deux
+ * formes :
+ *   · `?ref=<profileId>` — les liens de course et de profil, qui doivent
+ *     porter le parrain explicitement (leur chemin désigne une course, pas un
+ *     pilote) ;
+ *   · `/invite/<profileId>` — le lien d'ami (A19), dont le CHEMIN nomme déjà
+ *     l'invitant. Lui coller un `?ref=` identique rallongeait pour rien un lien
+ *     fait pour être collé dans une conversation ; sans cette lecture, en
+ *     revanche, les inscriptions venues du canal d'acquisition n°1 arrivaient
+ *     SANS parrain et le K-factor du tableau de bord les ignorait — la seule
+ *     mesure qui dit si le lien fonctionne.
+ */
 export function captureReferralFromUrl(): void {
   if (typeof window === 'undefined') return;
   try {
-    const ref = new URL(window.location.href).searchParams.get('ref');
+    const u = new URL(window.location.href);
+    const ref =
+      u.searchParams.get('ref') ??
+      // Le déploiement vit sous /kartme : on cherche le segment, pas un préfixe.
+      /(?:^|\/)invite\/([^/?#]+)/.exec(u.pathname)?.[1] ??
+      null;
     const store = safeLocalStorage();
     if (ref && UUID_RE.test(ref)) {
       referrer = ref;
@@ -111,6 +128,8 @@ export interface Metrics {
   signups_tracked: number;
   referred_signups: number;
   k_factor: number | null;
+  invite_accepts: number;
+  invite_signups: number;
   rematches: number;
   friends_accepted: number;
   badges_unlocked: number;

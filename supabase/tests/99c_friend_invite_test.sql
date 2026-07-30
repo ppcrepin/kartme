@@ -35,6 +35,7 @@ begin
   end;
 end $$;
 
+
 -- I = l'invitant, N = le nouveau venu, B = un pilote qui a bloqué I,
 -- S = un compte supprimé, U = un suspendu.
 insert into auth.users (id, email) values
@@ -68,10 +69,10 @@ select tests.eqt((select public.accept_friend_invite('fe000000-0000-0000-0000-00
 -- Amitié ACCEPTÉE d'emblée, avec l'INVITANT comme demandeur (c'est lui qui a
 -- lancé l'invitation) — aucune demande à valider de part ni d'autre.
 select tests.eq((select count(*) from public.friendships
-                 where requester_id = 'fe000000-0000-0000-0000-00000000000e'
-                   and addressee_id = 'fe000000-0000-0000-0000-000000000001'
+                 where requester_id = 'fe000000-0000-0000-0000-000000000001'
+                   and addressee_id = 'fe000000-0000-0000-0000-00000000000e'
                    and status = 'accepted'), 1,
-  'l''amitié est acceptée, l''invitant est le demandeur');
+  'l''amitié est acceptée, et l''INVITÉ est le demandeur (son quota, pas celui de l''invitant)');
 
 -- L'invitant est PRÉVENU : notify_friend ne réagit pas à un insert déjà
 -- « accepted », la fonction doit donc notifier elle-même.
@@ -80,6 +81,12 @@ select tests.eq((select count(*) from public.notifications
                    and type = 'friend_request'
                    and actor_id = 'fe000000-0000-0000-0000-000000000001'), 1,
   'l''invitant est notifié que son lien a fonctionné');
+-- URL décalée : « amis » aurait heurté l'index de déduplication d'une
+-- « Demande d'ami » non lue du même pilote, et l'annonce aurait disparu.
+select tests.eqt((select url from public.notifications
+                  where profile_id = 'fe000000-0000-0000-0000-00000000000e'
+                    and actor_id = 'fe000000-0000-0000-0000-000000000001'),
+  'amis?invite', 'l''annonce échappe à la déduplication de « Demande d''ami »');
 
 -- Rejouer le lien (double tap, deux onglets, lien rouvert) : pas d'erreur,
 -- pas de doublon.
@@ -96,8 +103,14 @@ select tests.eq((select count(*) from public.friendships
 select tests.as_uid('fe000000-0000-0000-0000-00000000000e');
 select tests.eqt((select public.accept_friend_invite('fe000000-0000-0000-0000-00000000000e')),
   'self', 'son propre lien ne fait rien, sans erreur');
-select tests.eq((select count(*) from public.get_inviter('fe000000-0000-0000-0000-00000000000e')), 0,
-  'on ne s''invite pas soi-même');
+-- Son propre lien renvoie bien une ligne, marquée `is_me` : la première version
+-- la filtrait, et le PO ouvrant son lien pour le vérifier lisait « invitation
+-- plus valable ». C'est son premier geste après avoir généré un lien.
+select tests.eq((select count(*) from public.get_inviter('fe000000-0000-0000-0000-00000000000e')), 1,
+  'son propre lien renvoie son profil');
+select tests.eq((select case when is_me then 1 else 0 end
+                 from public.get_inviter('fe000000-0000-0000-0000-00000000000e')), 1,
+  'et il est marqué « c''est toi »');
 
 -- ═══ Scénario 3 : une demande DORMANTE vaut acceptation ═══
 -- N2 avait envoyé une demande à I, restée en attente ; I lui envoie son lien.
@@ -113,6 +126,13 @@ select tests.eq((select count(*) from public.friendships
                  where requester_id = 'fe000000-0000-0000-0000-000000000005'
                    and status = 'accepted'), 1,
   'la demande dormante passe à accepted sans créer de seconde ligne');
+-- Dans ce sens, `notify_friend` prévient l'INVITÉ ; l'invitant serait resté
+-- dans le noir alors que c'est son lien qui vient de fonctionner.
+select tests.eq((select count(*) from public.notifications
+                 where profile_id = 'fe000000-0000-0000-0000-00000000000e'
+                   and actor_id = 'fe000000-0000-0000-0000-000000000005'
+                   and url = 'amis?invite'), 1,
+  'l''invitant est prévenu même quand une demande dormait dans l''autre sens');
 
 -- ═══ Scénario 4 : les refus ═══
 -- Blocage (dans ce sens-là : B a bloqué I).
@@ -121,25 +141,48 @@ insert into public.blocks (blocker_id, blocked_id) values
 select tests.as_uid('fe000000-0000-0000-0000-000000000002');
 select tests.eq((select count(*) from public.get_inviter('fe000000-0000-0000-0000-00000000000e')), 0,
   'un pilote bloqué ne voit même pas l''invitant');
-select tests.leve(
-  $$select public.accept_friend_invite('fe000000-0000-0000-0000-00000000000e')$$,
-  'un blocage empêche l''amitié par lien');
 
--- Compte supprimé et compte suspendu : injoignables.
+-- ── Un lien mort renvoie « gone », il ne LÈVE pas ─────────────────────────
+-- « gone » est un état de l'invitation, pas une panne : l'écran doit retirer
+-- le bouton. Levé, il s'affichait comme un refus SOUS un bouton encore actif,
+-- invitant à retaper indéfiniment.
+--
+-- Et surtout : UNE SEULE réponse pour les quatre cas. Des réponses distinctes
+-- (« ce pilote n'est plus joignable » d'un côté, « impossible d'ajouter ce
+-- pilote » de l'autre) laissaient déduire, en les comparant, qu'un identifiant
+-- existe et qu'il nous a bloqué — ce que `get_inviter` refuse déjà de dire en
+-- ne renvoyant aucune ligne. La RPC ne doit pas contredire ce silence.
+select tests.eqt((select public.accept_friend_invite('fe000000-0000-0000-0000-00000000000e')),
+  'gone', 'un blocage empêche l''amitié par lien, sans dire pourquoi');
+
 select tests.as_uid('fe000000-0000-0000-0000-000000000001');
-select tests.leve(
-  $$select public.accept_friend_invite('fe000000-0000-0000-0000-000000000003')$$,
-  'le lien d''un compte supprimé est refusé');
-select tests.leve(
-  $$select public.accept_friend_invite('fe000000-0000-0000-0000-000000000004')$$,
-  'le lien d''un compte suspendu est refusé');
+select tests.eqt((select public.accept_friend_invite('fe000000-0000-0000-0000-000000000003')),
+  'gone', 'le lien d''un compte supprimé est refusé');
+select tests.eqt((select public.accept_friend_invite('fe000000-0000-0000-0000-000000000004')),
+  'gone', 'le lien d''un compte suspendu est refusé');
+select tests.eqt((select public.accept_friend_invite('fe000000-0000-0000-0000-0000000000ff')),
+  'gone', 'un identifiant inconnu (lien bricolé) est refusé');
 select tests.eq((select count(*) from public.get_inviter('fe000000-0000-0000-0000-000000000003')), 0,
   'un compte supprimé n''est pas nommé comme invitant');
 
--- Identifiant inconnu (lien bricolé à la main) : refus net.
+-- Sans session, la RPC LÈVE — et c'est la bonne réponse : elle est appelable
+-- par `authenticated` seul, mais un jeton expiré entre le chargement de l'écran
+-- et le tap donnerait un `auth.uid()` nul. Renvoyer un code ferait passer
+-- l'écran en « lien mort » alors qu'il faut renvoyer vers la connexion.
+select set_config('request.jwt.claims', '', true);
 select tests.leve(
-  $$select public.accept_friend_invite('fe000000-0000-0000-0000-0000000000ff')$$,
-  'un identifiant inconnu est refusé');
+  $$select public.accept_friend_invite('fe000000-0000-0000-0000-00000000000e')$$,
+  'sans session, l''acceptation est refusée');
+select tests.as_uid('fe000000-0000-0000-0000-000000000001');
+
+-- Aucun de ces quatre refus n'a laissé de trace : pas de demande fantôme.
+select tests.eq((select count(*) from public.friendships f
+                 where f.requester_id in ('fe000000-0000-0000-0000-000000000002',
+                                          'fe000000-0000-0000-0000-000000000001')
+                   and f.addressee_id in ('fe000000-0000-0000-0000-000000000003',
+                                          'fe000000-0000-0000-0000-000000000004',
+                                          'fe000000-0000-0000-0000-0000000000ff')), 0,
+  'un refus n''écrit rien en base');
 
 -- ═══ Scénario 5 : plafond anti-inondation ═══
 -- Le lien est permanent et déductible d'autres liens (décision PO) : sans

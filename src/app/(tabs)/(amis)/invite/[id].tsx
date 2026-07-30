@@ -11,7 +11,11 @@ import { track } from '@/lib/analytics';
 import { signedAvatarUrls } from '@/lib/avatar';
 import { acceptFriendInvite, getInviter } from '@/lib/friends';
 
-type Inviter = { id: string; username: string; avatarPath: string | null };
+type Inviter = { id: string; username: string; avatarPath: string | null; isMe: boolean };
+
+/** Un lien tronqué par une messagerie n'est pas une panne réseau : le serveur
+ *  refuse l'identifiant, et « Réessayer » ne pourra jamais aboutir. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Arrivée par un lien d'amitié (A19, demande PO 2026-07-30).
@@ -45,8 +49,13 @@ export default function InviteScreen() {
   // (le lint l'interdit dans le corps d'un effet).
   const [essai, setEssai] = useState(0);
 
+  // Lien coupé en deux par une appli de messagerie : le cas le plus banal, et
+  // il ne doit pas déclencher une boucle « Réessayer » sans issue. Déduit au
+  // rendu plutôt que posé en état : rien à attendre du réseau pour le savoir.
+  const idValide = !!id && UUID_RE.test(id);
+
   useEffect(() => {
-    if (!id) return;
+    if (!idValide) return;
     let vivant = true;
     getInviter(id)
       .then(async (inv) => {
@@ -59,7 +68,9 @@ export default function InviteScreen() {
           return;
         }
         setInviter(inv);
-        setEtat('pret');
+        // Son propre lien : le serveur le renvoie marqué, l'écran le dit —
+        // c'est le premier geste de quelqu'un qui vient de le générer.
+        setEtat(inv.isMe ? 'moi' : 'pret');
         const urls = await signedAvatarUrls([inv.avatarPath]);
         if (vivant) setAvatarUrl(inv.avatarPath ? (urls.get(inv.avatarPath) ?? null) : null);
       })
@@ -67,7 +78,7 @@ export default function InviteScreen() {
     return () => {
       vivant = false;
     };
-  }, [id, essai]);
+  }, [id, idValide, essai]);
 
   async function onAccept() {
     if (!id) return;
@@ -76,6 +87,10 @@ export default function InviteScreen() {
     try {
       const code = await acceptFriendInvite(id);
       if (code === 'self') setEtat('moi');
+      // Lien devenu mort entre l'affichage et le tap (compte supprimé,
+      // suspendu, blocage) : on RETIRE le bouton au lieu de laisser un refus
+      // sous un bouton qui ne pourra jamais aboutir.
+      else if (code === 'gone') setEtat('inconnu');
       else {
         setResultat(code);
         // Mesure du canal d'acquisition : c'est le lien d'amitié qui a converti.
@@ -100,7 +115,12 @@ export default function InviteScreen() {
     <Screen
       title={t.invite.title}
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/amis'))}>
-      {etat === 'chargement' ? (
+      {!idValide || etat === 'inconnu' ? (
+        <View style={styles.bloc}>
+          <Muted>{t.invite.unknown}</Muted>
+          <Button label={t.invite.toFriends} variant="ghost" onPress={() => router.replace('/amis')} />
+        </View>
+      ) : etat === 'chargement' ? (
         <SkeletonCard />
       ) : etat === 'panne' ? (
         <View style={styles.bloc}>
@@ -112,11 +132,6 @@ export default function InviteScreen() {
               setEssai((n) => n + 1);
             }}
           />
-          <Button label={t.invite.toFriends} variant="ghost" onPress={() => router.replace('/amis')} />
-        </View>
-      ) : etat === 'inconnu' ? (
-        <View style={styles.bloc}>
-          <Muted>{t.invite.unknown}</Muted>
           <Button label={t.invite.toFriends} variant="ghost" onPress={() => router.replace('/amis')} />
         </View>
       ) : etat === 'moi' ? (

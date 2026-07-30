@@ -71,8 +71,13 @@ export default function StatsScreen() {
                 <Stat value={m.referred_signups} label={t.stats.referred} />
                 <Stat value={m.shares} label={t.stats.shares} />
                 <Stat value={m.signups_tracked} label={t.stats.signups} />
+                {/* Le lien d'ami (A19) : deux chiffres distincts, parce qu'un
+                    tap entre habitués n'est pas de la croissance. */}
+                <Stat value={m.invite_accepts} label={t.stats.inviteAccepts} />
+                <Stat value={m.invite_signups} label={t.stats.inviteSignups} />
               </View>
               <Muted style={styles.note}>{t.stats.viralityNote}</Muted>
+              <Muted style={styles.note}>{t.stats.inviteNote}</Muted>
             </Card>
 
             <Label>{t.stats.activationTitle}</Label>

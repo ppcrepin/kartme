@@ -14,7 +14,7 @@ test.use({ viewport: { width: 390, height: 844 } });
 test('l’invité voit qui l’invite et devient ami en un tap', async ({ page }) => {
   await sessionSimulee(page);
   await reseauSimule(page, {
-    'rpc/get_inviter': [{ id: INVITANT, username: 'Marc_R', avatar_path: null }],
+    'rpc/get_inviter': [{ id: INVITANT, username: 'Marc_R', avatar_path: null, is_me: false }],
     'rpc/accept_friend_invite': 'ok',
   });
   await page.goto(`/invite/${INVITANT}`);
@@ -43,16 +43,59 @@ test('un lien périmé ou bloqué le dit, sans révéler pourquoi', async ({ pag
   await expect(page.getByText(/Devenir ami/)).toHaveCount(0);
 });
 
-test('son propre lien ne crée rien et le dit', async ({ page }) => {
+/**
+ * Son propre lien. C'est le PREMIER geste de qui vient de générer un lien —
+ * et la première version l'envoyait sur « invitation plus valable », parce que
+ * `get_inviter` filtrait l'appelant. Le serveur renvoie désormais `is_me` et
+ * l'écran le dit tout de suite, sans attendre un tap.
+ */
+test('son propre lien est reconnu d’emblée, sans bouton', async ({ page }) => {
   await sessionSimulee(page);
   await reseauSimule(page, {
-    'rpc/get_inviter': [{ id: UID, username: 'Moi', avatar_path: null }],
-    'rpc/accept_friend_invite': 'self',
+    'rpc/get_inviter': [{ id: UID, username: 'Moi', avatar_path: null, is_me: true }],
   });
   await page.goto(`/invite/${UID}`);
 
-  await page.getByText('Devenir ami de Moi', { exact: true }).click();
-  await expect(page.getByText(/C’est ton propre lien/)).toBeVisible();
+  await expect(page.getByText(/C’est ton propre lien/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/Devenir ami/)).toHaveCount(0);
+  await expect(page.getByText('Cette invitation n’est plus valable.', { exact: true })).toHaveCount(0);
+});
+
+/**
+ * Le lien meurt ENTRE l'affichage et le tap (compte supprimé, suspendu, ou
+ * blocage posé dans l'intervalle). Le serveur renvoie un code, pas une
+ * exception : un lien mort est un état de l'écran, et le bouton doit
+ * DISPARAÎTRE — le laisser sous un message d'erreur invite à retaper une
+ * action qui ne peut plus aboutir.
+ */
+test('un lien mort au moment du tap retire le bouton', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, {
+    'rpc/get_inviter': [{ id: INVITANT, username: 'Marc_R', avatar_path: null, is_me: false }],
+    'rpc/accept_friend_invite': 'gone',
+  });
+  await page.goto(`/invite/${INVITANT}`);
+
+  await page.getByText('Devenir ami de Marc_R', { exact: true }).click();
+  await expect(page.getByText('Cette invitation n’est plus valable.', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Devenir ami/)).toHaveCount(0);
+});
+
+/**
+ * Lien coupé par une messagerie : le cas le plus banal du canal d'acquisition.
+ * Il ne doit pas se présenter comme une panne réseau, sinon l'invité tape
+ * « Réessayer » indéfiniment sur un identifiant que le serveur refusera
+ * toujours.
+ */
+test('un lien tronqué le dit tout de suite, sans « Réessayer »', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page);
+  await page.goto('/invite/aaaa1111-2222-3333');
+
+  await expect(page.getByText('Cette invitation n’est plus valable.', { exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByText('Réessayer', { exact: true })).toHaveCount(0);
 });
 
 /**
@@ -64,7 +107,7 @@ test('son propre lien ne crée rien et le dit', async ({ page }) => {
  */
 test('sans session, le lien est MÉMORISÉ RÉSOLU puis rouvert après connexion', async ({ page }) => {
   await reseauSimule(page, {
-    'rpc/get_inviter': [{ id: INVITANT, username: 'Marc_R', avatar_path: null }],
+    'rpc/get_inviter': [{ id: INVITANT, username: 'Marc_R', avatar_path: null, is_me: false }],
   });
 
   // 1. Arrivée sans session : renvoi vers la connexion.
@@ -108,7 +151,7 @@ test('une panne réseau ne déclare pas l’invitation morte', async ({ page }) 
 test('un refus technique ne montre jamais d’anglais brut', async ({ page }) => {
   await sessionSimulee(page);
   await reseauSimule(page, {
-    'rpc/get_inviter': [{ id: INVITANT, username: 'Marc_R', avatar_path: null }],
+    'rpc/get_inviter': [{ id: INVITANT, username: 'Marc_R', avatar_path: null, is_me: false }],
   });
   await page.route('**/rpc/accept_friend_invite**', (route) =>
     route.fulfill({

@@ -93,8 +93,10 @@ export async function getCircuitPage(circuitId: string): Promise<CircuitPage | n
     lapsAll: r.laps_all,
     lapsYear: r.laps_year,
     lapsMonth: r.laps_month,
-    // `numeric` arrive en CHAÎNE via PostgREST (précision préservée) : on
-    // convertit ici plutôt que de laisser « 1105.0 » s'afficher tel quel.
+    // `numeric` en base. PostgREST le sérialise en nombre JSON, mais rien ne
+    // le garantit contractuellement (un client qui préserve la précision le
+    // rendrait en chaîne) et une chaîne passerait le typage sans bruit avant
+    // de casser l'arrondi à l'affichage. La conversion est donc explicite.
     lengthM: r.length_m == null ? null : Number(r.length_m),
     widthM: r.width_m == null ? null : Number(r.width_m),
     envKind: r.env_kind,

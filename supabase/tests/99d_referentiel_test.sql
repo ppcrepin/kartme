@@ -69,9 +69,12 @@ begin
                       and homologation not in ('FFSA','CIK-FIA','FIA')), 0,
     'aucune homologation hors vocabulaire');
   -- Bornes de longueur : en dessous c'est une piste enfants mal saisie, au
-  -- dessus un circuit automobile pris pour un karting.
+  -- dessus un circuit automobile pris pour un karting. Le test reprend les
+  -- bornes EXACTES de la contrainte (200–1600) : un test plus permissif que la
+  -- base ne vérifie rien — deux relevés du fichier PO valaient 2055 et 2300 m
+  -- et sont des circuits moto/auto, écartés à l'import.
   perform tests.eq((select count(*) from public.circuits
-                    where length_m is not null and (length_m < 200 or length_m > 3000)), 0,
+                    where length_m is not null and (length_m < 200 or length_m > 1600)), 0,
     'aucune longueur aberrante');
   raise notice 'Scénario 2 (vocabulaires fermés) ✔';
 end $$;
@@ -193,6 +196,91 @@ begin
   select count(*) into v_notes from public.circuits where tracks_note is not null;
   perform tests.ge(v_notes, 25, 'au moins 25 circuits notent leurs tracés multiples');
   raise notice 'Scénario 8 (tracés multiples : % circuits) ✔', v_notes;
+end $$;
+
+-- ═══ Scénario 9 : la GÉOGRAPHIE tient ═══
+-- Le bloquant le plus coûteux du lot n'était visible NULLE PART dans les tests
+-- précédents : un rapprochement par le seul nom avait déplacé 7 circuits de 40
+-- à 470 km (des communes homonymes — Saint-Cyprien, Aigues-Vives, Neuilly). Le
+-- nom et la ville étaient réécrits, les coordonnées gardées : plus aucun test
+-- de volumétrie, de vocabulaire ou d'unicité ne pouvait s'en apercevoir.
+-- D'où ces assertions, les seules qui auraient crié.
+do $$
+declare v_hors int; v_proches int; v_cp int; v_ex text;
+begin
+  -- 9a. Toutes les coordonnées dans un cadre France. Un circuit « déplacé »
+  --     d'un continent est trivial à voir ; c'est le filet le plus grossier, et
+  --     il doit rester tendu. L'outre-mer EST dans le référentiel — Dumbéa
+  --     (Nouvelle-Calédonie) et Hitiaʻa ʻo te Rā (Polynésie) ont chacun leur
+  --     karting : les oublier ferait de ce test un piège qui condamne de la
+  --     donnée juste.
+  select count(*) into v_hors from public.circuits c
+   where not (
+     (c.lat between 41.3 and 51.2  and c.lon between -5.2 and 9.6)   -- métropole + Corse
+     or (c.lat between 14.3 and 16.6 and c.lon between -61.9 and -60.7) -- Antilles
+     or (c.lat between 3.5  and 6.0  and c.lon between -55.0 and -51.5) -- Guyane
+     or (c.lat between -21.5 and -20.8 and c.lon between 55.1 and 55.9) -- La Réunion
+     or (c.lat between -13.1 and -12.6 and c.lon between 44.9 and 45.4) -- Mayotte
+     or (c.lat between -22.8 and -19.5 and c.lon between 163.5 and 168.2) -- Nouvelle-Calédonie
+     or (c.lat between -18.1 and -16.0 and c.lon between -152.0 and -148.5) -- Polynésie (Société)
+   );
+  perform tests.eq(v_hors, 0, 'aucun circuit hors du cadre géographique France');
+
+  -- 9b. Le code postal s'accorde au DÉPARTEMENT déduit de la position. C'est
+  --     l'assertion qui attrape l'homonymie de communes : un « Saint-Cyprien »
+  --     des Pyrénées-Orientales (66) recopié sur un circuit de Dordogne garde
+  --     les coordonnées de la Dordogne mais reçoit un code postal en 66.
+  --     Approximation assumée : on ne compare pas au département exact (il
+  --     faudrait un découpage administratif), on vérifie que le code postal
+  --     n'est pas à plus de 300 km d'un AUTRE circuit du même département —
+  --     un département français tient largement dans ce rayon.
+  select count(*), min(a.name || ' / ' || b.name) into v_cp, v_ex
+    from public.circuits a
+    join public.circuits b
+      on left(b.postal_code, 2) = left(a.postal_code, 2) and b.id <> a.id
+   where a.postal_code is not null and b.postal_code is not null
+     and public.km_between(a.lat, a.lon, b.lat, b.lon) > 300;
+  if v_cp > 0 then
+    raise exception 'ÉCHEC : % paires de même département à plus de 300 km (ex. %) — homonymie de communes', v_cp, v_ex;
+  end if;
+
+  -- 9c. DEUX FICHES POUR UN MÊME LIEU : à moins de 500 m ET avec un nom dont
+  --     l'un contient l'autre. L'index (nom, ville) ne les voit pas — « City
+  --     Kart » et « City Kart Sautron » sont deux noms distincts, à la même
+  --     adresse. C'est le défaut le plus coûteux qu'ait révélé ce lot : le
+  --     garde-fou d'idempotence du seed portait sur (nom, ville), or A16
+  --     RENOMME 106 circuits — plus aucun de leurs anciens noms ne se
+  --     reconnaissait, et le seed les réinsérait en lignes neuves. 106 doublons,
+  --     invisibles pour le scénario 6 puisque les noms diffèrent bien.
+  select count(*), min(a.name || ' / ' || b.name) into v_proches, v_ex
+    from public.circuits a
+    join public.circuits b on b.id > a.id
+   where public.km_between(a.lat, a.lon, b.lat, b.lon) < 0.5
+     and length(public.kart_normalize(least(a.name, b.name))) >= 6
+     and (public.kart_normalize(a.name) like '%' || public.kart_normalize(b.name) || '%'
+       or public.kart_normalize(b.name) like '%' || public.kart_normalize(a.name) || '%');
+  if v_proches > 0 then
+    raise exception 'ÉCHEC : % couples au même endroit avec un nom emboîté (ex. %) — doublons physiques', v_proches, v_ex;
+  end if;
+
+  -- 9d. Reste les couples proches aux noms SANS RAPPORT : ce ne sont pas des
+  --     doublons mais des coordonnées imprécises — deux salles distinctes dont
+  --     l'adresse n'a pas été géocodée à la rue et qui ont hérité du centroïde
+  --     de leur code postal (Kart'Eam et Team Marius Karting partagent au mètre
+  --     celui du 54000). Conséquence produite : « Autour de toi » les annonce à
+  --     la même distance. Dette assumée, PAS masquée — le compte est plafonné,
+  --     donc un futur import qui en ajoute fait échouer ce test.
+  select count(*) into v_cp
+    from public.circuits a
+    join public.circuits b on b.id > a.id
+   where public.km_between(a.lat, a.lon, b.lat, b.lon) < 0.5
+     and not (public.kart_normalize(a.name) like '%' || public.kart_normalize(b.name) || '%'
+           or public.kart_normalize(b.name) like '%' || public.kart_normalize(a.name) || '%');
+  if v_cp > 2 then
+    raise exception 'ÉCHEC : % couples proches aux noms distincts (2 connus) — nouvelles coordonnées au centroïde', v_cp;
+  end if;
+
+  raise notice 'Scénario 9 (géographie : 0 hors cadre, 0 doublon, % coordonnées imprécises connues) ✔', v_cp;
 end $$;
 
 do $$ begin raise notice 'Tous les tests du référentiel consolidé sont passés ✔'; end $$;

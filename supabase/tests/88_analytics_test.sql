@@ -104,6 +104,52 @@ begin
   raise notice 'Scénario 3 (calcul des métriques) ✔';
 end $$;
 
+-- ═══ Scénario 4 : le lien d'ami est MESURÉ, et mesuré JUSTE ═══
+-- A19 en fait le canal d'acquisition n°1. L'écran d'arrivée émettait bien
+-- `friend_invite_accepted`, mais `get_metrics` ne le lisait pas : l'événement
+-- était écrit et jamais relu, donc le lot suivant se serait décidé sans savoir
+-- si le lien convertit.
+do $$
+declare
+  M uuid := 'a0000000-0000-0000-0000-00000000000e';
+  A uuid := 'a0000000-0000-0000-0000-00000000000a';  -- inscrit AVEC parrain (scénario 3)
+  B uuid := 'a0000000-0000-0000-0000-00000000000b';  -- inscrit SANS parrain valable
+  met jsonb;
+begin
+  -- Les deux acceptent un lien d'ami. Mais seul A s'est inscrit avec un parrain
+  -- réel : B est un habitué qui accepte un lien, pas une acquisition.
+  insert into analytics_events (profile_id, name) values
+    (A, 'friend_invite_accepted'), (B, 'friend_invite_accepted');
+
+  perform tests.as_uid(M);
+  met := public.get_metrics();
+
+  perform tests.eq((met ->> 'invite_accepts')::bigint, 2, 'les deux taps sont comptés');
+  -- LE chiffre à ne pas confondre avec le précédent : une soirée entre
+  -- habitués ne doit pas se lire comme de la croissance.
+  perform tests.eq((met ->> 'invite_signups')::bigint, 1,
+    'un seul est un compte réellement gagné par le lien');
+  raise notice 'Scénario 4 (mesure du lien d''ami) ✔';
+end $$;
+
+-- ═══ Scénario 5 : un compte supprimé ne gonfle pas le compteur ═══
+-- Un compte supprimé est ANONYMISÉ et non effacé (leçon A5/A13) : ses
+-- événements restent en base. Sans le filtre, le compteur ne redescendait
+-- jamais et la mesure dérivait mois après mois.
+do $$
+declare
+  M uuid := 'a0000000-0000-0000-0000-00000000000e';
+  B uuid := 'a0000000-0000-0000-0000-00000000000b';
+  met jsonb;
+begin
+  update profiles set deleted_at = now() where id = B;
+  perform tests.as_uid(M);
+  met := public.get_metrics();
+  perform tests.eq((met ->> 'invite_accepts')::bigint, 1,
+    'le tap d''un compte supprimé sort du compteur');
+  raise notice 'Scénario 5 (comptes supprimés exclus) ✔';
+end $$;
+
 do $$ begin raise notice 'Tous les tests analytics sont passés ✔'; end $$;
 
 rollback;

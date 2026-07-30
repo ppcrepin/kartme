@@ -143,10 +143,10 @@ export const fr = {
       loadError: 'Impossible de charger la fiche.',
       notFound: 'Circuit introuvable.',
       openPage: 'Voir la fiche',
-      // Le « métier » importé du relevé PO (A16).
-      specs: 'La piste',
-      length: 'Longueur',
-      width: 'Largeur',
+      // Le « métier » importé du relevé PO (A16). Pas de libellés
+      // « Longueur »/« Largeur » : la fiche affiche « 1 200 m × 8 m », qui se
+      // lit seul — un mot devant chaque nombre allongeait l'écran sans rien
+      // apprendre, et l'objectif du lot de densité est l'inverse.
       meters: '%n m',
       envKinds: {
         indoor: 'Indoor',
@@ -165,7 +165,6 @@ export const fr = {
       } as Record<string, string>,
       homologated: 'Homologué %h',
       tracks: 'Plusieurs tracés : %t',
-      address: 'Adresse',
       route: 'Itinéraire',
     },
     circuitTruncated: '%n circuits affichés sur %t — précise ta recherche (nom ou ville).',
@@ -470,6 +469,10 @@ export const fr = {
     shares: 'Partages',
     signups: 'Inscriptions',
     viralityNote: 'K-factor = part des inscriptions arrivées via un lien de parrainage.',
+    inviteAccepts: 'Liens d’ami acceptés',
+    inviteSignups: 'dont nouveaux comptes',
+    inviteNote:
+      'Un lien accepté par un pilote déjà inscrit compte dans le premier chiffre, pas dans le second.',
     activationTitle: 'Activation',
     activationRate: 'Ont une course',
     racedRate: 'Ont couru',

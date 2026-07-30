@@ -2,50 +2,56 @@
 --
 -- Le PO a fourni un relevé vérifié à la main (2026-07-21) : 310 pistes sur
 -- 270 lieux, 13 régions métropolitaines. Il apporte ce qu'OpenStreetMap ne
--- pouvait pas donner, et que l'étude A11 avait mesuré manquant :
---   · longueur de piste : 165 valeurs, contre UNE sur 277 avant ;
---   · intérieur/extérieur : 307 · thermique/électrique : 225 ;
---   · loisir/compétition : 298 · homologation FFSA/CIK-FIA : 71 ;
---   · adresses postales et codes postaux.
--- Symétriquement, le fichier n'a AUCUNE coordonnée : les deux jeux sont
--- complémentaires, pas concurrents. On garde donc nos coordonnées, et on
--- prend son métier.
+-- pouvait pas donner, et que l'étude A11 avait mesuré manquant. Symétriquement,
+-- le fichier n'a AUCUNE coordonnée : les deux jeux sont complémentaires, pas
+-- concurrents. On garde donc notre géographie, et on prend son métier.
+--
+-- CE QUE CE COLLAGE ÉCRIT RÉELLEMENT (chiffres de l'import, pas du fichier —
+-- la décision « une piste par lieu » en écarte une partie) :
+--   · 161 circuits existants enrichis · 103 nouveaux · 3 alias ajoutés ;
+--   · 142 longueurs de piste (contre UNE avant) · 262 intérieur/extérieur ;
+--   · 190 motorisations · 253 usages · 63 homologations FFSA/CIK-FIA ;
+--   · 33 lieux notent leurs tracés multiples.
+-- Le NOTICE final réimprime ces nombres : ils doivent concorder.
 --
 -- ── Décisions PO (2026-07-30), appliquées telles quelles ──────────────────
---   · UN CIRCUIT PAR LIEU (piste principale = la plus longue connue). Les 33
---     lieux à plusieurs pistes gardent la liste de leurs tracés en note, pour
---     ne rien perdre — et pour qu'un futur modèle « par piste » n'exige pas
---     un réimport.
---   · Rapprochement AUTOMATIQUE, avec alias de sécurité : l'identifiant
---     existant est PRÉSERVÉ (les courses déjà jouées gardent leur circuit) et
---     l'ancien nom part en alias, donc la recherche continue de le trouver.
---   · LE FICHIER GAGNE les conflits (nom, téléphone, site) : il a été vérifié
---     à la main, là où une donnée OSM périmée peut traîner des années.
---   · Les lieux au statut « inconnu » sont importés : le signalement (A13)
---     est le bon outil pour les sortir s'ils ont fermé.
+--   · UN CIRCUIT PAR LIEU (piste principale = la plus longue connue) ; les
+--     autres tracés restent en note, pour ne rien perdre et pour qu'un futur
+--     modèle « par piste » n'exige pas un réimport.
+--   · Rapprochement AUTOMATIQUE avec alias de sécurité : l'identifiant
+--     existant est PRÉSERVÉ (les courses jouées gardent leur circuit) et
+--     l'ancien nom part en alias, donc la recherche le trouve encore.
+--   · LE FICHIER GAGNE les conflits (téléphone, site, nom).
+--   · Les lieux au statut « inconnu » sont importés ; le signalement (A13) est
+--     le bon outil pour les sortir s'ils ont fermé.
 --
--- ── Comment les 163 rapprochements ont été établis ─────────────────────────
--- Trois passes, de la plus sûre à la plus large :
---   (78) nom OU ALIAS + ville normalisés — les alias du lot A4c portent les
---       sigles (BRK, RKC, CKB…) et ont fait une partie du travail à eux seuls ;
---   (24) nom seul, commune différente — cas des communes limitrophes :
---       « Atlantic Kart System » est aux Sables-d'Olonne chez nous, à
---       Château-d'Olonne dans le fichier ;
---   (61) même ville, nom différent — le plus fréquent, et le plus
---       utile : 27 de nos circuits s'appelaient « Piste de Karting » ou
---       « Karting » (objets OSM sans nom), le fichier leur donne enfin leur
---       nom commercial. Un second passage sur les villes annotées
---       (« Neuilly (Oise) », « Toulouse (Montaudran) ») a rattrapé 5 doublons
---       qui auraient été créés.
+-- ── Le rapprochement est VÉRIFIÉ GÉOGRAPHIQUEMENT ────────────────────────
+-- Première version : rapprochement sur le NOM seul. La revue adversariale a
+-- mesuré le résultat — sept circuits « déménageaient » de 40 à 470 km, nom et
+-- ville écrasés, coordonnées inchangées : une course jouée près de Nantes se
+-- serait affichée « Karting City — Dordogne ». Corruption d'historique, pire
+-- qu'un orphelin. Trois de ces sept étaient des pièges d'HOMONYMIE de commune
+-- (Saint-Cyprien, Aigues-Vives et Neuilly existent dans plusieurs
+-- départements), et pour deux autres la bonne cible dormait intacte dans la
+-- même table, à un kilomètre.
 --
--- Enfin, UN SEUL lieu du fichier par circuit existant : quatre circuits
--- étaient visés deux fois, et la seconde mise à jour écrasait la première EN
--- SILENCE. Le rapprochement le plus fiable gagne (nom+ville > nom > ville) et
--- les perdants deviennent de nouveaux circuits — dont un vrai faux positif
--- attrapé au passage : « Karting Évasion (Bully) », dans le Rhône, avait été
--- rapproché par le nom seul d'un circuit du Creusot, en Saône-et-Loire.
+-- Le rapprochement retenu croise donc TROIS signaux :
+--   (78) nom ou alias + ville normalisés — les alias du lot A4c portent les
+--       sigles (BRK, RKC, CKB…) et font une partie du travail ;
+--   (17) nom seul, MAIS la ville du fichier doit se géocoder à moins de 30 km
+--       de nos coordonnées — un rapprochement invérifiable est REJETÉ, jamais
+--       conservé par défaut (c'est ce défaut qui laissait passer « Karting
+--       City / Dordogne ») ;
+--   (58) même ville, nom différent — le plus fréquent et le plus utile :
+--       27 de nos circuits s'appelaient « Piste de Karting » ou « Karting »
+--       (objets OSM sans nom) et reçoivent leur nom commercial ;
+--   (8) proximité + parenté de nom (moins de 3 km et un jeton distinctif
+--       commun, nom de commune exclu) — c'est cette passe qui a retrouvé les
+--       bonnes cibles rejetées par le contrôle géographique.
+-- Enfin UN SEUL lieu par circuit : quatre circuits étaient visés deux fois et
+-- la seconde mise à jour écrasait la première EN SILENCE.
 --
--- Attribution : ce relevé s'appuie sur la FFSA et des annuaires publics ;
+-- Attribution : relevé appuyé sur la FFSA et des annuaires publics ;
 -- l'attribution OpenStreetMap reste due pour les coordonnées et l'import
 -- d'origine (ODbL). Les deux sont citées dans Aide & légal.
 
@@ -60,39 +66,33 @@ alter table public.circuits add column if not exists usage_kind text;
 alter table public.circuits add column if not exists homologation text;
 alter table public.circuits add column if not exists address text;
 alter table public.circuits add column if not exists postal_code text;
--- Les tracés d'un lieu multi-pistes, en clair. Purement informatif : un seul
--- circuit reste sélectionnable (décision PO).
 alter table public.circuits add column if not exists tracks_note text;
 
 -- Vocabulaires FERMÉS : une valeur libre finirait affichée telle quelle.
--- `not valid` pour ne pas buter sur d'éventuelles lignes préexistantes ; les
--- contraintes sont validées à la fin, une fois l'import écrit.
 alter table public.circuits drop constraint if exists circuits_env_kind;
 alter table public.circuits add constraint circuits_env_kind
-  check (env_kind is null or env_kind in ('indoor','outdoor','temporaire')) not valid;
+  check (env_kind is null or env_kind in ('indoor','outdoor','temporaire'));
 alter table public.circuits drop constraint if exists circuits_motor_kind;
 alter table public.circuits add constraint circuits_motor_kind
-  check (motor_kind is null or motor_kind in ('thermique','electrique','mixte')) not valid;
+  check (motor_kind is null or motor_kind in ('thermique','electrique','mixte'));
 alter table public.circuits drop constraint if exists circuits_usage_kind;
 alter table public.circuits add constraint circuits_usage_kind
-  check (usage_kind is null or usage_kind in ('loisir','competition','mixte')) not valid;
+  check (usage_kind is null or usage_kind in ('loisir','competition','mixte'));
 alter table public.circuits drop constraint if exists circuits_homologation;
 alter table public.circuits add constraint circuits_homologation
-  check (homologation is null or homologation in ('FFSA','CIK-FIA','FIA')) not valid;
--- 200 à 3 000 m : en dessous c'est une piste enfants mal saisie, au-dessus un
--- circuit automobile pris pour un karting.
+  check (homologation is null or homologation in ('FFSA','CIK-FIA','FIA'));
+-- 200 à 1600 m. La borne haute n'est pas cosmétique : à 2000 m et plus, ce
+-- sont des circuits AUTO ou MOTO que le relevé attribue au karting (Circuit
+-- Carole 2055 m est la piste moto de Tremblay, le Bourbonnais 2300 m le
+-- circuit auto de Moulins). La plus longue piste de karting crédible du
+-- relevé fait 1500 m : la borne ne rejette rien de légitime.
 alter table public.circuits drop constraint if exists circuits_length_sane;
 alter table public.circuits add constraint circuits_length_sane
-  check (length_m is null or length_m between 200 and 3000) not valid;
+  check (length_m is null or length_m between 200 and 1600);
 
--- ── 2. Mises à jour : 163 circuits existants enrichis ──────────────────────
--- L'IDENTIFIANT NE BOUGE PAS : c'est la garantie que les courses déjà jouées
--- gardent leur circuit (l'import A4b avait montré qu'une suppression/recréation
--- les aurait orphelinisées).
---
--- `kart_normalize` DES DEUX CÔTÉS de la comparaison : appliqué d'un seul côté,
--- il ne rapproche rien et annonce « 0 mis à jour », ce qui se lit « rien à
--- faire » — précisément le bloquant attrapé lors de l'import A4b.
+-- ── 2. Mises à jour : 161 circuits existants enrichis ──────────────────────
+-- L'IDENTIFIANT NE BOUGE PAS : garantie que les courses jouées gardent leur
+-- circuit (une suppression/recréation les aurait orphelinisées — leçon A4b).
 create temp table maj_circuits (
   old_name text, old_city text, new_name text, new_city text,
   length_m numeric, width_m numeric, env_kind text, motor_kind text,
@@ -160,7 +160,7 @@ insert into maj_circuits values
   ('Karting du Laquais', 'Champier', 'Karting du Laquais', 'Champier', 900.0, null, 'outdoor', 'thermique', 'loisir', 'FFSA', 'Au Laquay', '38260', null, 'https://kartingdulaquais.com', null, null),
   ('Karting du Mont-Blanc', 'Passy', 'Karting du Mont-Blanc', 'Passy', null, null, 'outdoor', null, 'loisir', null, null, '74190', null, 'https://kartingdumontblanc.com', null, null),
   ('Piste de karting', 'Le Creusot', 'Karting Évasion (Parc des Combes)', 'Le Creusot', 817.0, null, 'outdoor', 'thermique', 'mixte', null, 'Parc Touristique des Combes', '71200', null, null, null, 'Piste de karting | Karting Évasion'),
-  ('Lille Karting', 'Ennetières-en-Weppes', 'Lille Karting', 'Ennetières-en-Weppes', 900.0, null, 'indoor', 'thermique', 'mixte', 'FFSA', 'Centre Commercial Englos les Géants', '59320', '0320176080', 'https://lillekarting.com', 'Piste indoor 600 m · Piste outdoor 900 m (éclairée)', null),
+  ('Lille Karting', 'Ennetières-en-Weppes', 'Lille Karting', 'Ennetières-en-Weppes', 900.0, null, 'outdoor', 'thermique', 'mixte', 'FFSA', 'Centre Commercial Englos les Géants', '59320', '0320176080', 'https://lillekarting.com', 'Piste indoor 600 m · Piste outdoor 900 m (éclairée)', null),
   ('Circuit de karting Loc''karting', 'Pérols', 'Loc''Karting', 'Pérols', 700.0, 6.5, 'outdoor', 'thermique', 'mixte', null, 'RD172, Domaine Pailletrice', '34470', null, null, null, 'Circuit de karting Loc''karting'),
   ('MK Karting', 'Scientrier', 'MK Circuit (Scientrier)', 'Scientrier', null, null, 'outdoor', 'thermique', 'loisir', null, '2930 route de l''Arve', '74930', null, 'https://mk-circuit.com', null, 'MK Karting'),
   ('MP Karting', 'Lanas', 'MP Karting', 'Lanas', null, null, 'outdoor', 'thermique', 'mixte', 'FFSA', 'Aérodrome Aubenas-Lanas', '07200', null, null, null, null),
@@ -172,36 +172,29 @@ insert into maj_circuits values
   ('OnlyKart', 'Dagneux', 'OnlyKart', 'Dagneux', 502.0, null, 'indoor', 'electrique', 'loisir', null, '195 avenue de l''Industrie', '01120', null, 'https://onlykart.com', 'Piste indoor élec. 502 m · Piste outdoor bio-éthanol', null),
   ('Pro Kart Figari', 'Figari', 'Prokart Figari', 'Figari', null, null, 'outdoor', 'thermique', 'mixte', null, null, '20114', null, null, 'Piste principale · Piste enfants', null),
   ('RMT Karting', 'Limoges', 'RMT Karting', 'Limoges', null, null, 'indoor', 'electrique', 'loisir', null, null, '87000', null, null, null, null),
-  ('Racing Kart du Mans', 'Montfort-le-Gesnois', 'Racing Kart du Mans', 'Montfort-le-Gesnois', 1150.0, null, 'outdoor', 'thermique', 'loisir', null, null, '72450', null, null, 'Piste loisir 900 m · Piste compétition 1150 m', null),
+  ('Racing Kart du Mans', 'Montfort-le-Gesnois', 'Racing Kart du Mans', 'Montfort-le-Gesnois', 1150.0, null, 'outdoor', 'thermique', 'competition', null, null, '72450', null, null, 'Piste loisir 900 m · Piste compétition 1150 m', null),
   ('Sologne Karting', 'Salbris', 'Sologne Karting', 'Salbris', 1500.0, null, 'outdoor', 'thermique', 'mixte', 'FIA', 'Les Maisons Rouges', '41300', null, 'https://sologne-karting.com', null, null),
   ('Speed2Max', 'Clermont-Ferrand', 'Speed2max', 'Clermont-Ferrand', null, null, null, 'electrique', 'loisir', null, '160 avenue Jean Mermoz', '63100', null, null, null, null),
   ('SpeedPark Conflans-Sainte-Honorine', 'Conflans-Sainte-Honorine', 'Speedpark (Karting Bowling)', 'Conflans-Sainte-Honorine', null, null, 'indoor', null, 'loisir', null, 'Z.A. Les Boutries, 18 rue de l''Hautil', '78700', '0820208208', 'https://kartingbowling.com', null, 'SpeedPark Conflans-Sainte-Honorine | SpeedPark'),
   ('Stras Kart', 'Eckbolsheim', 'Stras''Kart', 'Eckbolsheim', 400.0, null, 'indoor', 'electrique', 'loisir', null, '14 Rue des Frères Lumière', '67201', '0367860016', 'https://straskart.fr', null, null),
   ('Selest''Kart''in', 'Sélestat', 'Sélest''Kart''In', 'Sélestat', null, null, 'indoor', null, 'loisir', null, 'Zone artisanale sud', '67600', null, null, null, null),
   ('Tours Kart Indoor', 'Saint-Avertin', 'Tours Kart Indoor (Pole Karting Service)', 'Saint-Avertin', null, null, 'indoor', null, 'loisir', 'FFSA', '11 rue Louis Pasteur', '37550', '0247800327', 'https://tours-kart-indoor.fr', null, 'Tours Kart Indoor'),
-  ('Atlantic Kart System', 'Les Sables-d''Olonne', 'Atlantic Kart System (AKS)', 'Château-d''Olonne', null, null, 'outdoor', 'thermique', 'mixte', null, 'D36A, Le Coudriou', '85180', '0251325252', 'https://akskart.fr', null, 'Atlantic Kart System'),
-  ('Base US Karting', 'Étrechet', 'Base US Karting', 'Châteauroux', 700.0, null, 'indoor', 'thermique', 'loisir', null, 'Ancienne base militaire de La Martinerie', '36000', null, 'https://baseuskarting.com', 'Piste indoor (2 niveaux) · Piste outdoor 700 m', null),
+  ('Atlantic Kart System', 'Les Sables-d''Olonne', 'Atlantic Kart System (AKS)', 'Les Sables-d''Olonne', null, null, 'outdoor', 'thermique', 'mixte', null, 'D36A, Le Coudriou', '85180', '0251325252', 'https://akskart.fr', null, 'Atlantic Kart System'),
+  ('Base US Karting', 'Étrechet', 'Base US Karting', 'Châteauroux', 700.0, null, 'outdoor', 'thermique', 'mixte', null, 'Ancienne base militaire de La Martinerie', '36000', null, 'https://baseuskarting.com', 'Piste indoor (2 niveaux) · Piste outdoor 700 m', null),
   ('Brest karting électrique', 'Brest', 'Brest Karting Électrique', 'Plouzané', 240.0, null, 'indoor', 'electrique', 'loisir', null, 'voisin du golf de Brest-Iroise', '29280', null, null, null, null),
   ('Circuit Espace Plus', 'Ollainville', 'Circuit Espace Plus', 'Marcoussis', 780.0, 6.0, 'outdoor', 'thermique', 'mixte', null, 'Domaine de Couard, Route de Couard', '91460', '0164493013', 'https://circuitespaceplus.com', 'Piste 780 m · Piste 360 m', null),
   ('Circuit International de Karting d''Aunay-les-Bois', 'Aunay-les-Bois', 'Circuit International d''Essay (Ouest Karting / K61)', 'Essay', 800.0, null, 'outdoor', 'thermique', 'mixte', null, '10 rue Roederer', '61500', null, 'https://karting61.com', null, 'Circuit International de Karting d''Aunay-les-Bois | Circuit Karting Essay'),
-  ('KartParc', 'Thônes', 'Circuit Karting du Parc (Team ASK)', 'Le Parc', 1300.0, 7.0, 'outdoor', null, null, 'FFSA', 'RN/D175, Sainte-Pience', '50870', '0233585024', 'https://kartingduparc.fr', null, 'KartParc'),
-  ('Circuit du Val d''Argenton', 'Argentonnay', 'Circuit de Karting du Val d''Argenton', 'Deux-Sèvres', null, null, 'outdoor', null, null, null, null, '79', null, null, null, 'Circuit du Val d''Argenton'),
   ('Circuit de l''Indre', 'Clion', 'Circuit de l''Indre (Renaux Racing)', 'Clion', 1000.0, 7.5, 'outdoor', 'thermique', 'mixte', 'FFSA', null, '36700', null, null, null, 'Circuit de l''Indre'),
   ('Circuit du Périgord', 'Teyjat', 'Circuit du Périgord', 'Teyjat', 1100.0, 8.0, 'outdoor', 'thermique', 'mixte', null, null, '24300', null, 'https://circuit-karting-perigord-24.fr', null, 'Karting du Périgord'),
   ('Dunois Kart', 'Villemaury', 'Dunois Kart', 'Lutz-en-Dunois', 1200.0, null, 'outdoor', 'thermique', 'mixte', null, null, '28200', null, 'https://dunoiskart.com', 'Piste outdoor · Piste indoor', null),
-  ('Karting Family Fun Park', 'Meschers-sur-Gironde', 'Family Fun Park', 'Lagord', null, null, 'indoor', 'electrique', 'loisir', null, null, '17140', null, null, null, 'Karting Family Fun Park'),
   ('Inwall Kart', 'Les Ponts-de-Cé', 'Inwall Kart', 'Les Ponts-de-Cé', 600.0, 5.0, 'indoor', 'thermique', 'loisir', null, null, '49130', null, 'https://inwallkart.com', null, null),
   ('Kart71', 'Dracy-le-Fort', 'Kart 71', 'Champforgeuil', null, null, 'indoor', 'thermique', 'mixte', null, null, '71530', null, null, null, null),
   ('Kart Racer', 'Saran', 'Kart Racer', 'Orléans', null, null, 'indoor', 'thermique', 'mixte', null, null, '45000', null, null, null, null),
-  ('Kart''In', 'Nancy', 'Kart''In (Park Events)', 'Vénissieux', 600.0, null, 'indoor', 'mixte', 'loisir', 'FFSA', '17 chemin du Génie', '69200', '0472780505', null, null, 'Kart''In'),
-  ('City Kart', 'Saint-Sébastien-sur-Loire', 'Karting City', 'Dordogne', null, null, 'outdoor', 'electrique', 'loisir', null, null, '24', null, null, null, 'City Kart'),
   ('Kerlabo Kart', 'Cohiniac', 'Karting de Kerlabo', 'Boqueho', 805.0, 8.0, 'outdoor', 'thermique', 'mixte', 'FFSA', 'Kerlabo (axe Châtelaudren-Quintin)', '22170', null, 'https://kerlabo-kart.com', 'Piste 805 m · Piste enfants (karts élec.)', 'Kerlabo Kart'),
   ('Karting de Saintes', 'Les Gonds', 'Karting de Saintes', 'Les Gonds', 700.0, null, 'outdoor', null, null, 'FFSA', '93 rue des Coudrasses', '17100', '0615357354', 'https://kartingdesaintes.com', null, null),
-  ('Le Karting', 'Nantes', 'Le Kart', 'Saint-Gorgon', 490.0, null, 'indoor', 'thermique', 'mixte', null, null, '88700', null, 'https://le-kart.fr', null, 'Le Karting'),
   ('On''Kart', 'Viry', 'On''Kart', 'Ville-la-Grand', 1014.0, null, 'outdoor', 'thermique', 'mixte', 'FFSA', null, '74100', null, null, null, null),
-  ('Opale Karting', 'Berck', 'Opale Karting', 'Berck-sur-Mer', 603.0, null, 'outdoor', 'thermique', 'mixte', null, null, '62600', null, null, null, null),
   ('Passion Karting 16', 'Taponnat-Fleurignac', 'Passion Karting 16', 'La Rochefoucauld', 750.0, null, 'outdoor', 'thermique', 'mixte', 'FFSA', null, '16110', '0545621818', 'https://passionkarting16.fr', null, null),
-  ('Sud Karting', 'Bouillargues', 'Sud Karting', 'Nîmes', null, null, 'outdoor', 'thermique', 'loisir', null, null, '30000', null, 'https://sudkarting.fr', null, null),
+  ('Sud Karting', 'Bouillargues', 'Sud Karting', 'Bouillargues', null, null, 'outdoor', 'thermique', 'loisir', null, null, '30000', null, 'https://sudkarting.fr', null, null),
   ('Sun Karting', 'Sérignan', 'Sunkart', 'Gruissan', 700.0, null, 'outdoor', 'thermique', 'mixte', 'FFSA', 'Route de Narbonne-Plage', '11430', null, null, null, 'Sun Karting'),
   ('Piste de Karting', 'Wittenheim', 'ASK Wittenheim', 'Wittenheim', 610.0, 6.5, 'outdoor', 'thermique', 'competition', null, null, '68270', null, 'https://askwittenheim.fr', null, 'Piste de Karting'),
   ('Circuit du Bugey', 'Château-Gaillard', 'Ain Karting', 'Château-Gaillard', 850.0, 8.0, 'outdoor', 'thermique', 'mixte', null, null, '01500', null, null, null, 'Circuit du Bugey | Karting de Chateau-Gaillard'),
@@ -227,7 +220,6 @@ insert into maj_circuits values
   ('Kart System Indoor', 'Bordeaux', 'KART System Bordeaux-Lac', 'Bordeaux', 600.0, null, 'indoor', 'thermique', 'loisir', null, null, '33300', null, 'https://kartsystem.com', null, 'Kart System Indoor'),
   ('Circuit de Karting', 'Mérignac', 'KART System Mérignac', 'Mérignac', null, null, 'outdoor', 'thermique', 'mixte', null, null, '33700', null, 'https://kartsystem.com', null, 'Circuit de Karting'),
   ('Kart de Foulain', 'Foulain', 'Kart 52 (Foulain)', 'Foulain', 710.0, 7.0, 'outdoor', 'thermique', 'mixte', 'FFSA', null, '52800', null, 'https://kart52.fr', null, 'Kart de Foulain'),
-  ('Circuit International de Lavelanet', 'Aigues-Vives', 'Kart''Are Aigues-Vives', 'Aigues-Vives', 1400.0, 8.5, 'outdoor', 'thermique', 'mixte', 'FFSA', 'D625 entre Lavelanet et Mirepoix', '09500', '0632099616', 'https://karting-ariege.fr', null, 'Circuit International de Lavelanet | Circuit International Mathieu Vidal'),
   ('Piste de Karting', 'Noiron-sous-Gevrey', 'Karting 2 Noiron', 'Noiron-sous-Gevrey', 300.0, null, 'outdoor', null, 'loisir', 'FFSA', '44 route d''Izeure', '21910', null, null, 'Piste outdoor 300 m · Piste indoor (couverte)', 'Piste de Karting'),
   ('AS Karting Corsika', 'Biguglia', 'Karting Biguglia', 'Biguglia', 1000.0, null, 'outdoor', 'thermique', 'mixte', null, null, '20620', null, null, null, 'AS Karting Corsika | Complexe Henri Muzio'),
   ('Circuit Jean Sainrame', 'Briscous', 'Karting Briscous', 'Briscous', 1200.0, null, 'outdoor', 'thermique', 'mixte', null, null, '64240', null, null, null, 'Circuit Jean Sainrame'),
@@ -250,21 +242,57 @@ insert into maj_circuits values
   ('Piste de Karting', 'Frontenaud', 'Le Circuit de Bresse', 'Frontenaud', null, null, 'outdoor', 'thermique', 'mixte', null, '460 route de Milleure (ZA Milleure Sud)', '71580', null, 'https://circuitdebresse.com', null, 'Piste de Karting'),
   ('Circuit Vendée Kart Center', 'Fontenay-le-Comte', 'Les Circuits de Vendée (karting électrique indoor)', 'Fontenay-le-Comte', 350.0, null, 'indoor', 'electrique', 'loisir', null, null, '85200', null, 'https://vendee-tourisme.com', null, 'Circuit Vendée Kart Center'),
   ('Milhaud Karting', 'Milhaud', 'NimesKarting', 'Milhaud', 525.0, null, 'outdoor', 'thermique', 'mixte', null, null, '30540', null, 'https://nimeskarting.fr', null, 'Milhaud Karting'),
-  ('Karting Saint-Cyprien', 'Saint-Cyprien', 'Performances Drive', 'Saint-Cyprien', null, null, 'outdoor', null, 'loisir', null, null, '42160', null, 'https://performances-drive.fr', null, 'Karting Saint-Cyprien'),
   ('Piste de Karting de Charmes', 'Charmes', 'Piste du Saulcy (ASK Charmes)', 'Charmes', null, null, 'outdoor', 'thermique', 'competition', null, 'Rue Sainte-Barbe', '88130', null, null, null, 'Piste de Karting de Charmes'),
   ('Rouen Espace Loisirs', 'Rouen', 'Rouen Espace Karting', 'Rouen', 400.0, null, 'indoor', 'electrique', 'loisir', null, '149 Chemin de Croisset', '76000', null, 'https://rouenespaceloisirs.fr', null, 'Rouen Espace Loisirs'),
   ('Piste de Karting de Lessay', 'Lessay', 'SMKart#50 (Circuit de la Manche / ASK Lessay)', 'Lessay', 1005.0, 8.0, 'outdoor', 'thermique', 'mixte', 'FFSA', null, '50340', null, 'https://smkart50.fr', null, 'Piste de Karting de Lessay'),
   ('SpeedPark', 'Vannes', 'SpeedPark Vannes', 'Vannes', null, null, 'indoor', null, 'loisir', null, null, '56000', null, null, null, 'SpeedPark'),
-  ('Piste de Karting', 'Pusey', 'Sport Karting – Circuit de la Vallée', 'Pusey', 300.0, null, 'outdoor', 'thermique', 'mixte', 'FFSA', null, '70000', '0384750495', 'https://sportkarting.com', 'Piste karting · Mini piste enfants 300 m', 'Piste de Karting'),
+  ('Piste de Karting', 'Pusey', 'Sport Karting – Circuit de la Vallée', 'Pusey', 300.0, null, 'outdoor', 'thermique', 'loisir', 'FFSA', null, '70000', '0384750495', 'https://sportkarting.com', 'Piste karting · Mini piste enfants 300 m', 'Piste de Karting'),
   ('Circuit de Karting du Bassin D''Arcachon', 'Biganos', 'TopGun Evasion (Circuit de Karting Bassin d''Arcachon)', 'Biganos', null, null, 'outdoor', 'thermique', 'mixte', 'FFSA', null, '33380', null, 'https://topgun-evasion.com', null, 'Circuit de Karting du Bassin D''Arcachon'),
   ('Karting Philippe Alliot', 'Bellevigny', 'Vendée Espace Karting (Circuit Philippe Alliot)', 'Bellevigny', null, null, 'outdoor', 'thermique', 'mixte', null, 'Les Prés Hauts', '85170', '0251410505', 'https://karting-philippealliot.com', null, 'Karting Philippe Alliot'),
   ('Win''Kart de Carcassonne', 'Carcassonne', 'WIN''KART', 'Carcassonne', 976.0, null, 'outdoor', 'thermique', 'mixte', 'FFSA', 'Route de Bram', '11000', null, 'https://winkart-11.fr', null, 'Win''Kart de Carcassonne'),
-  ('Karting', 'Neuilly-sous-Clermont', 'Karting Loisirs Neuilly', 'Neuilly', 720.0, null, 'outdoor', 'thermique', 'mixte', null, null, '60', null, null, null, 'Karting'),
   ('Piste de Karting Indoor', 'Toulouse', 'Karting Toulouse Montaudran', 'Toulouse', null, null, 'indoor', 'electrique', 'loisir', null, null, '31400', null, 'https://kartingtoulouse.com', null, 'Piste de Karting Indoor'),
   ('Circuit International de Saint-Amand', 'Colombiers', 'Karting de Colombiers (Saint-Amand)', 'Colombiers', 1200.0, null, 'outdoor', 'thermique', 'mixte', null, null, '18200', null, null, null, 'Circuit International de Saint-Amand | Circuit International de karting'),
   ('Nantes Karting NEK', 'Nantes', 'Karting de Nantes (Électrique)', 'Nantes', null, null, 'indoor', 'electrique', 'loisir', null, null, '44800', null, 'https://karting-de-nantes.fr', null, 'Nantes Karting NEK'),
-  ('Piste de Karting', 'Ancenis-Saint-Géréon', 'Plein Gaz Karting 44 (Circuit Roger Gaillard)', 'Ancenis', 1170.0, 7.0, 'outdoor', 'thermique', 'mixte', null, null, '44150', null, null, null, 'Piste de Karting');
+  ('Piste de Karting', 'Ancenis-Saint-Géréon', 'Plein Gaz Karting 44 (Circuit Roger Gaillard)', 'Ancenis', 1170.0, 7.0, 'outdoor', 'thermique', 'mixte', null, null, '44150', null, null, null, 'Piste de Karting'),
+  ('Karting', 'Le Thou', 'Aunis Karting', 'Le Thou', 800.0, null, 'outdoor', null, null, 'FFSA', 'ZI du Fief Girard', '17290', null, 'https://auniskarting.fr', null, 'Karting'),
+  ('Circuit Eisen - Kart 90', 'Pérouse', 'Kart 90 (Circuit Eisen)', 'Pérouse', 700.0, null, 'outdoor', 'thermique', 'mixte', null, 'D419 (6 km est de Belfort)', '90340', null, null, null, 'Circuit Eisen - Kart 90'),
+  ('Karting Cap Malo', 'La Mézière', 'Karting Rennes Cap Malo', 'La Mézière', 600.0, null, 'indoor', null, 'mixte', null, 'Avenue du Phare du Grand Lejeon, ZAC Cap Malo', '35520', '0299133500', 'https://karting-rennes.fr', null, 'Karting Cap Malo'),
+  ('Karting de Pers', 'Le Rouget-Pers', 'Karting de Pers – Le Lissartel', 'Le Rouget-Pers', 1105.0, 8.0, 'outdoor', 'thermique', 'mixte', 'FFSA', 'Selves', '15290', '0471622626', 'https://cantalkarting.fr', null, 'Karting de Pers | Circuit le Lissartel'),
+  ('Karting Buffo', 'Ozouer-le-Voulgis', 'Racing Kart Buffo', 'Ozouer-le-Voulgis', 1000.0, 7.5, 'outdoor', 'thermique', 'mixte', 'FFSA', 'RN19', '77390', '0164076166', 'https://karting-buffo.com', 'Grande piste 1000 m · Piste 600 m · Piste indoor', 'Karting Buffo'),
+  ('Karting Saint-Cyprien', 'Saint-Cyprien', 'Saint Cyp Kart', 'Saint-Cyprien', 600.0, null, 'outdoor', 'thermique', 'mixte', null, 'Chemin du Prat d''en Veil', '66750', null, 'https://kartingstcyprien.fr', 'Piste 600 m (pont + tunnel) · Circuit enfants (100cc) · Circuit baby (électrique)', 'Karting Saint-Cyprien'),
+  ('Circuit de Karting du Parc', 'Le Parc', 'Circuit Karting du Parc (Team ASK)', 'Le Parc', 1300.0, 7.0, 'outdoor', null, null, 'FFSA', 'RN/D175, Sainte-Pience', '50870', '0233585024', 'https://kartingduparc.fr', null, 'Circuit de Karting du Parc'),
+  ('Family Fun Kart', 'Lagord', 'Family Fun Park', 'Lagord', null, null, 'indoor', 'electrique', 'loisir', null, null, '17140', null, null, null, 'Family Fun Kart')
+;
 
+-- ── 2bis. PRÉ-VOL : l'identité cible est-elle déjà prise ? ───────────────
+-- `circuits_ident_uniq` est un index unique NON déférable sur (nom normalisé,
+-- ville normalisée). Un renommage vers une identité déjà occupée fait échouer
+-- TOUTE la migration sur un message anglais, sans dire laquelle des 161
+-- lignes fautait. Or la base du PO n'est pas la base de référence : l'ajout
+-- libre de circuits a été ouvert quelques jours en juillet, et le PO traite
+-- les signalements A13 à la main — un renommage manuel vers le nom commercial
+-- (exactement ce que ce fichier utilise) suffirait à tout bloquer.
+-- On refuse donc AVANT d'écrire, en NOMMANT les collisions.
+do $$
+declare v_txt text;
+begin
+  select string_agg(format('« %s » (%s) → « %s » (%s), déjà occupé par « %s » (%s)',
+                           m.old_name, m.old_city, m.new_name, m.new_city, c.name, c.city), E'\n')
+    into v_txt
+  from maj_circuits m
+  join public.circuits c
+    on public.kart_normalize(c.name) = public.kart_normalize(m.new_name)
+   and public.kart_normalize(coalesce(c.city,'')) = public.kart_normalize(coalesce(m.new_city,''))
+  where public.kart_normalize(c.name) <> public.kart_normalize(m.old_name)
+     or public.kart_normalize(coalesce(c.city,'')) <> public.kart_normalize(coalesce(m.old_city,''));
+  if v_txt is not null then
+    raise exception E'Collision d''identité : ces renommages heurtent un circuit existant.\n%\nRien n''a été écrit. Renomme ou supprime le circuit en conflit, puis recolle.', v_txt;
+  end if;
+end $$;
+
+do $upd$
+declare v_attendu int; v_fait int;
+begin
 update public.circuits c set
   name         = m.new_name,
   city         = m.new_city,
@@ -276,40 +304,77 @@ update public.circuits c set
   homologation = coalesce(m.homologation, c.homologation),
   address      = coalesce(m.address, c.address),
   postal_code  = coalesce(m.postal_code, c.postal_code),
-  -- Le fichier gagne (décision PO) quand il a une valeur ; sinon on garde.
   phone        = coalesce(m.phone, c.phone),
   website      = coalesce(m.website, c.website),
   tracks_note  = coalesce(m.tracks_note, c.tracks_note),
-  -- `is_indoor` reste la colonne d'affichage historique : on la réaligne sur
-  -- le vocabulaire fermé, pour qu'un même fait ne soit pas dit deux fois de
-  -- deux façons différentes.
   is_indoor    = case when m.env_kind is not null then m.env_kind = 'indoor' else c.is_indoor end,
-  -- L'ancien nom rejoint les alias : la recherche continue de le trouver.
-  aliases      = nullif(m.add_aliases, '')
+  -- Alias FUSIONNÉS, pas écrasés : un `nullif(m.add_aliases,'')` sec
+  -- détruirait sans trace tout alias posé entre la génération de ce fichier et
+  -- son collage (correction manuelle du PO, lot futur). On réunit les deux
+  -- listes, on dédoublonne sur la forme normalisée, et on retire l'alias qui
+  -- serait devenu le nom.
+  aliases = (
+    select nullif(string_agg(distinct u.a, ' | '), '')
+    from (
+      select trim(x) as a
+      from unnest(string_to_array(
+             coalesce(c.aliases, '') || '|' || coalesce(m.add_aliases, ''), '|')) as x
+      where trim(x) <> ''
+        and public.kart_normalize(trim(x)) <> public.kart_normalize(m.new_name)
+    ) u
+  )
 from maj_circuits m
 where public.kart_normalize(c.name) = public.kart_normalize(m.old_name)
   and public.kart_normalize(coalesce(c.city, '')) = public.kart_normalize(coalesce(m.old_city, ''));
 
-do $$
-declare v_attendu int; v_fait int;
-begin
+  -- `row_count` et NON un recomptage par nom : la première version comptait les
+  -- circuits qui PORTENT les nouveaux noms, si bien qu'un SECOND collage
+  -- affichait « 161 sur 161 » sans rien renommer du tout. Un import partiel se
+  -- serait annoncé complet. `get diagnostics` n'est fiable que dans le bloc qui
+  -- exécute la requête — d'où cet emballage.
+  get diagnostics v_fait = row_count;
   select count(*) into v_attendu from maj_circuits;
-  select count(*) into v_fait from public.circuits c join maj_circuits m
-    on public.kart_normalize(c.name) = public.kart_normalize(m.new_name)
-   and public.kart_normalize(coalesce(c.city,'')) = public.kart_normalize(coalesce(m.new_city,''));
-  raise notice 'Mises à jour : % appliquées sur % attendues', v_fait, v_attendu;
-  -- Un écart signale un rapprochement qui n'a rien trouvé : mieux vaut refuser
-  -- la migration que la croire passée (leçon A4b).
+  raise notice 'Mises à jour : % lignes écrites sur % attendues', v_fait, v_attendu;
   if v_fait <> v_attendu then
-    raise exception 'Mises à jour perdues (% / %) — rapprochement à revoir', v_fait, v_attendu;
+    raise exception 'Mises à jour perdues (% / %) — un circuit visé a changé de nom ou de ville depuis la génération de ce fichier. Rien n''a été écrit.', v_fait, v_attendu;
   end if;
-end $$;
+end $upd$;
 
--- ── 3. Nouveaux lieux : 107 kartings absents de notre base ────────────────
--- Géocodés depuis leurs adresses (Nominatim, 1 requête/seconde, cache
--- reprenable) : 31 à l'adresse précise, 72 au code postal, 4 à la commune.
--- La commune suffit pour « près de moi » — mieux vaut une ville juste qu'une
--- adresse fantaisiste.
+-- ── 2ter. Alias seuls : 3 lieux du fichier sont le MÊME site qu'un
+-- circuit déjà enrichi par une autre ligne (mesuré à moins de 3 km, avec un
+-- nom apparenté). On n'insère rien — un doublon sur la carte est pire qu'un
+-- nom manquant — on ajoute seulement l'appellation en alias.
+create temp table alias_circuits (old_name text, old_city text, add_alias text) on commit drop;
+insert into alias_circuits values
+  ('Circuit de Karting de la Roche de Glun', 'La Roche-de-Glun', 'Driv''Kart (La Roche-de-Glun)'),
+  ('Kart71', 'Dracy-le-Fort', 'Kartmania Dracy-le-Fort'),
+  ('City Kart', 'Saint-Sébastien-sur-Loire', 'City Kart Saint-Sébastien')
+;
+
+update public.circuits c set aliases = (
+  select nullif(string_agg(distinct u.a, ' | '), '')
+  from (
+    select trim(x) as a
+    from unnest(string_to_array(coalesce(c.aliases,'') || '|' || a.add_alias, '|')) as x
+    where trim(x) <> '' and public.kart_normalize(trim(x)) <> public.kart_normalize(c.name)
+  ) u
+)
+from alias_circuits a
+where public.kart_normalize(c.name) = public.kart_normalize(a.old_name)
+  and public.kart_normalize(coalesce(c.city,'')) = public.kart_normalize(coalesce(a.old_city,''));
+
+-- ── 3. Nouveaux lieux : 103 kartings absents de notre base ────────────────
+-- Géocodés (Nominatim, 1 requête/seconde) : 26 à l'adresse, 68 au code
+-- postal, 9 à la commune. Un lieu que le relevé lui-même ne sait pas situer
+-- (« commune à préciser ») est ÉCARTÉ : sans coordonnées il serait invisible
+-- sur la carte.
+--
+-- Le garde `not exists` ci-dessous ne compare que les NOMS : c'est la
+-- protection contre l'échec de migration, pas contre le doublon physique.
+-- Celui-là a été traité en amont, en mesurant la distance de chaque nouveau
+-- lieu à tous les circuits existants — le garde SQL seul aurait planté dix
+-- épingles au même endroit, coupant en deux le record et les compteurs du
+-- circuit concerné.
 insert into public.circuits
   (name, city, is_official, lat, lon, length_m, width_m, env_kind, motor_kind,
    usage_kind, homologation, address, postal_code, phone, website, tracks_note, is_indoor)
@@ -324,7 +389,6 @@ from (values
   ('Anneau Jaune', 'Haguenau', 48.83874, 7.83182, null, null, 'outdoor', null, 'loisir', null, null, '67500', null, null, null),
   ('Aqua Speed', 'Hourtin', 45.18212, -1.08425, null, null, 'outdoor', 'electrique', 'loisir', null, 'Île aux Enfants', '33990', null, null, null),
   ('Ardèche Loisirs Mécaniques', 'Grospierres', 44.4002, 4.28953, 700.0, 7.0, 'outdoor', 'thermique', 'loisir', null, null, '07120', null, 'https://ardecheloisirsmecaniques.com', null),
-  ('Aunis Karting', 'Aigrefeuille-d''Aunis', 46.10212, -0.94459, 800.0, null, 'outdoor', null, null, 'FFSA', 'ZI du Fief Girard', '17290', null, 'https://auniskarting.fr', null),
   ('B''Kart', 'Maurepas', 48.76187, 1.94515, 600.0, 6.5, 'indoor', null, 'loisir', null, 'Avenue Gutenberg, Z.A. Pariwest', '78310', '0130053131', 'https://bkart.fr', null),
   ('Bailly Loisirs', 'Bailly-en-Rivière', 49.91287, 1.33821, null, null, 'outdoor', null, null, null, '10 Rue de la Gare', '76630', null, null, null),
   ('BattleKart Metz', 'Metz', 49.1197, 6.17636, null, null, 'indoor', 'electrique', 'loisir', null, null, '57000', null, null, null),
@@ -335,21 +399,20 @@ from (values
   ('Cannes Karting', 'Cannes', 43.55152, 7.01344, null, null, 'indoor', 'electrique', 'loisir', null, null, '06400', null, 'https://canneskarting.com', null),
   ('Center Kart Noisiel', 'Noisiel', 48.84573, 2.62, 350.0, null, 'indoor', null, 'loisir', null, '7 rue de la Mare Blanche (Z.I.)', '77186', '0164804257', 'https://centerkart.fr', null),
   ('Chrono Kart 32', 'Pavie', 43.62042, 0.57833, null, null, 'indoor', null, 'loisir', null, 'ZI du Sousson', '32550', '0562664809', null, null),
-  ('Circuit Carole', 'Tremblay-en-France', 48.9802, 2.55896, 2055.0, null, 'outdoor', 'thermique', 'mixte', null, 'Route Départementale 40', '93290', null, 'https://circuit-carole.com', null),
+  ('Circuit Carole', 'Tremblay-en-France', 48.9802, 2.55896, null, null, 'outdoor', 'thermique', 'mixte', null, 'Route Départementale 40', '93290', null, 'https://circuit-carole.com', null),
   ('Circuit Flatten', 'Waldwisse', 49.41375, 6.52952, null, null, 'outdoor', null, 'loisir', null, null, '57480', null, null, null),
   ('Circuit Intl Anthoine Hubert (RKO/ASK Angerville)', 'Angerville', 48.31067, 1.99798, 1200.0, 8.0, 'outdoor', 'thermique', 'mixte', 'CIK-FIA', 'Villeneuve, RD6 (dir. Pithiviers)', '91670', '0169950000', 'https://rko.fr', 'Piste 1200 m · Piste 1080 m'),
-  ('Circuit Pau Arnos (piste karting)', 'Arnos', 43.45741, -0.53225, null, null, 'outdoor', null, 'mixte', null, null, '64', null, null, null),
+  ('Circuit Pau Arnos (piste karting)', 'Arnos', 43.45741, -0.53225, null, null, 'outdoor', null, 'mixte', null, null, null, null, null, null),
   ('Circuit de Karting Indoor Biarritz', 'Biarritz', 43.48325, -1.55928, 400.0, 6.0, 'indoor', 'thermique', 'loisir', null, null, '64200', null, null, null),
   ('Circuit de Loudun', 'Loudun', 47.01023, 0.08183, 1150.0, 8.0, 'outdoor', 'thermique', 'mixte', null, null, '86200', null, null, null),
   ('Circuit de Mantes-la-Jolie (ASK Mantes)', 'Mantes-la-Jolie', 48.9892, 1.71407, 709.0, 7.0, 'outdoor', 'thermique', 'mixte', 'FFSA', 'Nationale 13 (dir. Vernon), ''La Butte Verte''', null, '0134781283', null, null),
   ('Circuit de Mornay', 'Bonnat', 46.32765, 1.90391, null, null, 'outdoor', 'thermique', 'mixte', null, null, '23220', null, null, null),
   ('Circuit du Bois Bidaut', 'Aubusson', 45.95538, 2.16745, null, null, 'outdoor', null, 'loisir', null, null, '23200', null, null, null),
-  ('Circuit du Bourbonnais', 'Montbeugny', 46.5286, 3.4889, 2300.0, 10.0, 'outdoor', 'thermique', 'mixte', 'FFSA', 'Aérodrome de Moulins-Montbeugny', '03340', '0470348002', 'https://circuitdubourbonnais.com', null),
+  ('Circuit du Bourbonnais', 'Montbeugny', 46.5286, 3.4889, null, 10.0, 'outdoor', 'thermique', 'mixte', 'FFSA', 'Aérodrome de Moulins-Montbeugny', '03340', '0470348002', 'https://circuitdubourbonnais.com', null),
   ('Circuits de Montemart', 'Malemort', 45.17968, 1.58948, 770.0, null, 'outdoor', 'thermique', 'mixte', null, null, '19360', null, null, 'Piste outdoor 770 m · Piste indoor 250 m'),
   ('Circuits du Nonnenfels', 'Klang', 49.3198, 6.3722, 800.0, null, 'outdoor', 'thermique', 'loisir', null, null, '57220', null, null, null),
   ('Cognac Karting Competition', 'Salles-d''Angles', 45.63185, -0.34634, 450.0, null, 'indoor', 'thermique', 'mixte', null, '2 chemin Notaire Royal', '16130', null, null, 'Piste indoor 450 m · Piste outdoor n°1 · Piste outdoor n°2'),
   ('Distra Kart', 'Saint-Paulien', 45.13585, 3.81311, 700.0, null, 'outdoor', 'thermique', 'loisir', null, 'Lieu-dit Le Versonne, RD906', '43350', '0471042375', 'https://distrakart-43.fr', null),
-  ('Driv''Kart (La Roche-de-Glun)', 'La Roche-de-Glun', 44.98625, 4.85893, null, null, 'outdoor', 'thermique', 'mixte', null, '3475 route de Valence', '26600', '0475841010', 'https://valencekarting.com', null),
   ('Dynamic Kart (Quinssaines)', 'Quinssaines', 46.32762, 2.51057, null, null, 'outdoor', 'thermique', 'loisir', null, 'Lieu-dit Le Cordeau', '03380', '0470518569', 'https://dynamic-kart.fr', null),
   ('Défis Parc', 'Gauchy', 49.8254, 3.28146, null, null, 'indoor', null, 'loisir', null, null, '02100', null, 'https://defisparc.com', null),
   ('E-Kart''in Park', 'Andrézieux-Bouthéon', 45.52509, 4.25948, null, null, 'indoor', 'electrique', 'loisir', null, null, '42160', null, 'https://ekartin.fr', null),
@@ -361,7 +424,6 @@ from (values
   ('Game Factory Besançon', 'Besançon', 47.23802, 6.02436, 400.0, null, 'indoor', 'thermique', 'loisir', null, 'Planoise (ZAC de Chateaufarine)', '25000', null, null, null),
   ('Games Factory', 'Dijon', 47.35113, 5.05908, null, null, 'indoor', null, 'loisir', null, '10 Rue Marguerite Yourcenar', '21000', null, 'https://gamesfactory.fr', null),
   ('K1 Speed Caen', 'Caen', 49.18134, -0.36356, null, null, 'indoor', 'electrique', 'loisir', null, null, '14000', null, 'https://k1speed.com', null),
-  ('Kart 90 (Circuit Eisen)', 'Chèvremont', 47.62721, 6.92196, 700.0, null, 'outdoor', 'thermique', 'mixte', null, 'D419 (6 km est de Belfort)', '90340', null, null, null),
   ('Kart Indoor Chrono', 'Fegersheim', 48.48973, 7.6798, 400.0, null, 'indoor', 'thermique', 'loisir', null, null, '67640', null, 'https://kartindoorchrono.fr', null),
   ('Kart Sensation', 'Bourg-Lastic', 45.64795, 2.55863, null, null, 'outdoor', null, 'loisir', null, 'D2089', '63760', '0473218889', 'https://kart-quad-sensations.com', null),
   ('Kart and Kart', 'Poincy', 48.96926, 2.93499, 600.0, null, 'indoor', null, 'loisir', null, 'Rue de la Briqueterie, Z.I. Entrepôt Piot', '77470', '0164365555', 'https://kartandkart.fr', 'Piste 600 m · Piste enfants'),
@@ -379,14 +441,11 @@ from (values
   ('Karting Dellaroli', 'Barcelonnette', 44.3862, 6.65136, null, null, 'outdoor', null, 'loisir', null, 'ZI Saint Pons', '04400', null, null, null),
   ('Karting Indoor 88', 'Gérardmer', 48.07058, 6.8777, null, null, 'indoor', null, 'loisir', null, '1 Rue de l''Industrie', '88400', null, null, null),
   ('Karting Loisir 86 (Circuit des 3 Chênes)', 'Usseau', 46.87565, 0.50953, 800.0, null, 'outdoor', 'thermique', 'mixte', 'FFSA', null, '86230', '0549851261', 'https://karting-loisir-86.fr', 'Piste outdoor 800 m · Piste indoor 450 m'),
-  ('Karting Rennes Cap Malo', 'Melesse', 48.21758, -1.69624, 600.0, null, 'indoor', null, 'mixte', null, 'Avenue du Phare du Grand Lejeon, ZAC Cap Malo', '35520', '0299133500', 'https://karting-rennes.fr', null),
   ('Karting de Guillac', 'Guillac', 47.9111, -2.46604, 618.0, 6.5, 'outdoor', 'thermique', 'mixte', null, null, '56800', null, null, null),
-  ('Karting de Pers – Le Lissartel', 'Pers', 44.88412, 2.23439, 1105.0, 8.0, 'outdoor', 'thermique', 'mixte', 'FFSA', 'Selves', '15290', '0471622626', 'https://cantalkarting.fr', null),
   ('Karting de Royan', 'Royan', 45.62453, -1.02876, 600.0, 8.0, 'outdoor', null, null, 'FFSA', '13 rue d''Arsonval, ZC Royan 2', '17000', '0546057994', 'https://karting-royan.com', null),
   ('Karting de Serre Chevalier', 'La Salle-les-Alpes', 44.94538, 6.57198, null, null, 'outdoor', null, 'loisir', null, null, '05240', null, null, null),
   ('Karting de la Gravona', 'Ajaccio', 41.9264, 8.7376, 600.0, null, 'outdoor', 'thermique', 'mixte', 'FFSA', null, '20167', null, 'https://karting-gravona.corsica', null),
   ('Karting du Tydos', 'Lourdes', 43.09409, -0.0465, null, null, 'outdoor', null, 'loisir', null, null, '65100', null, null, null),
-  ('Kartmania Dracy-le-Fort', 'Dracy-le-Fort', 46.79794, 4.79364, null, null, null, null, 'loisir', null, '5 ZA de la Tuilerie', '71640', null, 'https://kartmania.com', null),
   ('Katr''Aid', 'La Rochelle', 46.17645, -1.13692, null, null, 'outdoor', null, 'mixte', null, '147 rue Marius Lacroix', '17000', null, null, null),
   ('Le Blizz', 'Rennes', 48.13254, -1.65072, null, null, 'indoor', 'electrique', 'loisir', null, '8 Avenue des Gayeulles', '35000', '0299362810', 'https://leblizz.com', null),
   ('Le Réservoir (SARL)', 'Le Havre', 49.50008, 0.19023, null, null, 'outdoor', null, null, null, '581 Boulevard Jules Durand', '76600', null, null, null),
@@ -402,12 +461,10 @@ from (values
   ('Planet Minia', 'Bourg-en-Bresse', 46.20512, 5.22503, null, null, null, 'electrique', 'loisir', null, null, '01000', null, null, null),
   ('Pro Race Café', 'Montpellier', 43.61124, 3.87673, null, null, 'indoor', 'electrique', 'loisir', null, null, '34000', null, 'https://proracecafe.com', null),
   ('RKO – Karting de Lohéac', 'Lohéac', 47.86666, -1.88547, null, null, 'outdoor', 'thermique', 'mixte', null, null, '35550', null, 'https://rko-loheac.fr', null),
-  ('Racing Kart Buffo', 'Les Étards', 48.65616, 2.75034, 1000.0, 7.5, 'outdoor', 'thermique', 'mixte', 'FFSA', 'RN19', '77390', '0164076166', 'https://karting-buffo.com', 'Grande piste 1000 m · Piste 600 m · Piste indoor'),
   ('Racing Kart Loisirs', 'Albi', 43.90129, 2.14312, null, null, 'indoor', null, 'loisir', null, 'Chemin Albert Einstein', '81000', null, null, null),
   ('Racing Kart de Cormeilles (RKC)', 'Boissy-l''Aillerie', 49.07706, 2.02917, 1200.0, 8.0, 'outdoor', 'thermique', 'mixte', 'FFSA', 'Aérodrome de Cormeilles-en-Vexin', '95650', '0130732800', 'https://rkc.fr', 'Grande piste 1200 m · Piste 900 m · Circuit enfants'),
   ('Royal Tuning Club', 'Bernay', 49.18916, 0.72884, null, null, 'outdoor', null, 'mixte', null, '2 rue Jean Jacques Rousseau', '27300', null, null, null),
   ('SKLC 55', 'Chaumont-sur-Aire', 48.92778, 5.25622, 713.0, 6.5, 'outdoor', 'thermique', 'mixte', null, null, '55260', null, null, null),
-  ('Saint Cyp Kart', 'Saint-Cyprien', 42.61078, 3.01289, 600.0, null, 'outdoor', 'thermique', 'mixte', null, 'Chemin du Prat d''en Veil', '66750', null, 'https://kartingstcyprien.fr', 'Piste 600 m (pont + tunnel) · Circuit enfants (100cc) · Circuit baby (électrique)'),
   ('Sens Espaces Karting', 'Soucy', 48.25689, 3.31825, null, null, 'outdoor', 'thermique', 'mixte', null, 'Route de la Chapelle-sur-Oreuse', '89100', null, null, null),
   ('Speed Karting (Speed Loisirs)', 'Saint-Georges-de-Reneins', 46.05455, 4.71901, null, null, 'indoor', 'thermique', 'loisir', null, '436 boulevard Napoléon Bullukian', '69830', '0474090549', 'https://speedloisirs.net', null),
   ('Speed Karting Saint-Marcel', 'Saint-Marcel', 46.77594, 4.88756, null, null, 'indoor', 'thermique', 'loisir', null, null, '71380', '0469002048', 'https://speedloisirs.net', null),
@@ -423,11 +480,13 @@ from (values
   ('Karting Évasion (Bully)', 'Bully', 45.85758, 4.56107, 400.0, null, 'outdoor', 'thermique', 'loisir', null, 'Chemin de la Plagne', '69210', null, 'https://karting-evasion.fr', null),
   ('MP Karting', 'Saint-Martin-de-Valgalgues', 44.16208, 4.08322, null, null, 'outdoor', 'thermique', 'loisir', null, null, '30520', null, null, null),
   ('BKI – Brest Kart Indoor', 'Brest', 48.42415, -4.4691, null, null, 'indoor', null, 'loisir', null, '10 rue Alain Le Berre', '29200', null, null, null),
-  ('City Kart Saint-Sébastien', 'Saint-Sébastien-sur-Loire', 47.2035, -1.49921, 500.0, null, 'indoor', 'thermique', 'loisir', null, null, '44230', null, 'https://city-kart.fr', null)
+  ('Kart''In (Park Events)', 'Vénissieux', 45.71566, 4.8599, 600.0, null, 'indoor', 'mixte', 'loisir', 'FFSA', '17 chemin du Génie', '69200', '0472780505', null, null),
+  ('Le Kart', 'Saint-Gorgon', 48.32454, 6.64758, 490.0, null, 'indoor', 'thermique', 'mixte', null, null, '88700', null, 'https://le-kart.fr', null),
+  ('Kart''Are Aigues-Vives', 'Aigues-Vives', 43.23104, 2.53383, 1400.0, 8.5, 'outdoor', 'thermique', 'mixte', 'FFSA', 'D625 entre Lavelanet et Mirepoix', '09500', '0632099616', 'https://karting-ariege.fr', null),
+  ('Performances Drive', 'Saint-Cyprien', 45.53777, 4.23605, null, null, 'outdoor', null, 'loisir', null, null, '42160', null, 'https://performances-drive.fr', null),
+  ('Karting Loisirs Neuilly', 'Neuilly', 48.93214, 1.42091, 720.0, null, 'outdoor', 'thermique', 'mixte', null, null, null, null, null, null)
 ) as v(name, city, lat, lon, length_m, width_m, env_kind, motor_kind, usage_kind,
        homologation, address, postal_code, phone, website, tracks_note)
--- L'index unique (nom normalisé, ville normalisée) existe depuis A4b : cette
--- garde évite de faire échouer la migration entière sur un seul doublon.
 where not exists (
   select 1 from public.circuits c
   where public.kart_normalize(c.name) = public.kart_normalize(v.name)
@@ -436,33 +495,45 @@ where not exists (
 
 -- ── 4. Contrôles ─────────────────────────────────────────────────────────
 do $$
-declare v_total int; v_long int; v_env int; v_homol int; v_hors int;
+declare
+  v_total int; v_long int; v_env int; v_motor int; v_usage int; v_homol int;
+  v_pistes int; v_hors int; v_proches int;
 begin
   select count(*) into v_total from public.circuits;
   select count(*) into v_long from public.circuits where length_m is not null;
   select count(*) into v_env from public.circuits where env_kind is not null;
+  select count(*) into v_motor from public.circuits where motor_kind is not null;
+  select count(*) into v_usage from public.circuits where usage_kind is not null;
   select count(*) into v_homol from public.circuits where homologation is not null;
+  select count(*) into v_pistes from public.circuits where tracks_note is not null;
   select count(*) into v_hors from public.circuits where lat is null or lon is null;
-  raise notice 'Circuits : % au total · % avec longueur · % avec type · % homologués · % sans coordonnées',
-    v_total, v_long, v_env, v_homol, v_hors;
+  raise notice 'Circuits : % au total · % longueurs · % types · % motorisations · % usages · % homologations · % tracés multiples',
+    v_total, v_long, v_env, v_motor, v_usage, v_homol, v_pistes;
   if v_hors > 0 then
     raise exception 'Des circuits sans coordonnées : ils seraient invisibles sur la carte';
   end if;
+
+  -- Deux épingles au même endroit coupent en deux le record du circuit et ses
+  -- compteurs, et les pilotes en choisissent une au hasard. On le MESURE ici :
+  -- c'est le contrôle qui manquait à la première version.
+  select count(*) into v_proches from (
+    select 1 from public.circuits a join public.circuits b on a.id < b.id
+    where public.km_between(a.lat, a.lon, b.lat, b.lon) < 0.3
+  ) x;
+  -- UNE paire attendue : deux salles de Nancy que le relevé ne situe qu'à
+  -- « Est de Nancy ». Géocodées à la commune, elles tombent sur le même point.
+  -- Ce sont deux établissements distincts : les empiler est moins faux que
+  -- d'en écarter un, ou que de leur inventer des coordonnées.
+  raise notice 'Circuits à moins de 300 m d''un autre : % (1 attendue : deux salles de Nancy situées à la commune)', v_proches;
 end $$;
 
-alter table public.circuits validate constraint circuits_env_kind;
-alter table public.circuits validate constraint circuits_motor_kind;
-alter table public.circuits validate constraint circuits_usage_kind;
-alter table public.circuits validate constraint circuits_homologation;
-alter table public.circuits validate constraint circuits_length_sane;
-
 -- ── 5. La fiche circuit sert les nouvelles données ───────────────────────
--- Reprise depuis sa DERNIÈRE définition (A11) : reprendre une version
+-- Reprise depuis sa DERNIÈRE définition (A11) : repartir d'une version
 -- antérieure ferait retomber les règles des tableaux (courses ≥ 2 inscrits,
 -- suspendus exclus) — régression déjà vécue et consignée.
 --
 -- `drop` d'abord : `create or replace` REFUSE de changer le type de retour, et
--- on ajoute neuf colonnes. Aucune autre fonction ne dépend de celle-ci (seul
+-- on ajoute neuf colonnes. Aucune fonction ni vue ne référence celle-ci (seul
 -- le client l'appelle), la suppression est donc sans effet de bord.
 drop function if exists public.get_circuit_page(uuid);
 create function public.get_circuit_page(p_circuit_id uuid)
@@ -472,7 +543,6 @@ returns table (
   races_count bigint, pilots_count bigint, last_race_at timestamptz,
   my_races_count bigint, my_best_lap_ms integer,
   laps_all bigint, laps_year bigint, laps_month bigint,
-  -- Le « métier » importé du relevé PO (A16).
   length_m numeric, width_m numeric, env_kind text, motor_kind text,
   usage_kind text, homologation text, address text, postal_code text,
   tracks_note text
@@ -483,8 +553,6 @@ language sql stable security definer set search_path = public as $$
     from races ra
     where ra.circuit_id = p_circuit_id and ra.status = 'completed'
   ),
-  -- L'ensemble ÉLIGIBLE aux tableaux publics : inscrits, courses qui
-  -- comptent, comptes ni supprimés ni suspendus.
   eligibles as (
     select pp.profile_id, res.best_lap_ms, j.completed_at
     from results res

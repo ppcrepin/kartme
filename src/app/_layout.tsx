@@ -63,8 +63,9 @@ function RootNavigator() {
       // la racine = groupe (tabs)), on n'est ni dans (auth) ni (onboarding).
       const pending = takePendingRoute();
       // Destination reconstruite à l'exécution (localStorage) : les routes
-      // typées d'expo-router ne peuvent pas la vérifier. `rememberPendingRoute`
-      // filtre déjà sur `race/` et `pilot/`, seules formes acceptées.
+      // typées d'expo-router ne peuvent pas la vérifier. `pending-route` filtre
+      // aux deux bouts (écriture ET lecture) sur les seules formes partageables
+      // — `race/`, `pilot/`, `invite/`.
       if (pending) router.replace(`/${pending}` as Parameters<typeof router.replace>[0]);
       else if (inAuth || inOnboarding) router.replace('/');
     }

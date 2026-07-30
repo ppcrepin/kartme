@@ -58,3 +58,44 @@ jobs:
 
       - name: Schema + RLS tests
         run: npm run db:test
+
+  # Les tests de bout en bout tournaient en local uniquement, donc jamais sur une
+  # pull request. Or ce sont EUX qui ont attrapé les régressions les plus chères
+  # du produit : un écran de course entièrement blanc (`useAnimatedValue` absent
+  # de react-native-web) et un lien profond ouvert sans session qui retombait
+  # sur une page morte. Aucun test unitaire ni SQL ne pouvait les voir.
+  e2e:
+    name: Bout en bout (navigateur)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Le navigateur seul : `--with-deps` installe aussi Firefox et WebKit,
+      # inutiles ici (un seul projet, chromium).
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        run: npm run test:e2e
+
+      # Les traces ne sont produites qu'au premier échec (`trace:
+      # 'on-first-retry'`) : sans cette étape, un échec de CI n'était
+      # diagnosticable qu'en rejouant la suite en local.
+      - name: Traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
