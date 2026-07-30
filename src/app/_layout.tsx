@@ -53,7 +53,11 @@ function RootNavigator() {
     if (!session) {
       if (!inAuth) {
         rememberPendingRoute(path); // ex. « race/abc » → on y reviendra après connexion
-        router.replace('/sign-in');
+        // Arrivée par un LIEN D'AMI : cette personne n'a très probablement pas
+        // de compte — c'est la raison d'être du lien. L'envoyer sur « Content
+        // de te revoir » lui parlait comme à un habitué ; on ouvre
+        // l'inscription, d'où « Déjà un compte ? » reste à un tap.
+        router.replace(path.startsWith('invite/') ? '/sign-up' : '/sign-in');
       }
     } else if (hasProfile === false) {
       if (!inOnboarding) router.replace('/username');

@@ -37,6 +37,12 @@ export const fr = {
   auth: {
     signInTitle: 'Content de te revoir',
     signUpTitle: 'Rejoins la grille',
+    // Affiché sur l'inscription ET la connexion quand une invitation d'ami
+    // attend : entre le lien et son retour sur l'invitation, le nouveau venu
+    // traverse deux écrans qui, sans cela, n'en parlent nulle part.
+    // L'invitant n'est pas nommé — il faudrait l'interroger avant toute
+    // connexion, donc exposer un pseudo à quiconque fabrique une URL.
+    inviteWaiting: '🤝 Une invitation t’attend — crée ton compte et vous serez amis.',
     forgotTitle: 'Mot de passe oublié',
     usernameTitle: 'Choisis ton pseudo',
     email: 'Email',

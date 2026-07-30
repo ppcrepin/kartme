@@ -110,11 +110,22 @@ test('sans session, le lien est MÉMORISÉ RÉSOLU puis rouvert après connexion
     'rpc/get_inviter': [{ id: INVITANT, username: 'Marc_R', avatar_path: null, is_me: false }],
   });
 
-  // 1. Arrivée sans session : renvoi vers la connexion.
+  // 1. Arrivée sans session : renvoi vers l'INSCRIPTION, pas la connexion.
+  //    Quelqu'un qui ouvre un lien d'ami n'a très probablement pas de compte —
+  //    c'est la raison d'être du lien. « Content de te revoir » lui parlait
+  //    comme à un habitué (arbitrage PO 2026-07-30).
   await page.goto(`/invite/${INVITANT}`);
-  await expect(page.getByText('Content de te revoir', { exact: true })).toBeVisible({
+  await expect(page.getByText('Rejoins la grille', { exact: true })).toBeVisible({
     timeout: 20_000,
   });
+  // Et l'invitation reste MENTIONNÉE : sans cela il traverse deux écrans qui
+  // n'en parlent nulle part, puis retombe dessus sans comprendre pourquoi.
+  await expect(page.getByText(/Une invitation t’attend/)).toBeVisible();
+  // L'invitant n'est PAS nommé — le nommer supposerait d'interroger le serveur
+  // avant toute connexion, donc d'exposer un pseudo à qui fabrique une URL.
+  await expect(page.getByText(/Marc_R/)).toHaveCount(0);
+  // Un compte existant reste à un tap.
+  await expect(page.getByText(/Déjà un compte/)).toBeVisible();
 
   // 2. La destination mémorisée porte l'IDENTIFIANT, pas « [id] ».
   const memo = await page.evaluate(() => localStorage.getItem('ks_pending_route'));
@@ -165,6 +176,23 @@ test('un refus technique ne montre jamais d’anglais brut', async ({ page }) =>
 
   await expect(page.getByText('Impossible d’ajouter ce pilote pour le moment.', { exact: true })).toBeVisible();
   await expect(page.getByText(/permission denied/)).toHaveCount(0);
+});
+
+/**
+ * Le contre-exemple : un lien de COURSE sans session doit continuer d'ouvrir
+ * la CONNEXION, et sans rappel d'invitation. Sans ce test, il suffirait
+ * d'élargir la condition par erreur pour envoyer tout le monde s'inscrire.
+ */
+test('un lien de course sans session ouvre la connexion, sans rappel d’invitation', async ({
+  page,
+}) => {
+  await reseauSimule(page);
+  await page.goto('/race/cccc3333-4444-5555-6666-777788889999');
+
+  await expect(page.getByText('Content de te revoir', { exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByText(/Une invitation t’attend/)).toHaveCount(0);
 });
 
 test('l’onglet Amis propose le lien à partager', async ({ page }) => {

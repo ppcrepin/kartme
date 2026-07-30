@@ -21,6 +21,28 @@ export function rememberPendingRoute(path: string): void {
   }
 }
 
+/**
+ * Lit la destination mémorisée SANS l'effacer.
+ *
+ * Sert aux écrans d'authentification : quelqu'un qui arrive par un lien d'ami
+ * doit voir qu'une invitation l'attend pendant qu'il crée son compte. La
+ * consommer là ferait perdre la destination — c'est `takePendingRoute` qui
+ * l'efface, et seulement une fois le pilote connecté ET profilé.
+ */
+export function peekPendingRoute(): string | null {
+  try {
+    const v = window?.localStorage?.getItem(KEY) ?? null;
+    return v && SHAREABLE.test(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Vrai si la destination mémorisée est une INVITATION d'ami. */
+export function hasPendingInvite(): boolean {
+  return (peekPendingRoute() ?? '').startsWith('invite/');
+}
+
 /** Récupère ET efface la destination mémorisée (usage unique). */
 export function takePendingRoute(): string | null {
   try {

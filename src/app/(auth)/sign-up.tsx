@@ -9,6 +9,7 @@ import { Body, Muted } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
+import { hasPendingInvite } from '@/lib/pending-route';
 import { validateUsername } from '@/lib/username';
 
 export default function SignUpScreen() {
@@ -38,6 +39,12 @@ export default function SignUpScreen() {
 
   return (
     <AuthShell title={t.auth.signUpTitle} subtitle={t.app.tagline}>
+      {/* Un invité ne doit pas perdre le fil : entre le lien d'ami et son
+          retour sur l'invitation, il traverse deux écrans qui, sans cela,
+          ne mentionnent l'invitation nulle part. L'invitant n'est PAS
+          nommé ici : il faudrait l'interroger avant toute connexion, donc
+          exposer un pseudo à quiconque fabrique une URL. */}
+      {hasPendingInvite() ? <Body style={styles.invitation}>{t.auth.inviteWaiting}</Body> : null}
       <Field
         label={t.auth.username}
         value={username}
@@ -80,6 +87,7 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
+  invitation: { color: colors.gold, fontWeight: '700' },
   linkCenter: { alignItems: 'center', paddingVertical: spacing.sm },
   linkTxt: { color: colors.inkDim },
   error: { color: colors.accent },

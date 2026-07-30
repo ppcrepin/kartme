@@ -8,6 +8,7 @@ import { Body, Muted } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
+import { hasPendingInvite } from '@/lib/pending-route';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 export default function SignInScreen() {
@@ -36,6 +37,12 @@ export default function SignInScreen() {
 
   return (
     <AuthShell title={t.auth.signInTitle} subtitle={t.app.tagline}>
+      {/* Un invité ne doit pas perdre le fil : entre le lien d'ami et son
+          retour sur l'invitation, il traverse deux écrans qui, sans cela,
+          ne mentionnent l'invitation nulle part. L'invitant n'est PAS
+          nommé ici : il faudrait l'interroger avant toute connexion, donc
+          exposer un pseudo à quiconque fabrique une URL. */}
+      {hasPendingInvite() ? <Body style={styles.invitation}>{t.auth.inviteWaiting}</Body> : null}
       {!isSupabaseConfigured ? <Muted>{t.auth.notConfigured}</Muted> : null}
 
       <Field
@@ -77,6 +84,7 @@ export default function SignInScreen() {
 }
 
 const styles = StyleSheet.create({
+  invitation: { color: colors.gold, fontWeight: '700' },
   linkRight: { alignSelf: 'flex-end' },
   linkCenter: { alignItems: 'center', paddingVertical: spacing.sm },
   linkTxt: { color: colors.inkDim },
