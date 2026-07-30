@@ -4,6 +4,7 @@ import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 
 import { Muted } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
+import { t } from '@/i18n';
 import type { EloPoint } from '@/lib/profile';
 
 const PAD = 10;
@@ -12,6 +13,10 @@ const PAD = 10;
  * Courbe d'évolution de l'Elo. Part de l'Elo de départ (1000) puis une valeur
  * par course. Ligne accent, point final marqué, repères min/max discrets.
  * `height` : 120 par défaut ; 72 dans la carte d'identité fusionnée (A17).
+ *
+ * Les ABANDONS sont marqués d'un point creux : la courbe montrait jusqu'ici une
+ * chute sans dire si le pilote avait mal couru ou s'il n'avait pas fini — deux
+ * choses très différentes, et impossibles à démêler six mois plus tard.
  */
 export function EloCurve({ points, height = 120 }: { points: EloPoint[]; height?: number }) {
   const HEIGHT = height;
@@ -53,10 +58,32 @@ export function EloCurve({ points, height = 120 }: { points: EloPoint[]; height?
               strokeLinejoin="round"
               strokeLinecap="round"
             />
+            {/* Abandons : cercle CREUX, distinct du point final plein. Le
+                décalage d'indice vient de l'Elo de départ, ajouté en tête des
+                valeurs et qui ne correspond à aucune course. */}
+            {points.map((p, i) =>
+              p.dnf ? (
+                <Circle
+                  key={p.at}
+                  cx={x(i + 1)}
+                  cy={y(p.elo)}
+                  r={3.5}
+                  fill={colors.bg}
+                  stroke={colors.inkDim}
+                  strokeWidth={1.5}
+                />
+              ) : null,
+            )}
             <Circle cx={x(values.length - 1)} cy={y(last)} r={4.5} fill={colors.accent} />
           </Svg>
           <View style={styles.legend}>
             <Muted style={styles.legendTxt}>min {min}</Muted>
+            {/* La légende n'apparaît que s'il y a quelque chose à légender :
+                une mention permanente « ○ abandon » sur une courbe sans abandon
+                coûterait une ligne pour rien (lot de densité A17). */}
+            {points.some((p) => p.dnf) ? (
+              <Muted style={styles.legendTxt}>{t.profile.curveDnf}</Muted>
+            ) : null}
             <Muted style={styles.legendTxt}>max {max}</Muted>
           </View>
         </>

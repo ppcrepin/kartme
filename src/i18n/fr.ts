@@ -404,6 +404,7 @@ export const fr = {
     maxGrade: 'Grade maximal atteint 🏆',
     // Période de calibration : les 5 premières courses, le niveau se règle vite.
     calibrating: 'En calibration',
+    curveDnf: '○ abandon',
     calibratingHint: 'En calibration : ton niveau se règle plus vite (encore %c).',
     stats: 'Statistiques',
     races: 'Courses',

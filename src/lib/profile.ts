@@ -23,6 +23,8 @@ export interface ProfileStats {
 export interface EloPoint {
   elo: number;
   at: string; // ISO
+  /** Abandon : la chute a une raison, et la courbe doit pouvoir la dire. */
+  dnf: boolean;
 }
 
 export interface HistoryEntry {
@@ -92,11 +94,13 @@ export async function getEloCurve(profileId?: string): Promise<EloPoint[]> {
   if (!id) return [];
   const { data, error } = await supabase
     .from('elo_history')
-    .select('elo, created_at')
+    .select('elo, created_at, dnf')
     .eq('profile_id', id)
     .order('created_at');
   if (error) throw new Error(error.message);
-  return (data ?? []).map((r) => ({ elo: r.elo, at: r.created_at }));
+  // `dnf` peut être absent sur une base pas encore migrée : on ne casse pas la
+  // courbe pour un drapeau manquant.
+  return (data ?? []).map((r) => ({ elo: r.elo, at: r.created_at, dnf: r.dnf === true }));
 }
 
 type RawHistory = {

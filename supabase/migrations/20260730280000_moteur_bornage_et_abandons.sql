@@ -1,4 +1,10 @@
--- KartSquad — le BORNAGE ne casse plus la somme nulle.
+-- KartSquad — moteur Elo : le bornage ne casse plus la somme nulle, et
+-- l'historique sait enfin ce qu'était un abandon.
+--
+-- Deux dettes du vérificateur en un seul collage : elles touchent la MÊME
+-- fonction, et la réécrire deux fois de suite serait deux fois le risque.
+--
+-- ══ Dette A — le bornage créait des points ═══════════════════════════════
 --
 -- Dette relevée par le vérificateur, mesurée avant correctif : une course à
 -- quatre pilotes dont deux au plancher (100) CRÉE 14 points d'Elo à partir de
@@ -37,6 +43,28 @@
 -- redistribution est ajouté, juste avant les écritures.
 
 begin;
+
+-- ══ Dette B — `elo_history` ne savait pas ce qu'était un abandon ═════════
+-- La courbe de progression affichait une CHUTE sans explication : rien ne
+-- distinguait « il a mal couru » de « il a abandonné ». Un pilote regardant sa
+-- courbe six mois plus tard n'a aucun moyen de se rappeler lequel des deux.
+--
+-- Et côté audit, c'est plus gênant encore : `elo_history` est la seule trace
+-- durable du calcul (les `results` disparaissent avec la course). Sans le
+-- drapeau, on ne peut plus reconstituer le classement DE CALCUL — les abandons
+-- y sont ex æquo derrière tout le monde, à un rang qui ne figure nulle part.
+alter table public.elo_history
+  add column if not exists dnf boolean not null default false;
+
+-- Rétro-remplissage depuis les résultats encore présents. Les courses déjà
+-- supprimées restent à `false` : on ne réinvente pas ce qu'on ne sait plus.
+update public.elo_history eh
+   set dnf = rr.dnf
+  from public.results rr
+  join public.participations pp on pp.id = rr.participation_id
+ where eh.race_id = rr.race_id
+   and (eh.profile_id = pp.profile_id or eh.ghost_id = pp.ghost_id)
+   and eh.dnf is distinct from rr.dnf;
 
 create or replace function public.submit_race_results(
   p_race_id uuid, p_order uuid[], p_dnf uuid[] default '{}'::uuid[]
@@ -299,10 +327,13 @@ begin
          greatest(100, least(2500, d.elo_before + d.delta)) - d.elo_before
   from _delta d;
 
-  insert into elo_history (profile_id, ghost_id, race_id, elo, delta)
+  -- `is_dnf` accompagne désormais chaque ligne : sans lui, la courbe montrait
+  -- une chute sans dire si le pilote avait mal couru ou abandonné.
+  insert into elo_history (profile_id, ghost_id, race_id, elo, delta, dnf)
   select d.profile_id, d.ghost_id, p_race_id,
          greatest(100, least(2500, d.elo_before + d.delta)),
-         greatest(100, least(2500, d.elo_before + d.delta)) - d.elo_before
+         greatest(100, least(2500, d.elo_before + d.delta)) - d.elo_before,
+         d.is_dnf
   from _delta d;
 
   -- Compteur de courses : +1 par inscrit (aligné sur elo_history). Un abandon

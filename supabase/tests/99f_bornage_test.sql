@@ -238,6 +238,45 @@ begin
   raise notice 'Scénario 6 (correction 24 h) ✔';
 end $$;
 
+-- ═══ Scénario 7 : `elo_history` sait ce qu'était un abandon ═══
+-- La courbe de progression affichait une chute sans explication : rien ne
+-- distinguait « il a mal couru » de « il a abandonné ». Et `elo_history` étant
+-- la seule trace durable du calcul (les `results` partent avec la course), un
+-- audit ne pouvait plus reconstituer le classement DE CALCUL, où les abandons
+-- sont ex æquo derrière tout le monde.
+do $$
+declare
+  a uuid := 'ba000000-0000-0000-0000-000000000061';
+  b uuid := 'ba000000-0000-0000-0000-000000000062';
+  c uuid := 'ba000000-0000-0000-0000-000000000063';
+  r uuid := 'ba200000-0000-0000-0000-000000000007';
+  pa uuid := 'ba400000-0000-0000-0000-000000000061';
+  pb uuid := 'ba400000-0000-0000-0000-000000000062';
+  pc uuid := 'ba400000-0000-0000-0000-000000000063';
+begin
+  perform tests.pilote(a, 'HistArrive', 1000);
+  perform tests.pilote(b, 'HistDeuxieme', 1000);
+  perform tests.pilote(c, 'HistAbandon', 1000);
+  insert into races (id, admin_id, scheduled_at) values (r, a, now());
+  insert into participations (id, race_id, profile_id) values (pa, r, a), (pb, r, b), (pc, r, c);
+  perform tests.as_uid(a);
+  perform public.submit_race_results(r, array[pa, pb, pc], array[pc]);
+  perform set_config('kartsquad.elo_engine', '', true);
+
+  perform tests.eq((select case when dnf then 1 else 0 end from elo_history
+                    where race_id = r and profile_id = c), 1,
+    'l''abandon est marqué dans l''historique');
+  perform tests.eq((select count(*) from elo_history
+                    where race_id = r and profile_id in (a, b) and dnf), 0,
+    'et les pilotes ARRIVÉS ne le sont pas');
+  -- La courbe doit pouvoir expliquer la chute : le drapeau accompagne un delta
+  -- négatif, pas un delta quelconque.
+  perform tests.eq((select case when delta <= 0 then 1 else 0 end from elo_history
+                    where race_id = r and profile_id = c), 1,
+    'un abandon ne rapporte jamais de points (décision PO)');
+  raise notice 'Scénario 7 (abandon tracé dans l''historique) ✔';
+end $$;
+
 do $$ begin raise notice 'Tous les tests de bornage sont passés ✔'; end $$;
 
 rollback;
