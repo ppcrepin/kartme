@@ -143,6 +143,30 @@ export const fr = {
       loadError: 'Impossible de charger la fiche.',
       notFound: 'Circuit introuvable.',
       openPage: 'Voir la fiche',
+      // Le « métier » importé du relevé PO (A16).
+      specs: 'La piste',
+      length: 'Longueur',
+      width: 'Largeur',
+      meters: '%n m',
+      envKinds: {
+        indoor: 'Indoor',
+        outdoor: 'Extérieur',
+        temporaire: 'Piste temporaire',
+      } as Record<string, string>,
+      motorKinds: {
+        thermique: 'Karts thermiques',
+        electrique: 'Karts électriques',
+        mixte: 'Thermique et électrique',
+      } as Record<string, string>,
+      usageKinds: {
+        loisir: 'Loisir',
+        competition: 'Compétition',
+        mixte: 'Loisir et compétition',
+      } as Record<string, string>,
+      homologated: 'Homologué %h',
+      tracks: 'Plusieurs tracés : %t',
+      address: 'Adresse',
+      route: 'Itinéraire',
     },
     circuitTruncated: '%n circuits affichés sur %t — précise ta recherche (nom ou ville).',
     circuitNearTitle: 'Autour de toi',
@@ -542,6 +566,10 @@ export const fr = {
     creditsTitle: 'Sources des données',
     creditsOsm:
       'Les circuits de karting proviennent d’OpenStreetMap, sous licence ODbL. Un karting manquant, fermé ou mal nommé ? La correction se fait sur openstreetmap.org — elle profite à tout le monde, KartSquad compris.',
+    // Le relevé consolidé (A16) s'appuie sur la FFSA et des annuaires publics :
+    // citer ses sources est la même hygiène que l'attribution ODbL.
+    creditsReferentiel:
+      'Caractéristiques des pistes (longueurs, homologations, types) : relevé consolidé à partir des données FFSA « Où pratiquer » et d’annuaires publics de circuits, vérifié en juillet 2026.',
     creditsFont: 'Police Fraunces, sous licence SIL Open Font License.',
     faqTitle: 'Questions fréquentes',
     faq: [
@@ -634,6 +662,22 @@ export const fr = {
     badge: '%a décroche « %b »',
     tabYou: 'Pour toi',
     tabFriends: 'Tes amis',
+  },
+  // Lien d'amitié (A19, demande PO 2026-07-30).
+  invite: {
+    shareTitle: 'Inviter un ami',
+    shareHint: 'Envoie ce lien : la personne s’inscrit et vous êtes amis directement.',
+    shareCta: 'Partager mon lien d’ami',
+    title: 'Invitation',
+    from: '%s t’invite à le rejoindre sur KartSquad.',
+    accept: 'Devenir ami de %s',
+    accepted: 'C’est fait, vous êtes amis 🤝',
+    already: 'Vous étiez déjà amis.',
+    seeProfile: 'Voir son profil',
+    self: 'C’est ton propre lien d’invitation — partage-le à quelqu’un d’autre !',
+    unknown: 'Cette invitation n’est plus valable.',
+    error: 'Impossible d’ajouter ce pilote pour le moment.',
+    toFriends: 'Voir mes amis',
   },
   notFound: {
     title: 'Page introuvable',

@@ -29,6 +29,18 @@ export interface CircuitPage {
   lapsAll: number;
   lapsYear: number;
   lapsMonth: number;
+  // Le « métier » importé du relevé PO (A16) — souvent partiel : chaque champ
+  // est optionnel, et la fiche n'affiche que ce qu'elle sait.
+  lengthM: number | null;
+  widthM: number | null;
+  envKind: 'indoor' | 'outdoor' | 'temporaire' | null;
+  motorKind: 'thermique' | 'electrique' | 'mixte' | null;
+  usageKind: 'loisir' | 'competition' | 'mixte' | null;
+  homologation: 'FFSA' | 'CIK-FIA' | 'FIA' | null;
+  address: string | null;
+  postalCode: string | null;
+  /** Les tracés d'un lieu à plusieurs pistes, en clair (informatif). */
+  tracksNote: string | null;
 }
 
 export interface TopTime {
@@ -47,6 +59,10 @@ type RawPage = {
   races_count: number; pilots_count: number; last_race_at: string | null;
   my_races_count: number; my_best_lap_ms: number | null;
   laps_all: number; laps_year: number; laps_month: number;
+  length_m: string | number | null; width_m: string | number | null;
+  env_kind: CircuitPage['envKind']; motor_kind: CircuitPage['motorKind'];
+  usage_kind: CircuitPage['usageKind']; homologation: CircuitPage['homologation'];
+  address: string | null; postal_code: string | null; tracks_note: string | null;
 };
 
 type RawTop = {
@@ -77,6 +93,17 @@ export async function getCircuitPage(circuitId: string): Promise<CircuitPage | n
     lapsAll: r.laps_all,
     lapsYear: r.laps_year,
     lapsMonth: r.laps_month,
+    // `numeric` arrive en CHAÎNE via PostgREST (précision préservée) : on
+    // convertit ici plutôt que de laisser « 1105.0 » s'afficher tel quel.
+    lengthM: r.length_m == null ? null : Number(r.length_m),
+    widthM: r.width_m == null ? null : Number(r.width_m),
+    envKind: r.env_kind,
+    motorKind: r.motor_kind,
+    usageKind: r.usage_kind,
+    homologation: r.homologation,
+    address: r.address,
+    postalCode: r.postal_code,
+    tracksNote: r.tracks_note,
   };
 }
 

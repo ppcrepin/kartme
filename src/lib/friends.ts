@@ -187,6 +187,31 @@ export async function listFriends(): Promise<FriendEntry[]> {
 
 // ── Blocage & signalement ─────────────────────────────────────────────────
 /** Bloque un pilote : coupe l'amitié existante puis pose le blocage. */
+/**
+ * Lien d'amitié (A19) — qui m'invite ? Affiché AVANT le tap de confirmation :
+ * accepter une invitation sans savoir de qui elle vient serait devenir l'ami
+ * d'un inconnu. Renvoie null si l'identifiant est inconnu, le compte parti,
+ * suspendu, bloqué — ou si c'est mon propre lien.
+ */
+export async function getInviter(
+  inviterId: string,
+): Promise<{ id: string; username: string; avatarPath: string | null } | null> {
+  const { data, error } = await supabase.rpc('get_inviter', { p_inviter: inviterId });
+  if (error) throw new Error(error.message);
+  const row = (data as { id: string; username: string; avatar_path: string | null }[])?.[0];
+  return row ? { id: row.id, username: row.username, avatarPath: row.avatar_path } : null;
+}
+
+/**
+ * Devient ami de l'invitant, en un tap. `already` n'est pas une erreur (double
+ * tap, lien rouvert, deux onglets) ; `self` non plus (son propre lien).
+ */
+export async function acceptFriendInvite(inviterId: string): Promise<'ok' | 'already' | 'self'> {
+  const { data, error } = await supabase.rpc('accept_friend_invite', { p_inviter: inviterId });
+  if (error) throw new Error(error.message);
+  return (data as 'ok' | 'already' | 'self') ?? 'ok';
+}
+
 export async function blockPilot(pilotId: string): Promise<void> {
   const { data: auth } = await supabase.auth.getUser();
   const state = await getFriendshipWith(pilotId);

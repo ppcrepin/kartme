@@ -122,10 +122,53 @@ export default function CircuitPageScreen() {
   return (
     <Screen title={page.name} onBack={back}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* ── Ce qu'on sait de la piste (A16) : des étiquettes, pas un
+            tableau — chaque champ est souvent absent, et une ligne
+            « Longueur : — » ne dit rien à personne. ── */}
         <View style={styles.headRow}>
           <Muted>{page.city ?? ''}</Muted>
-          {page.isIndoor ? <Tag label={t.races.circuitPage.indoor} /> : null}
+          {page.envKind ? (
+            <Tag label={t.races.circuitPage.envKinds[page.envKind]} />
+          ) : page.isIndoor ? (
+            <Tag label={t.races.circuitPage.indoor} />
+          ) : null}
+          {page.homologation ? (
+            <Tag
+              label={t.races.circuitPage.homologated.replace('%h', page.homologation)}
+              selected
+            />
+          ) : null}
         </View>
+
+        {page.lengthM || page.motorKind || page.usageKind ? (
+          <View style={styles.specsRow}>
+            {page.lengthM ? (
+              <Body style={styles.spec}>
+                {t.races.circuitPage.meters.replace('%n', String(Math.round(page.lengthM)))}
+                {page.widthM ? (
+                  <Muted style={styles.specDim}>
+                    {' × '}
+                    {t.races.circuitPage.meters.replace('%n', String(Math.round(page.widthM)))}
+                  </Muted>
+                ) : null}
+              </Body>
+            ) : null}
+            {page.motorKind ? (
+              <Muted style={styles.specTxt}>{t.races.circuitPage.motorKinds[page.motorKind]}</Muted>
+            ) : null}
+            {page.usageKind ? (
+              <Muted style={styles.specTxt}>{t.races.circuitPage.usageKinds[page.usageKind]}</Muted>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Un lieu à plusieurs tracés : l'information ne se perd pas, même si
+            un seul circuit est sélectionnable (décision PO). */}
+        {page.tracksNote ? (
+          <Muted style={styles.aliases}>
+            {t.races.circuitPage.tracks.replace('%t', page.tracksNote)}
+          </Muted>
+        ) : null}
         {page.aliases ? (
           <Muted style={styles.aliases}>
             {t.races.circuitPage.alsoKnown.replace('%a', page.aliases)}
@@ -155,6 +198,29 @@ export default function CircuitPageScreen() {
               />
             ) : null}
           </View>
+        ) : null}
+
+        {/* Adresse postale : cliquable vers l'itinéraire. Les coordonnées sont
+            toujours connues, l'adresse pas — on ouvre donc sur lat/lon, plus
+            fiable qu'une chaîne d'adresse recopiée. */}
+        {page.address || page.postalCode ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t.races.circuitPage.route}
+            onPress={() => {
+              if (page.lat != null && page.lon != null) {
+                void Linking.openURL(
+                  `https://www.openstreetmap.org/?mlat=${page.lat}&mlon=${page.lon}#map=16/${page.lat}/${page.lon}`,
+                );
+              }
+            }}>
+            <Muted style={styles.address}>
+              {[page.address, [page.postalCode, page.city].filter(Boolean).join(' ')]
+                .filter(Boolean)
+                .join(', ')}
+              {page.lat != null ? ` · ${t.races.circuitPage.route} ›` : ''}
+            </Muted>
+          </Pressable>
         ) : null}
 
         <View style={styles.rule}>
@@ -269,6 +335,11 @@ export default function CircuitPageScreen() {
 }
 
 const styles = StyleSheet.create({
+  specsRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: spacing.md },
+  spec: { fontFamily: fonts.serifBlack, fontSize: 18, color: colors.ink },
+  specDim: { fontFamily: fonts.sans, fontSize: 12 },
+  specTxt: { fontSize: 12 },
+  address: { fontSize: 12, lineHeight: 17 },
   content: { gap: spacing.md, paddingBottom: spacing.xxl },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

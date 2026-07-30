@@ -44,3 +44,25 @@ L'ODbL est une licence **share-alike**. Concrètement, pour KartSquad :
 
 **Fraunces**, sous licence **SIL Open Font License 1.1** — libre d'usage, y
 compris commercial, sans obligation d'attribution visible.
+
+## Caractéristiques des pistes (longueurs, homologations, types)
+
+Les **caractéristiques techniques et pratiques** des circuits — longueur et
+largeur de piste, intérieur/extérieur, motorisation, usage loisir/compétition,
+homologation FFSA ou CIK-FIA, adresse postale — proviennent d'un **relevé
+consolidé** fourni par le PO le 2026-07-30 (généré le 2026-07-21), établi à
+partir de :
+
+- la **FFSA**, rubrique « Où pratiquer » (homologations, catégories) ;
+- des **annuaires publics de circuits de karting** français ;
+- des **sites officiels des circuits** eux-mêmes (téléphones, longueurs).
+
+Le relevé compte 310 pistes sur 270 lieux (13 régions métropolitaines) et
+suit la convention « cellule vide = non confirmé, jamais inventé ». Il n'a
+**aucune coordonnée** : la géographie de KartSquad reste celle
+d'OpenStreetMap (voir ci-dessus), et les 107 lieux nouveaux ont été géocodés
+via **Nominatim** depuis leur adresse ou leur code postal.
+
+Les deux jeux sont donc complémentaires : OpenStreetMap donne le *où*, ce
+relevé donne le *quoi*. L'attribution ODbL reste due pour l'ensemble des
+coordonnées et de l'import d'origine.

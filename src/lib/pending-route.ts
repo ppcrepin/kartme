@@ -7,7 +7,10 @@
 const KEY = 'ks_pending_route';
 
 // Routes que l'on juge « partageables » et donc dignes d'être restaurées.
-const SHAREABLE = /^(race|pilot)\//;
+// `invite/` (A19) est LA raison d'être de ce mécanisme pour un nouveau venu :
+// il arrive par un lien d'amitié, passe par l'inscription, et doit retomber
+// sur l'invitation — sinon le lien ne convertit pas.
+const SHAREABLE = /^(race|pilot|invite)\//;
 
 export function rememberPendingRoute(path: string): void {
   if (!SHAREABLE.test(path)) return;

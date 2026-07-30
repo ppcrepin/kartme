@@ -3,11 +3,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
-import { Avatar, Button, Card, Field, GradeMedal } from '@/components/ui';
+import { ShareCard } from '@/components/share-card';
+import { Avatar, Button, Card, Field, GradeMedal, Sheet } from '@/components/ui';
 import { Body, Label, Muted } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { signedAvatarUrls } from '@/lib/avatar';
+import { useAuth } from '@/lib/auth';
+import { appBaseUrl } from '@/lib/url';
 import {
   acceptFriendRequest,
   deleteFriendship,
@@ -23,6 +26,10 @@ const FRIENDS_CAP = 12; // liste d'amis plafonnée par défaut (perf + lisibilit
 
 export default function AmisScreen() {
   const router = useRouter();
+  const { session } = useAuth();
+  // Lien d'amitié (A19) : en feuille glissante, comme le partage d'une course
+  // — l'écran Amis vient d'être désencombré, le QR n'y vit pas en permanence.
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Pilot[]>([]);
   const [searched, setSearched] = useState(false);
@@ -111,6 +118,23 @@ export default function AmisScreen() {
   return (
     <Screen title={t.tabs.friends}>
       <Field label={t.friends.search} value={query} onChangeText={setQuery} autoCapitalize="none" />
+
+      {/* ── Inviter quelqu'un qui n'a PAS encore l'app (demande PO
+          2026-07-30) : il s'inscrit par ce lien et vous êtes amis en un tap,
+          sans demande à valider. La recherche par pseudo au-dessus ne sert
+          qu'aux pilotes déjà inscrits — c'était le trou du parcours. ── */}
+      <Pressable
+        onPress={() => setInviteOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={t.invite.shareTitle}>
+        <Card style={styles.inviteRow}>
+          <View style={styles.flex}>
+            <Body style={styles.inviteTitle}>{t.invite.shareTitle}</Body>
+            <Muted style={styles.inviteHint}>{t.invite.shareHint}</Muted>
+          </View>
+          <Body style={styles.chevron}>›</Body>
+        </Card>
+      </Pressable>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {searching ? (
@@ -242,11 +266,26 @@ export default function AmisScreen() {
           </>
         )}
       </ScrollView>
+
+      <Sheet open={inviteOpen} onClose={() => setInviteOpen(false)} title={t.invite.shareTitle}>
+        <Muted>{t.invite.shareHint}</Muted>
+        {/* Le lien porte l'identifiant du compte (décision PO : lien
+            permanent). `ShareCard` y ajoute `?ref=` : le même lien mesure donc
+            aussi le parrainage, sans travail supplémentaire. */}
+        <ShareCard
+          url={`${appBaseUrl()}invite/${session?.user.id ?? ''}`}
+          title={t.invite.shareCta}
+        />
+      </Sheet>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  inviteRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  inviteTitle: { fontWeight: '700' },
+  inviteHint: { fontSize: 11, lineHeight: 15 },
+  chevron: { color: colors.inkDim2, fontSize: 20 },
   content: { gap: spacing.lg, paddingBottom: spacing.xxl * 2, paddingTop: spacing.sm },
   section: { gap: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

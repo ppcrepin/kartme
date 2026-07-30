@@ -56,6 +56,7 @@ export default function AideScreen() {
         <View style={styles.credits}>
           <Body style={styles.q}>{t.help.creditsTitle}</Body>
           <Muted style={styles.a}>{t.help.creditsOsm}</Muted>
+          <Muted style={styles.a}>{t.help.creditsReferentiel}</Muted>
           <Muted style={styles.a}>{t.help.creditsFont}</Muted>
         </View>
       </ScrollView>
