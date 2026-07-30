@@ -676,6 +676,7 @@ export const fr = {
     seeProfile: 'Voir son profil',
     self: 'C’est ton propre lien d’invitation — partage-le à quelqu’un d’autre !',
     unknown: 'Cette invitation n’est plus valable.',
+    loadError: 'Impossible de charger l’invitation. Vérifie ta connexion.',
     error: 'Impossible d’ajouter ce pilote pour le moment.',
     toFriends: 'Voir mes amis',
   },

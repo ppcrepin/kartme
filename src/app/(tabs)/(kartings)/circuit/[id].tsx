@@ -140,7 +140,9 @@ export default function CircuitPageScreen() {
           ) : null}
         </View>
 
-        {page.lengthM || page.motorKind || page.usageKind ? (
+        {page.lengthM ||
+        (page.motorKind && t.races.circuitPage.motorKinds[page.motorKind]) ||
+        (page.usageKind && t.races.circuitPage.usageKinds[page.usageKind]) ? (
           <View style={styles.specsRow}>
             {page.lengthM ? (
               <Body style={styles.spec}>
@@ -176,7 +178,7 @@ export default function CircuitPageScreen() {
         ) : null}
 
         {/* ── Le pratique — seulement quand la donnée existe ── */}
-        {page.website || page.phone ? (
+        {page.website || page.phone || page.lat != null ? (
           <View style={styles.linksRow}>
             {page.website ? (
               <Button
@@ -197,30 +199,33 @@ export default function CircuitPageScreen() {
                 onPress={() => void Linking.openURL(`tel:${page.phone!.replace(/[ .]/g, '')}`)}
               />
             ) : null}
+            {/* Ouvert sur lat/lon, pas sur la chaîne d'adresse : les
+                coordonnées sont toujours connues et vérifiées, une adresse
+                recopiée peut ne mener nulle part. Absent si on n'en a pas —
+                un bouton qui ne fait rien est pire que pas de bouton. */}
+            {page.lat != null && page.lon != null ? (
+              <Button
+                label={t.races.circuitPage.route}
+                variant="ghost"
+                onPress={() =>
+                  void Linking.openURL(
+                    `https://www.openstreetmap.org/?mlat=${page.lat}&mlon=${page.lon}#map=16/${page.lat}/${page.lon}`,
+                  )
+                }
+              />
+            ) : null}
           </View>
         ) : null}
 
-        {/* Adresse postale : cliquable vers l'itinéraire. Les coordonnées sont
-            toujours connues, l'adresse pas — on ouvre donc sur lat/lon, plus
-            fiable qu'une chaîne d'adresse recopiée. */}
-        {page.address || page.postalCode ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t.races.circuitPage.route}
-            onPress={() => {
-              if (page.lat != null && page.lon != null) {
-                void Linking.openURL(
-                  `https://www.openstreetmap.org/?mlat=${page.lat}&mlon=${page.lon}#map=16/${page.lat}/${page.lon}`,
-                );
-              }
-            }}>
-            <Muted style={styles.address}>
-              {[page.address, [page.postalCode, page.city].filter(Boolean).join(' ')]
-                .filter(Boolean)
-                .join(', ')}
-              {page.lat != null ? ` · ${t.races.circuitPage.route} ›` : ''}
-            </Muted>
-          </Pressable>
+        {/* Adresse postale, en TEXTE seul : l'itinéraire est un bouton, à
+            côté de « Site web » et « Appeler » — même affordance, même zone
+            tapable de 44 px. La ville n'est pas répétée (elle est déjà dans
+            l'en-tête), et un code postal seul n'aide personne : on n'affiche
+            la ligne que si l'on a une vraie adresse. */}
+        {page.address ? (
+          <Muted style={styles.address}>
+            {[page.address, page.postalCode].filter(Boolean).join(', ')}
+          </Muted>
         ) : null}
 
         <View style={styles.rule}>

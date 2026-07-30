@@ -30,10 +30,20 @@ export default function InviteScreen() {
 
   const [inviter, setInviter] = useState<Inviter | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [etat, setEtat] = useState<'chargement' | 'pret' | 'inconnu' | 'moi'>('chargement');
+  // `panne` ≠ `inconnu` : un tunnel de métro ne doit pas déclarer morte une
+  // invitation parfaitement valable — sur le canal d'acquisition n°1, c'est
+  // un compte créé et aucun ami (même distinction que la fiche circuit).
+  const [etat, setEtat] = useState<'chargement' | 'pret' | 'inconnu' | 'moi' | 'panne'>(
+    'chargement',
+  );
   const [resultat, setResultat] = useState<'ok' | 'already' | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // `essai` : incrémenté par « Réessayer ». L'effet ci-dessous en dépend, ce
+  // qui relance le chargement sans appeler de setState hors d'un gestionnaire
+  // (le lint l'interdit dans le corps d'un effet).
+  const [essai, setEssai] = useState(0);
 
   useEffect(() => {
     if (!id) return;
@@ -53,11 +63,11 @@ export default function InviteScreen() {
         const urls = await signedAvatarUrls([inv.avatarPath]);
         if (vivant) setAvatarUrl(inv.avatarPath ? (urls.get(inv.avatarPath) ?? null) : null);
       })
-      .catch(() => vivant && setEtat('inconnu'));
+      .catch(() => vivant && setEtat('panne'));
     return () => {
       vivant = false;
     };
-  }, [id]);
+  }, [id, essai]);
 
   async function onAccept() {
     if (!id) return;
@@ -72,7 +82,15 @@ export default function InviteScreen() {
         track('friend_invite_accepted').catch(() => {});
       }
     } catch (e) {
-      setErreur(e instanceof Error ? e.message : t.invite.error);
+      // Les exceptions MÉTIER de nos fonctions SQL sont en français et passent
+      // telles quelles ; un refus TECHNIQUE (RLS, droits) sortirait en anglais
+      // brut dans une app entièrement française.
+      const m = e instanceof Error ? e.message : '';
+      setErreur(
+        m && !/permission denied|row-level security|violates|duplicate key|invalid input/i.test(m)
+          ? m
+          : t.invite.error,
+      );
     } finally {
       setBusy(false);
     }
@@ -84,6 +102,18 @@ export default function InviteScreen() {
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/amis'))}>
       {etat === 'chargement' ? (
         <SkeletonCard />
+      ) : etat === 'panne' ? (
+        <View style={styles.bloc}>
+          <Muted>{t.invite.loadError}</Muted>
+          <Button
+            label={t.inbox.retry}
+            onPress={() => {
+              setEtat('chargement');
+              setEssai((n) => n + 1);
+            }}
+          />
+          <Button label={t.invite.toFriends} variant="ghost" onPress={() => router.replace('/amis')} />
+        </View>
       ) : etat === 'inconnu' ? (
         <View style={styles.bloc}>
           <Muted>{t.invite.unknown}</Muted>
@@ -106,7 +136,11 @@ export default function InviteScreen() {
               />
               <View style={styles.flex}>
                 <Heading>{inviter.username}</Heading>
-                <Muted>{t.invite.from.replace('%s', inviter.username)}</Muted>
+                {/* L'invitation est CONSOMMÉE après le tap : la laisser écrite
+                    au-dessus de « vous êtes amis » se contredit. */}
+                {!resultat ? (
+                  <Muted>{t.invite.from.replace('%s', inviter.username)}</Muted>
+                ) : null}
               </View>
             </View>
           </Card>

@@ -17,15 +17,20 @@ export function ShareCard({
   url,
   title,
   message,
+  noRef = false,
 }: {
   url: string;
   title?: string;
   message?: string;
+  /** Le lien porte déjà l'identifiant du parrain (lien d'amitié A19) : y
+   *  ajouter `?ref=` doublerait la même information dans une URL qu'on
+   *  partage à la voix. */
+  noRef?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const { session } = useAuth();
   // Lien de partage porteur du parrain (?ref=<moi>) pour attribuer les inscriptions.
-  const shareUrl = withRef(url, session?.user.id);
+  const shareUrl = noRef ? url : withRef(url, session?.user.id);
   const payload = message ? `${message}\n${shareUrl}` : shareUrl;
 
   async function onShare() {

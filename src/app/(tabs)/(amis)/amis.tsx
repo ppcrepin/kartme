@@ -268,13 +268,15 @@ export default function AmisScreen() {
       </ScrollView>
 
       <Sheet open={inviteOpen} onClose={() => setInviteOpen(false)} title={t.invite.shareTitle}>
-        <Muted>{t.invite.shareHint}</Muted>
-        {/* Le lien porte l'identifiant du compte (décision PO : lien
-            permanent). `ShareCard` y ajoute `?ref=` : le même lien mesure donc
-            aussi le parrainage, sans travail supplémentaire. */}
+        {/* Une seule consigne : `ShareCard` porte déjà la sienne. Et PAS de
+            `?ref=` ajouté — l'identifiant est déjà dans le chemin, le
+            doubler faisait un lien de 106 caractères qu'on ne dicte pas au
+            bord d'une piste. Le parrainage est mesuré à l'arrivée par
+            l'événement `friend_invite_accepted`. */}
         <ShareCard
           url={`${appBaseUrl()}invite/${session?.user.id ?? ''}`}
           title={t.invite.shareCta}
+          noRef
         />
       </Sheet>
     </Screen>

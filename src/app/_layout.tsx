@@ -1,5 +1,5 @@
 import { Fraunces_700Bold, Fraunces_900Black, useFonts } from '@expo-google-fonts/fraunces';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
@@ -19,6 +19,14 @@ SplashScreen.preventAutoHideAsync();
 function RootNavigator() {
   const { initializing, session, hasProfile } = useAuth();
   const segments = useSegments();
+  // `useSegments()` renvoie les segments du PATRON de route : sur /race/abc il
+  // rend ['(tabs)','(courses)','race','[id]'] — littéralement « [id] ». La
+  // destination mémorisée valait donc « race/[id] », et tout visiteur non
+  // connecté arrivant par un lien partagé retombait après inscription sur une
+  // course inexistante. `usePathname()` rend le chemin RÉSOLU (« /race/abc »).
+  // Défaut ANTÉRIEUR à A19, resté invisible parce qu'aucun test ne partait
+  // d'un lien profond SANS session — le canal d'acquisition n°1 du produit.
+  const pathname = usePathname();
   const router = useRouter();
 
   // Analytics : une ouverture d'app par session connectée (rétention/DAU).
@@ -35,9 +43,8 @@ function RootNavigator() {
     if (initializing) return;
     // Pages légales publiques : accessibles dans tout état d'auth (l'utilisateur
     // doit pouvoir LIRE les CGU/confidentialité qu'il accepte à l'inscription).
-    // Les segments de groupe — « (tabs) » depuis que les écrans de détail y
-    // vivent — ne font pas partie de l'URL : on compare sans eux.
-    const path = segments.filter((s) => !s.startsWith('(')).join('/');
+    // `usePathname()` ne contient déjà ni groupe ni query string.
+    const path = pathname.replace(/^\/+/, '');
     if (path === 'settings/cgu' || path === 'settings/confidentialite') return;
     const group = segments[0];
     const inAuth = group === '(auth)';
@@ -61,7 +68,7 @@ function RootNavigator() {
       if (pending) router.replace(`/${pending}` as Parameters<typeof router.replace>[0]);
       else if (inAuth || inOnboarding) router.replace('/');
     }
-  }, [initializing, session, hasProfile, segments, router]);
+  }, [initializing, session, hasProfile, segments, pathname, router]);
 
   return (
     <Stack

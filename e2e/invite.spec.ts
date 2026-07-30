@@ -55,6 +55,75 @@ test('son propre lien ne crée rien et le dit', async ({ page }) => {
   await expect(page.getByText(/C’est ton propre lien/)).toBeVisible();
 });
 
+/**
+ * LE parcours du lot : quelqu'un qui n'a pas l'app ouvre le lien. Ce test
+ * n'existait pas, et c'est exactement par ce trou qu'un bloquant est passé —
+ * la destination mémorisée valait « invite/[id] », le PATRON de route, si bien
+ * que le nouveau venu retombait après inscription sur une invitation morte.
+ * Le défaut touchait aussi les liens de course et de profil depuis toujours.
+ */
+test('sans session, le lien est MÉMORISÉ RÉSOLU puis rouvert après connexion', async ({ page }) => {
+  await reseauSimule(page, {
+    'rpc/get_inviter': [{ id: INVITANT, username: 'Marc_R', avatar_path: null }],
+  });
+
+  // 1. Arrivée sans session : renvoi vers la connexion.
+  await page.goto(`/invite/${INVITANT}`);
+  await expect(page.getByText('Content de te revoir', { exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
+
+  // 2. La destination mémorisée porte l'IDENTIFIANT, pas « [id] ».
+  const memo = await page.evaluate(() => localStorage.getItem('ks_pending_route'));
+  expect(memo).toBe(`invite/${INVITANT}`);
+
+  // 3. Session posée puis rechargement (le vrai parcours passe par
+  //    supabase.auth, qui déclenche le même effet de garde).
+  await sessionSimulee(page);
+  await page.reload();
+
+  // 4. On retombe sur l'invitation, avec le bon invitant — pas sur un écran
+  //    « invitation plus valable ».
+  await expect(page.getByText('Devenir ami de Marc_R', { exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page).toHaveURL(new RegExp(`/invite/${INVITANT}$`));
+});
+
+test('une panne réseau ne déclare pas l’invitation morte', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page);
+  // 500 sur get_inviter : c'est le réseau, pas un lien invalide.
+  await page.route('**/rpc/get_inviter**', (route) =>
+    route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"boom"}' }),
+  );
+  await page.goto(`/invite/${INVITANT}`);
+
+  await expect(page.getByText(/Impossible de charger l’invitation/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText('Réessayer', { exact: true })).toBeVisible();
+  // Et surtout PAS le message qui condamne le lien.
+  await expect(page.getByText('Cette invitation n’est plus valable.', { exact: true })).toHaveCount(0);
+});
+
+test('un refus technique ne montre jamais d’anglais brut', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, {
+    'rpc/get_inviter': [{ id: INVITANT, username: 'Marc_R', avatar_path: null }],
+  });
+  await page.route('**/rpc/accept_friend_invite**', (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: '{"message":"permission denied for function accept_friend_invite"}',
+    }),
+  );
+  await page.goto(`/invite/${INVITANT}`);
+  await page.getByText('Devenir ami de Marc_R', { exact: true }).click();
+
+  await expect(page.getByText('Impossible d’ajouter ce pilote pour le moment.', { exact: true })).toBeVisible();
+  await expect(page.getByText(/permission denied/)).toHaveCount(0);
+});
+
 test('l’onglet Amis propose le lien à partager', async ({ page }) => {
   await sessionSimulee(page);
   await reseauSimule(page);
