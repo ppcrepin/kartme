@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EloCurve } from '@/components/elo-curve';
-import { Avatar, BadgeIcon, Button, Card, GradeMedal, SkeletonCard, Tag } from '@/components/ui';
+import { Avatar, BadgeIcon, Button, Card, GradeMedal, ListRow, SkeletonCard, Tag } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -295,22 +295,22 @@ export default function PilotScreen() {
                 ) : (
                   <View style={styles.historySection}>
                     <Label>{t.profile.historyOther}</Label>
-                    {(showAllHistory ? history : history.slice(0, 10)).map((h, i) => (
-                      <Pressable
-                        key={`${h.raceId}-${i}`}
-                        onPress={() => h.raceId && router.push(`/race/${h.raceId}`)}
-                        accessibilityRole="button">
-                        <Card>
-                          <View style={styles.historyRow}>
-                            {/* Un abandon a bien une position en base (l'index l'exige), mais
-    l'afficher laisserait croire qu'il a fini là. */}
+                    <Card>
+                      {(showAllHistory ? history : history.slice(0, 10)).map((h, i) => (
+                        <ListRow
+                          key={`${h.raceId}-${i}`}
+                          first={i === 0}
+                          onPress={h.raceId ? () => router.push(`/race/${h.raceId}`) : undefined}
+                          left={
+                            /* Un abandon a une position en base (l'index l'exige),
+                               mais l'afficher laisserait croire qu'il a fini là. */
                             <Body style={[styles.historyPos, h.dnf && styles.historyPosDnf]}>
                               {h.dnf ? t.races.dnfShort : h.position}
                             </Body>
-                            <View style={styles.flex}>
-                              <Body>{h.circuitName ?? t.races.noCircuit}</Body>
-                              {h.scheduledAt ? <Muted>{formatRaceDate(h.scheduledAt)}</Muted> : null}
-                            </View>
+                          }
+                          title={h.circuitName ?? t.races.noCircuit}
+                          sub={h.scheduledAt ? formatRaceDate(h.scheduledAt) : undefined}
+                          right={
                             <Body
                               style={[
                                 styles.historyDelta,
@@ -318,10 +318,10 @@ export default function PilotScreen() {
                               ]}>
                               {h.eloDelta > 0 ? `▲ +${h.eloDelta}` : h.eloDelta < 0 ? `▼ ${h.eloDelta}` : '—'}
                             </Body>
-                          </View>
-                        </Card>
-                      </Pressable>
-                    ))}
+                          }
+                        />
+                      ))}
+                    </Card>
                     {history.length > 10 && !showAllHistory ? (
                       <Button
                         label={t.profile.historySeeAll.replace('%n', String(history.length))}

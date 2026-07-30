@@ -6,6 +6,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Body } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
+import { unreadFeedCount } from '@/lib/feed';
 import { unreadCount } from '@/lib/notifications';
 
 /**
@@ -18,12 +19,19 @@ import { unreadCount } from '@/lib/notifications';
 export function NotificationBell() {
   const router = useRouter();
   const [count, setCount] = useState(0);
+  // Second compteur, SÉPARÉ (décision PO 2026-07-30) : la pastille rouge veut
+  // dire « quelqu'un t'attend » ; l'or dit « ça bouge chez tes amis ». Les
+  // fusionner noierait le seul signal qui exige une action.
+  const [feedCount, setFeedCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       unreadCount()
         .then((n) => active && setCount(n))
+        .catch(() => {});
+      unreadFeedCount()
+        .then((n) => active && setFeedCount(n))
         .catch(() => {});
       return () => {
         active = false;
@@ -33,7 +41,9 @@ export function NotificationBell() {
 
   return (
     <Pressable
-      onPress={() => router.push('/notifications')}
+      // Rien « pour toi » mais du neuf chez tes amis : la cloche ouvre
+      // directement l'onglet du fil — la pastille mène à ce qu'elle annonce.
+      onPress={() => router.push(count === 0 && feedCount > 0 ? '/notifications?vue=amis' : '/notifications')}
       accessibilityRole="button"
       accessibilityLabel={
         count > 0 ? `${t.inbox.title} (${count})` : t.inbox.title
@@ -53,6 +63,12 @@ export function NotificationBell() {
         <View style={styles.badge}>
           {/* Plafond serveur à 100 → « 99+ » est la seule forme possible au-delà. */}
           <Body style={styles.badgeTxt}>{count > 99 ? '99+' : count}</Body>
+        </View>
+      ) : null}
+      {feedCount > 0 ? (
+        <View style={[styles.badge, styles.badgeFeed]}>
+          {/* Plafond serveur à 20 (unread_feed_count) : jamais au-delà. */}
+          <Body style={styles.badgeFeedTxt}>{feedCount}</Body>
         </View>
       ) : null}
     </Pressable>
@@ -76,4 +92,9 @@ const styles = StyleSheet.create({
   // Blanc, comme le libellé des boutons primaires : #0a0706 sur #e10600
   // tombe à ~3,7:1, sous le minimum AA pour du 11 px.
   badgeTxt: { fontSize: 11, fontWeight: '800', color: '#ffffff', lineHeight: 14 },
+  // « Ça bouge » : or, EN BAS de la cloche. `top` explicite : sur web,
+  // `top: undefined` n'efface pas le `top: -2` du style de base et les deux
+  // pastilles se superposaient — l'or recouvrait le rouge (audit navigateur).
+  badgeFeed: { top: 16, backgroundColor: colors.gold },
+  badgeFeedTxt: { fontSize: 11, fontWeight: '800', color: '#0a0706', lineHeight: 14 },
 });

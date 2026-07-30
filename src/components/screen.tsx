@@ -38,11 +38,15 @@ export function Screen({
             <Muted>←</Muted>
           </Pressable>
         ) : null}
-        <View style={styles.rule}>
-          <CheckeredRule cells={10} />
-        </View>
+        {/* En-tête compact (audit A17, décision PO) : le filet damier vit À
+            CÔTÉ du titre, plus au-dessus, et le titre descend de 30 à 23 px —
+            ~55 px rendus au contenu sur chaque écran, signature préservée. */}
         <View style={styles.titleRow}>
-          <Title>{title}</Title>
+          <Title style={styles.titleCompact}>{title}</Title>
+          <View style={styles.rule}>
+            <CheckeredRule cells={8} />
+          </View>
+          <View style={styles.spacer} />
           {headerAction}
         </View>
         {children}
@@ -56,8 +60,10 @@ export { Muted } from '@/components/ui/text';
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: spacing.md },
+  body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.md, gap: spacing.md },
   back: { alignSelf: 'flex-start', paddingVertical: 2 },
-  rule: { width: 64 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rule: { width: 48, marginLeft: spacing.sm, flexShrink: 0 },
+  spacer: { flex: 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  titleCompact: { fontSize: 23, lineHeight: 27, flexShrink: 1 },
 });

@@ -6,7 +6,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  useAnimatedValue,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,7 +15,7 @@ import { LapField } from '@/components/lap-field';
 import { DateTimeField } from '@/components/date-time-field';
 import { Podium } from '@/components/podium';
 import { ShareCard } from '@/components/share-card';
-import { Avatar, Banner, Button, Card, Field, GradeMedal } from '@/components/ui';
+import { Avatar, Banner, Button, Card, Field, GradeMedal, ListRow, Sheet, Tag } from '@/components/ui';
 import { Body, Heading, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -71,7 +70,9 @@ const deltaColor = (d: number) => (d > 0 ? colors.pos : d < 0 ? colors.accent : 
 
 /** Drapeau d'attente, pulsation douce (statique si « réduire les animations »). */
 function WaitingFlag() {
-  const opacity = useAnimatedValue(1);
+  // PAS useAnimatedValue : absent de react-native-web — l'état « en attente »
+  // plantait sur web depuis sa création, aucun test ne l'ouvrait.
+  const [opacity] = useState(() => new Animated.Value(1));
 
   useEffect(() => {
     let animation: Animated.CompositeAnimation | null = null;
@@ -138,6 +139,14 @@ export default function RaceDetailScreen() {
   const [editCircuit, setEditCircuit] = useState<Circuit | null>(null);
   const [editWhen, setEditWhen] = useState<Date>(() => new Date());
 
+  // Refonte densité (A17, décisions PO 2026-07-30) : les sections « on s'en
+  // sert une fois » vivent dans des feuilles glissantes, la course terminée
+  // se lit en trois vues au lieu de trois listes empilées.
+  const [vue, setVue] = useState<'classement' | 'chronos' | 'duels'>('classement');
+  const [addOpen, setAddOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
   const refresh = useCallback(async () => {
     if (!id) return;
     const [r, p, res, f] = await Promise.all([
@@ -165,6 +174,16 @@ export default function RaceDetailScreen() {
       return unsubscribe;
     }, [refresh, id]),
   );
+
+  // Une erreur serveur TECHNIQUE (RLS, contrainte) sort en anglais brut ;
+  // les exceptions MÉTIER de nos fonctions SQL sont déjà en français et
+  // passent telles quelles.
+  const messageFr = (e: unknown) => {
+    const m = e instanceof Error ? e.message : '';
+    return m && !/row-level security|violates|permission denied|duplicate key/i.test(m)
+      ? m
+      : t.races.actionError;
+  };
 
   const isAdmin = !!race && race.admin_id === selfId;
   const completed = race?.status === 'completed';
@@ -239,7 +258,7 @@ export default function RaceDetailScreen() {
     } catch (e) {
       // Sans ce catch, un refus serveur (grille figée entre-temps, RLS, réseau)
       // ne produisait AUCUN retour : le champ gardait le nom, rien n'apparaissait.
-      setActionError(e instanceof Error ? e.message : t.races.actionError);
+      setActionError(messageFr(e));
     } finally {
       setBusy(false);
     }
@@ -262,7 +281,7 @@ export default function RaceDetailScreen() {
       await addProfileParticipant(id!, profileId);
       await refresh();
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : t.races.actionError);
+      setActionError(messageFr(e));
     } finally {
       setBusy(false);
     }
@@ -281,7 +300,7 @@ export default function RaceDetailScreen() {
     } catch (e) {
       // Cas réels : blocage apparu entre-temps, compte suspendu, grille figée
       // par le temps réel… L'échec doit se voir, pas rester muet.
-      setActionError(e instanceof Error ? e.message : t.races.actionError);
+      setActionError(messageFr(e));
     } finally {
       setBusy(false);
     }
@@ -526,17 +545,35 @@ export default function RaceDetailScreen() {
       position: r.dnf ? results.filter((x) => !x.dnf).length + 1 : r.position,
     }));
 
+  // Mon résultat, remonté dans le sous-titre : la réponse à « et moi ? »
+  // arrive avant toute lecture de liste (audit A17, levier L12).
+  const monResultat = results.find((r) => r.isSelf && !r.isGuest);
+  const posAffichee = (r: RaceResult) => (r.dnf ? t.races.dnfShort : `${r.position}ᵉ`);
+  // Le menu ⋯ n'existe que s'il a au moins une entrée.
+  const hasMenu = isAdmin && (!completed || canCorrect);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-          accessibilityRole="button"
-          accessibilityLabel="Retour"
-          hitSlop={10}
-          style={styles.back}>
-          <Muted>←</Muted>
-        </Pressable>
+        <View style={styles.topRow}>
+          <Pressable
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+            accessibilityRole="button"
+            accessibilityLabel="Retour"
+            hitSlop={10}
+            style={styles.back}>
+            <Muted>←</Muted>
+          </Pressable>
+          {hasMenu && !editing ? (
+            <Pressable
+              onPress={() => setMenuOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t.races.menu}
+              hitSlop={10}>
+              <Body style={styles.menuDots}>⋯</Body>
+            </Pressable>
+          ) : null}
+        </View>
 
         {!race ? (
           <Muted>…</Muted>
@@ -553,119 +590,185 @@ export default function RaceDetailScreen() {
           <>
             <View style={styles.head}>
               <View style={styles.flex}>
-                <Title>{race.circuit?.name ?? t.races.noCircuit}</Title>
+                <Title style={styles.titleCompact}>{race.circuit?.name ?? t.races.noCircuit}</Title>
                 <Muted>{formatRaceDate(race.scheduled_at)}</Muted>
+                {completed && monResultat ? (
+                  <Body style={[styles.youLine, { color: deltaColor(monResultat.eloDelta) }]}>
+                    {t.races.youResult
+                      .replace('%p', posAffichee(monResultat))
+                      .replace('%d', fmtDelta(monResultat.eloDelta))}
+                  </Body>
+                ) : null}
               </View>
-              {isAdmin && !completed && !locked ? (
-                <Pressable onPress={startEdit} accessibilityRole="button">
-                  <Muted style={styles.editLink}>{t.races.edit}</Muted>
-                </Pressable>
-              ) : null}
             </View>
 
             {completed ? (
-              /* ── Résultats (C9) ── */
+              /* ── Résultats (C9), en trois vues (A17) : les mêmes pilotes
+                 étaient listés TROIS fois à la suite — podium, classement Elo,
+                 chronos. Segments : on choisit sa lecture, rien n'est répété. ── */
               <View style={styles.section}>
-                <Label>{t.races.results}</Label>
-                <Podium results={results} avatars={avatars} />
-
-                {myNewBadges.length > 0 ? (
-                  <Banner
-                    kind="ok"
-                    title={(myNewBadges.length > 1
-                      ? t.badges.unlockedBannerMany
-                      : t.badges.unlockedBanner
-                    ).replace('%s', myNewBadges.map((k) => t.badges.items[k].name).join(' · '))}
+                <View style={styles.filters}>
+                  <Tag
+                    label={t.races.vueRanking}
+                    selected={vue === 'classement'}
+                    onPress={() => setVue('classement')}
                   />
-                ) : null}
+                  <Tag
+                    label={t.races.vueLaps}
+                    selected={vue === 'chronos'}
+                    onPress={() => setVue('chronos')}
+                  />
+                  <Tag
+                    label={t.races.vueDuels}
+                    selected={vue === 'duels'}
+                    onPress={() => setVue('duels')}
+                  />
+                </View>
 
-                {results.map((r) => {
-                  const grade = gradeForElo(r.eloAfter);
-                  // Invité : aucun duel (Elo gelé) → ligne non dépliable, pas de
-                  // panneau vide « d'où viennent tes points ».
-                  const isOpen = expanded === r.participationId && !r.isGuest;
-                  // Indexé sur la PARTICIPATION : deux abandons partagent le
-                  // même rang effectif, chercher par position renverrait le
-                  // voisin — et son panneau se contredirait lui-même.
-                  const self = pairInputs.find((p) => p.participationId === r.participationId);
-                  const duels = isOpen && self ? pairwiseBreakdown(self, pairInputs) : [];
-                  return (
-                    <Pressable
-                      key={r.participationId}
-                      onPress={() => setExpanded(isOpen ? null : r.participationId)}
-                      disabled={r.isGuest}
-                      accessibilityRole="button">
-                      <Card style={isOpen ? styles.cardOpen : undefined}>
-                        <View style={styles.resultRow}>
-                          {/* Un abandon n'a pas de place à l'arrivée : afficher
-                              son rang laisserait croire qu'il a fini là. */}
-                          <Body style={[styles.posNum, r.dnf && styles.posNumDnf]}>
-                            {r.dnf ? t.races.dnfShort : r.position}
-                          </Body>
-                          <Avatar
-                            name={r.hiddenProfile ? '?' : r.name}
-                            size={34}
-                            uri={r.avatarPath ? (avatars.get(r.avatarPath) ?? null) : null}
-                            cacheKey={r.avatarPath}
-                          />
-                          <View style={styles.flex}>
-                            <Body>
-                              {r.hiddenProfile ? t.races.privatePilot : r.name}
-                              {r.isSelf ? <Muted> ({t.races.you})</Muted> : null}
-                            </Body>
-                            {r.isGuest ? (
-                              <Muted>{t.races.guest}</Muted>
-                            ) : r.dnf ? (
-                              <Muted>
-                                {t.races.dnf} ·{' '}
-                                <Muted style={{ color: grade.color }}>
+                {vue === 'classement' ? (
+                  <View style={styles.section}>
+                    <Podium results={results} avatars={avatars} />
+
+                    {myNewBadges.length > 0 ? (
+                      <Banner
+                        kind="ok"
+                        title={(myNewBadges.length > 1
+                          ? t.badges.unlockedBannerMany
+                          : t.badges.unlockedBanner
+                        ).replace('%s', myNewBadges.map((k) => t.badges.items[k].name).join(' · '))}
+                      />
+                    ) : null}
+
+                    <Card>
+                      {results.map((r, i) => {
+                        const grade = gradeForElo(r.eloAfter);
+                        return (
+                          <ListRow
+                            key={r.participationId}
+                            first={i === 0}
+                            left={
+                              <>
+                                {/* Un abandon n'a pas de place à l'arrivée. */}
+                                <Body style={[styles.posNum, r.dnf && styles.posNumDnf]}>
+                                  {r.dnf ? t.races.dnfShort : r.position}
+                                </Body>
+                                <Avatar
+                                  name={r.hiddenProfile ? '?' : r.name}
+                                  size={28}
+                                  uri={r.avatarPath ? (avatars.get(r.avatarPath) ?? null) : null}
+                                  cacheKey={r.avatarPath}
+                                />
+                              </>
+                            }
+                            title={
+                              <Body style={styles.rowName} numberOfLines={1}>
+                                {displayName(r)}
+                                {r.isSelf ? <Muted> ({t.races.you})</Muted> : null}
+                              </Body>
+                            }
+                            sub={
+                              r.isGuest ? (
+                                <Muted style={styles.rowSub}>{t.races.guest}</Muted>
+                              ) : (
+                                <Muted style={[styles.rowSub, { color: grade.color }]}>
                                   {grade.name} · {r.eloAfter}
                                 </Muted>
-                              </Muted>
-                            ) : (
-                              <Muted style={{ color: grade.color }}>
-                                {grade.name} · {r.eloAfter}
-                              </Muted>
-                            )}
-                          </View>
-                          {!r.isGuest ? (
-                            <Body style={[styles.delta, { color: deltaColor(r.eloDelta) }]}>
-                              {fmtDelta(r.eloDelta)}
-                            </Body>
-                          ) : null}
-                        </View>
-
-                        {isOpen ? (
-                          /* ── Détail par paire (C10) ── */
-                          <View style={styles.pairBox}>
-                            <Label>{t.races.pairTitle}</Label>
-                            {duels.map((duel) => (
-                              <View key={duel.opponent} style={styles.pairRow}>
-                                <Muted style={styles.flex}>
-                                  {duel.tied
-                                    ? t.races.pairTied
-                                    : duel.beat
-                                      ? t.races.pairBeat
-                                      : t.races.pairLost}{' '}
-                                  {duel.opponent}
-                                </Muted>
-                                <Body style={[styles.pairPts, { color: deltaColor(duel.points) }]}>
-                                  {duel.points >= 0 ? '+' : ''}
-                                  {duel.points.toFixed(1)}
+                              )
+                            }
+                            right={
+                              !r.isGuest ? (
+                                <Body style={[styles.delta, { color: deltaColor(r.eloDelta) }]}>
+                                  {fmtDelta(r.eloDelta)}
                                 </Body>
-                              </View>
-                            ))}
-                            <Muted style={styles.pairClose}>{t.races.pairClose}</Muted>
-                          </View>
-                        ) : null}
-                      </Card>
-                    </Pressable>
-                  );
-                })}
+                              ) : undefined
+                            }
+                          />
+                        );
+                      })}
+                    </Card>
 
-                {/* ── Meilleurs tours ⏱ (informatif, hors Elo) ── */}
+                    <Button
+                      label={t.races.shareResults}
+                      variant="ghost"
+                      onPress={() => setShareOpen(true)}
+                    />
+                  </View>
+                ) : null}
+
+                {vue === 'duels' ? (
+                  /* ── Détail par paire (C10) — un seul panneau ouvert à la
+                     fois : à 8 pilotes, tout déplier ne tiendra jamais. ── */
+                  <View style={styles.section}>
+                    <Muted>{t.races.duelsHint}</Muted>
+                    <Card>
+                      {results
+                        .filter((r) => !r.isGuest)
+                        .map((r, i) => {
+                          const isOpen = expanded === r.participationId;
+                          // Indexé sur la PARTICIPATION : deux abandons partagent
+                          // le même rang effectif, chercher par position
+                          // renverrait le voisin.
+                          const self = pairInputs.find(
+                            (p) => p.participationId === r.participationId,
+                          );
+                          const duels = isOpen && self ? pairwiseBreakdown(self, pairInputs) : [];
+                          return (
+                            <View key={r.participationId}>
+                              <ListRow
+                                first={i === 0}
+                                onPress={() => setExpanded(isOpen ? null : r.participationId)}
+                                left={
+                                  <Body style={[styles.posNum, r.dnf && styles.posNumDnf]}>
+                                    {r.dnf ? t.races.dnfShort : r.position}
+                                  </Body>
+                                }
+                                title={
+                                  <Body style={styles.rowName} numberOfLines={1}>
+                                    {displayName(r)}
+                                    {r.isSelf ? <Muted> ({t.races.you})</Muted> : null}
+                                  </Body>
+                                }
+                                right={
+                                  <Body style={[styles.delta, { color: deltaColor(r.eloDelta) }]}>
+                                    {fmtDelta(r.eloDelta)}
+                                  </Body>
+                                }
+                              />
+                              {isOpen ? (
+                                <View style={styles.pairBox}>
+                                  <Label>{r.isSelf ? t.races.pairTitle : t.races.pairTitleOther}</Label>
+                                  {duels.map((duel) => (
+                                    <View key={duel.opponent} style={styles.pairRow}>
+                                      <Muted style={styles.flex}>
+                                        {duel.tied
+                                          ? t.races.pairTied
+                                          : duel.beat
+                                            ? t.races.pairBeat
+                                            : t.races.pairLost}{' '}
+                                        {duel.opponent}
+                                      </Muted>
+                                      <Body
+                                        style={[
+                                          styles.pairPts,
+                                          { color: deltaColor(duel.points) },
+                                        ]}>
+                                        {duel.points >= 0 ? '+' : ''}
+                                        {duel.points.toFixed(1)}
+                                      </Body>
+                                    </View>
+                                  ))}
+                                </View>
+                              ) : null}
+                            </View>
+                          );
+                        })}
+                    </Card>
+                  </View>
+                ) : null}
+
+                {vue === 'chronos' ? (
+                /* ── Meilleurs tours ⏱ (informatif, hors Elo) ── */
                 <View style={styles.section}>
-                  <Label>{t.races.lapTimes}</Label>
                   {circuitRecord ? (
                     <Muted style={styles.lapRecord}>
                       {t.races.circuitRecord
@@ -712,146 +815,246 @@ export default function RaceDetailScreen() {
                     </View>
                   ) : null}
 
-                  {(lapBulk === null ? [...results].sort(lapSort) : []).map((r) => {
-                    const editable = r.isSelf || isAdmin;
-                    const editing = lapEditId === r.participationId;
-                    return (
-                      <Card key={r.participationId}>
-                        <View style={styles.lapRow}>
-                          <Body style={styles.flex}>
-                            {displayName(r)}
-                            {r.isSelf ? <Muted> ({t.races.you})</Muted> : null}
-                          </Body>
-                          {!editing ? (
-                            <Body style={styles.lapTime}>
-                              {r.bestLapMs != null ? formatLap(r.bestLapMs) : '—'}
-                            </Body>
-                          ) : null}
-                          {editable && !editing ? (
-                            <Pressable onPress={() => startLapEdit(r)} accessibilityRole="button">
-                              <Muted style={styles.lapEdit}>
-                                {r.bestLapMs != null
-                                  ? t.races.lapEdit
-                                  : r.isSelf
-                                    ? t.races.lapAdd
-                                    : t.races.lapAddOther}
-                              </Muted>
-                            </Pressable>
-                          ) : null}
-                        </View>
-                        {editing ? (
-                          <View style={styles.lapEditBox}>
-                            <LapField
-                              label={t.races.lapLabel}
-                              digits={lapInput}
-                              onChangeDigits={setLapInput}
+                  {lapBulk === null ? (
+                    <Card>
+                      {[...results].sort(lapSort).map((r, i) => {
+                        const editable = r.isSelf || isAdmin;
+                        const editingLap = lapEditId === r.participationId;
+                        return (
+                          <View key={r.participationId}>
+                            <ListRow
+                              first={i === 0}
+                              title={
+                                <Body style={styles.rowName} numberOfLines={1}>
+                                  {displayName(r)}
+                                  {r.isSelf ? <Muted> ({t.races.you})</Muted> : null}
+                                </Body>
+                              }
+                              right={
+                                <>
+                                  {!editingLap ? (
+                                    <Body style={styles.lapTime}>
+                                      {r.bestLapMs != null ? formatLap(r.bestLapMs) : '—'}
+                                    </Body>
+                                  ) : null}
+                                  {editable && !editingLap ? (
+                                    <Pressable
+                                      onPress={() => startLapEdit(r)}
+                                      accessibilityRole="button"
+                                      hitSlop={8}>
+                                      <Muted style={styles.lapEdit}>
+                                        {r.bestLapMs != null
+                                          ? t.races.lapEdit
+                                          : r.isSelf
+                                            ? t.races.lapAdd
+                                            : t.races.lapAddOther}
+                                      </Muted>
+                                    </Pressable>
+                                  ) : null}
+                                </>
+                              }
                             />
-                            {lapError ? <Muted style={styles.rematchErr}>{lapError}</Muted> : null}
-                            <View style={styles.actions}>
-                              <Button
-                                label={t.common.cancel}
-                                variant="ghost"
-                                onPress={() => {
-                                  setLapEditId(null);
-                                  setLapError(null);
-                                }}
-                              />
-                              <Button
-                                label={t.races.lapSave}
-                                onPress={() => onSaveLap(r.participationId)}
-                                disabled={busy}
-                              />
-                            </View>
+                            {editingLap ? (
+                              <View style={styles.lapEditBox}>
+                                <LapField
+                                  label={t.races.lapLabel}
+                                  digits={lapInput}
+                                  onChangeDigits={setLapInput}
+                                />
+                                {lapError ? (
+                                  <Muted style={styles.rematchErr}>{lapError}</Muted>
+                                ) : null}
+                                <View style={styles.actions}>
+                                  <Button
+                                    label={t.common.cancel}
+                                    variant="ghost"
+                                    onPress={() => {
+                                      setLapEditId(null);
+                                      setLapError(null);
+                                    }}
+                                  />
+                                  <Button
+                                    label={t.races.lapSave}
+                                    onPress={() => onSaveLap(r.participationId)}
+                                    disabled={busy}
+                                  />
+                                </View>
+                              </View>
+                            ) : null}
                           </View>
-                        ) : null}
-                      </Card>
-                    );
-                  })}
+                        );
+                      })}
+                    </Card>
+                  ) : null}
                 </View>
-
-                <ShareCard url={shareUrl} title={t.races.shareResults} message={resultsMessage} />
-
-                {/* Revanche : reprendre le même circuit + les mêmes pilotes */}
-                {isAdmin || results.some((r) => r.isSelf) ? (
-                  <>
-                    <Button label={t.races.rematch} onPress={onRematch} disabled={busy} />
-                    {rematchError ? <Muted style={styles.rematchErr}>{rematchError}</Muted> : null}
-                  </>
                 ) : null}
 
-                {/* Correction du classement — fenêtre 24 h (lot 2.6) */}
-                {isAdmin && canCorrect ? (
-                  <View style={styles.correctBox}>
-                    <Button
-                      label={t.races.correctRanking}
-                      variant="ghost"
-                      onPress={() => router.push(`/rank/${id}?correct=1`)}
-                      disabled={busy}
-                    />
-                    <Muted style={styles.correctHint}>{t.races.correctWindowHint}</Muted>
-                  </View>
-                ) : null}
               </View>
             ) : (
               /* ── Course à venir ── */
               <>
                 <View style={styles.section}>
-                  <Label>
-                    {t.races.participants} · {participants.length}
-                  </Label>
-                  {participants.map((p) => {
-                    const grade = gradeForElo(p.elo);
-                    // Invité (sans compte) : Elo gelé et hors classement → pas de score affiché.
-                    const isGuest = !p.profileId;
-                    // Profil illisible (privé non-ami…) : ne rien inventer.
-                    const hidden = p.hiddenProfile;
-                    // Nouveau pilote : niveau encore en calibration, pas de grade figé.
-                    const calibrating = !isGuest && !hidden && isCalibrating(p.races);
-                    return (
-                      <Card key={p.id}>
-                        <View style={styles.pilotRow}>
-                          <Avatar
-                            name={hidden ? '?' : p.name}
-                            size={36}
-                            uri={p.avatarPath ? (avatars.get(p.avatarPath) ?? null) : null}
-                            cacheKey={p.avatarPath}
-                          />
-                          <View style={styles.flex}>
-                            <Body>
+                  <View style={styles.gridHead}>
+                    <Label>
+                      {t.races.participants} · {participants.length}
+                    </Label>
+                    {isAdmin && !locked ? (
+                      <Pressable
+                        onPress={() => setAddOpen(true)}
+                        accessibilityRole="button"
+                        hitSlop={8}
+                        style={styles.addBtn}>
+                        <Body style={styles.addBtnTxt}>{t.races.addOpen}</Body>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                  <Card>
+                    {participants.map((p, i) => {
+                      const grade = gradeForElo(p.elo);
+                      // Invité (sans compte) : Elo gelé, hors classement.
+                      const isGuest = !p.profileId;
+                      // Profil illisible (privé non-ami…) : ne rien inventer.
+                      const hidden = p.hiddenProfile;
+                      // Niveau encore en calibration : pas de grade figé.
+                      const calibrating = !isGuest && !hidden && isCalibrating(p.races);
+                      return (
+                        <ListRow
+                          key={p.id}
+                          first={i === 0}
+                          left={
+                            <Avatar
+                              name={hidden ? '?' : p.name}
+                              size={28}
+                              uri={p.avatarPath ? (avatars.get(p.avatarPath) ?? null) : null}
+                              cacheKey={p.avatarPath}
+                            />
+                          }
+                          title={
+                            <Body style={styles.rowName} numberOfLines={1}>
                               {hidden ? t.races.privatePilot : p.name}
                               {p.isSelf ? <Muted> ({t.races.you})</Muted> : null}
                             </Body>
-                            {isGuest ? (
-                              <Muted>{t.races.guest}</Muted>
+                          }
+                          sub={
+                            isGuest ? (
+                              <Muted style={styles.rowSub}>{t.races.guest}</Muted>
                             ) : hidden ? (
-                              <Muted>{t.races.privateProfileHint}</Muted>
+                              <Muted style={styles.rowSub}>{t.races.privateProfileHint}</Muted>
                             ) : calibrating ? (
-                              <Muted>
+                              <Muted style={styles.rowSub}>
                                 {t.profile.calibrating} · {p.elo}
                               </Muted>
                             ) : (
-                              <Muted style={{ color: grade.color }}>
+                              <Muted style={[styles.rowSub, { color: grade.color }]}>
                                 {grade.name} · {p.elo}
                               </Muted>
-                            )}
-                          </View>
-                          {!isGuest && !hidden && !calibrating ? (
-                            <GradeMedal grade={grade} size={30} />
-                          ) : null}
-                          {isAdmin && !locked ? (
-                            <Pressable onPress={() => onRemove(p.id)} accessibilityRole="button">
-                              <Muted style={styles.remove}>{t.races.remove}</Muted>
-                            </Pressable>
-                          ) : null}
-                        </View>
-                      </Card>
-                    );
-                  })}
+                            )
+                          }
+                          right={
+                            <>
+                              {!isGuest && !hidden && !calibrating ? (
+                                <GradeMedal grade={grade} size={24} />
+                              ) : null}
+                              {isAdmin && !locked ? (
+                                <Pressable
+                                  onPress={() => onRemove(p.id)}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={t.races.remove}
+                                  hitSlop={10}>
+                                  <Muted style={styles.remove}>✕</Muted>
+                                </Pressable>
+                              ) : null}
+                            </>
+                          }
+                        />
+                      );
+                    })}
+                  </Card>
 
                   {locked ? <Banner kind="info" title={t.races.lockedBanner} /> : null}
 
-                  {isAdmin && !locked ? (
-                    <>
+
+                  {/* Échec d'une action sur la grille : toujours visible. */}
+                  {actionError ? <Muted style={styles.rematchErr}>{actionError}</Muted> : null}
+                </View>
+
+                {!isAdmin && (selfParticipating || locked) ? (
+                  <View style={styles.section}>
+                    <WaitingFlag />
+                    {/* Inscrit d'office ? Tant que la grille est ouverte, chacun
+                        peut se retirer lui-même (consentement, Reviewer A2). */}
+                    {selfParticipating && !locked ? (
+                      <Button
+                        label={t.races.leaveRace}
+                        variant="ghost"
+                        onPress={onLeave}
+                        disabled={busy}
+                      />
+                    ) : null}
+                    {joinError ? <Muted style={styles.rematchErr}>{joinError}</Muted> : null}
+                  </View>
+                ) : null}
+
+                {/* Inviter la bande : UNE ligne — QR, lien et copie vivent
+                    dans la feuille, plus en permanence dans la page. */}
+                <Pressable
+                  onPress={() => setShareOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t.races.shareOpen}>
+                  <Card style={styles.inviteRow}>
+                    <View style={styles.flex}>
+                      <Body style={styles.rowName}>{t.races.shareOpen}</Body>
+                      <Muted style={styles.rowSub}>{t.races.shareOpenHint}</Muted>
+                    </View>
+                    <Body style={styles.chevron}>›</Body>
+                  </Card>
+                </Pressable>
+              </>
+            )}
+          </>
+        )}
+      </ScrollView>
+
+      {/* ── Barre d'action fixe (A17, décision PO) : l'action du jour reste
+          visible dès l'ouverture, quelle que soit la longueur de la page.
+          Sœur du ScrollView (pas de superposition) : rien n'est recouvert. ── */}
+      {race && !editing ? (
+        completed ? (
+          isAdmin || results.some((r) => r.isSelf) ? (
+            <View style={styles.barre}>
+              {rematchError ? <Muted style={styles.rematchErr}>{rematchError}</Muted> : null}
+              <Button label={t.races.rematch} onPress={onRematch} disabled={busy} />
+            </View>
+          ) : null
+        ) : isAdmin ? (
+          <View style={styles.barre}>
+            {participants.length < 2 ? (
+              <Muted style={styles.barreHint}>{t.races.needTwoPilots}</Muted>
+            ) : null}
+            <Button
+              label={t.races.enterRanking}
+              disabled={participants.length < 2}
+              onPress={() => router.push(`/rank/${id}${locked ? '?locked=1' : ''}`)}
+            />
+            <Pressable
+              onPress={locked ? onReopen : onLock}
+              accessibilityRole="button"
+              disabled={busy}
+              style={styles.barreLien}>
+              <Muted>{locked ? t.races.reopen : t.races.lock}</Muted>
+            </Pressable>
+          </View>
+        ) : !selfParticipating && !locked ? (
+          <View style={styles.barre}>
+            {joinError ? <Muted style={styles.rematchErr}>{joinError}</Muted> : null}
+            <Button label={t.races.joinRace} onPress={onJoin} disabled={busy} />
+          </View>
+        ) : null
+      ) : null}
+
+      {/* ── Feuille : remplir la grille (les trois marches d'origine,
+          déplacées telles quelles — l'ordre par coût reste le même). ── */}
+      <Sheet open={addOpen} onClose={() => setAddOpen(false)} title={t.races.addPilots}>
                       {/* ── Remplir la grille, en trois marches ──────────────
                           L'ordre n'est pas cosmétique : chaque marche est plus
                           coûteuse et moins « bonne » que la précédente.
@@ -947,98 +1150,119 @@ export default function RaceDetailScreen() {
                       {!selfParticipating ? (
                         <Button label={t.races.rejoin} variant="ghost" onPress={onToggleSelf} />
                       ) : null}
-                    </>
-                  ) : null}
+        {actionError ? <Muted style={styles.rematchErr}>{actionError}</Muted> : null}
+      </Sheet>
 
-                  {/* Échec d'une action sur la grille : toujours visible. */}
-                  {actionError ? <Muted style={styles.rematchErr}>{actionError}</Muted> : null}
-                </View>
+      {/* ── Feuille : inviter / partager ── */}
+      <Sheet open={shareOpen} onClose={() => setShareOpen(false)}>
+        <ShareCard
+          url={shareUrl}
+          title={completed ? t.races.shareResults : undefined}
+          message={resultsMessage}
+        />
+      </Sheet>
 
-                {isAdmin ? (
-                  participants.length >= 2 ? (
-                    <View style={styles.actions}>
-                      {locked ? (
-                        <Button
-                          label={t.races.reopen}
-                          variant="ghost"
-                          onPress={onReopen}
-                          disabled={busy}
-                        />
-                      ) : (
-                        <Button
-                          label={t.races.lock}
-                          variant="ghost"
-                          onPress={onLock}
-                          disabled={busy}
-                        />
-                      )}
-                      <Button
-                        label={t.races.enterRanking}
-                        onPress={() => router.push(`/rank/${id}${locked ? '?locked=1' : ''}`)}
-                      />
-                    </View>
-                  ) : (
-                    <Muted>{t.races.needTwoPilots}</Muted>
-                  )
-                ) : !selfParticipating && !locked ? (
-                  /* Invité : rejoindre soi-même une course ouverte */
-                  <View style={styles.section}>
-                    <Button label={t.races.joinRace} onPress={onJoin} disabled={busy} />
-                    {joinError ? <Muted style={styles.rematchErr}>{joinError}</Muted> : null}
-                  </View>
-                ) : (
-                  <View style={styles.section}>
-                    <WaitingFlag />
-                    {/* Inscrit d'office ? Tant que la grille est ouverte, chacun
-                        peut se retirer lui-même (consentement, Reviewer A2). */}
-                    {selfParticipating && !locked ? (
-                      <Button
-                        label={t.races.leaveRace}
-                        variant="ghost"
-                        onPress={onLeave}
-                        disabled={busy}
-                      />
-                    ) : null}
-                    {joinError ? <Muted style={styles.rematchErr}>{joinError}</Muted> : null}
-                  </View>
-                )}
-
-                <ShareCard url={shareUrl} />
-
-                {isAdmin ? (
-                  confirmDelete ? (
-                    <View style={styles.deleteConfirm}>
-                      <Muted>{t.races.deleteConfirm}</Muted>
-                      <Button label={t.races.deleteConfirmBtn} onPress={onDelete} disabled={busy} />
-                      <Button label={t.common.cancel} variant="ghost" onPress={() => setConfirmDelete(false)} />
-                    </View>
-                  ) : (
-                    <Pressable
-                      onPress={() => setConfirmDelete(true)}
-                      accessibilityRole="button"
-                      style={styles.deleteBtn}>
-                      <Body style={styles.deleteTxt}>{t.races.delete}</Body>
-                    </Pressable>
-                  )
-                ) : null}
-              </>
+      {/* ── Feuille : options d'admin (Modifier, verrou, suppression,
+          correction) — les actions rares ne coûtent plus de hauteur. ── */}
+      <Sheet
+        open={menuOpen}
+        onClose={() => {
+          setMenuOpen(false);
+          // Sans cette purge, « Supprimer » abandonné au voile resterait ARMÉ
+          // à la prochaine ouverture — un tap destructif sous le doigt (revue).
+          setConfirmDelete(false);
+        }}
+        title={t.races.menu}>
+        {!completed && isAdmin ? (
+          <>
+            {/* Grille verrouillée = date et circuit FIGÉS : l'ancien écran
+                l'exigeait, la RLS ne le vérifie pas — garde reconduite. */}
+            {!locked ? (
+              <Button
+                label={t.races.edit}
+                variant="ghost"
+                onPress={() => {
+                  setMenuOpen(false);
+                  startEdit();
+                }}
+              />
+            ) : null}
+            {confirmDelete ? (
+              <View style={styles.deleteConfirm}>
+                <Muted>{t.races.deleteConfirm}</Muted>
+                <Button label={t.races.deleteConfirmBtn} onPress={onDelete} disabled={busy} />
+                <Button
+                  label={t.common.cancel}
+                  variant="ghost"
+                  onPress={() => setConfirmDelete(false)}
+                />
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => setConfirmDelete(true)}
+                accessibilityRole="button"
+                style={styles.deleteBtn}>
+                <Body style={styles.deleteTxt}>{t.races.delete}</Body>
+              </Pressable>
             )}
+            {joinError ? <Muted style={styles.rematchErr}>{joinError}</Muted> : null}
           </>
-        )}
-      </ScrollView>
+        ) : null}
+        {completed && isAdmin && canCorrect ? (
+          <View style={styles.correctBox}>
+            <Button
+              label={t.races.correctRanking}
+              variant="ghost"
+              onPress={() => {
+                setMenuOpen(false);
+                router.push(`/rank/${id}?correct=1`);
+              }}
+              disabled={busy}
+            />
+            <Muted style={styles.correctHint}>{t.races.correctWindowHint}</Muted>
+          </View>
+        ) : null}
+      </Sheet>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl * 2 },
+  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xl },
   back: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  menuDots: { fontSize: 22, fontWeight: '800', color: colors.inkDim, paddingHorizontal: spacing.sm },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  titleCompact: { fontSize: 23, lineHeight: 27 },
+  youLine: { fontWeight: '800', marginTop: 2 },
+  filters: { flexDirection: 'row', gap: spacing.sm },
+  gridHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  addBtn: {
+    borderColor: colors.accent,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+  },
+  addBtnTxt: { color: colors.accent, fontWeight: '700', fontSize: 13 },
+  rowName: { fontSize: 14, lineHeight: 18, fontWeight: '600' },
+  rowSub: { fontSize: 11, lineHeight: 14 },
+  inviteRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  chevron: { color: colors.inkDim2, fontSize: 20 },
+  // La barre d'action fixe : sœur du ScrollView, jamais par-dessus le contenu.
+  barre: {
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    backgroundColor: colors.bg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+  },
+  barreHint: { textAlign: 'center' },
+  barreLien: { alignItems: 'center', paddingVertical: spacing.xs },
   flex: { flex: 1 },
-  editLink: { color: colors.accent, fontWeight: '700' },
   section: { gap: spacing.sm },
-  pilotRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   remove: { color: colors.inkDim2 },
   // Une « marche » du bloc d'ajout : léger encart pour que les trois options
   // se lisent comme une descente d'escalier, pas comme trois champs en vrac.
@@ -1064,11 +1288,9 @@ const styles = StyleSheet.create({
     paddingRight: spacing.md,
   },
   friendChipTxt: { fontSize: 13, fontWeight: '700' },
-  resultRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   posNumDnf: { fontSize: 11, fontWeight: '800', color: colors.inkDim2 },
   posNum: { fontFamily: fonts.serifBlack, fontSize: 18, minWidth: 22, textAlign: 'center', color: colors.ink },
   delta: { fontWeight: '800' },
-  cardOpen: { borderColor: colors.line2 },
   pairBox: {
     marginTop: spacing.md,
     borderTopColor: colors.line,
@@ -1078,7 +1300,6 @@ const styles = StyleSheet.create({
   },
   pairRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   pairPts: { fontWeight: '800', fontVariant: ['tabular-nums'] },
-  pairClose: { textAlign: 'center', marginTop: spacing.sm, textDecorationLine: 'underline' },
   waiting: { alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xl },
   flag: { fontSize: 44 },
   waitingTitle: { fontFamily: fonts.serif, fontSize: 17 },
@@ -1091,7 +1312,6 @@ const styles = StyleSheet.create({
   correctBox: { gap: spacing.xs, marginTop: spacing.sm },
   correctHint: { textAlign: 'center' },
   lapRecord: { color: colors.accent, marginBottom: spacing.xs },
-  lapRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   lapTime: { fontVariant: ['tabular-nums'], fontWeight: '800' },
   lapEdit: { color: colors.accent, fontWeight: '700' },
   lapEditBox: { marginTop: spacing.sm, gap: spacing.sm },

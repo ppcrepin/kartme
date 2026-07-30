@@ -1,12 +1,13 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
-import { Button, Card, SkeletonCard } from '@/components/ui';
+import { Button, Card, ListRow, SkeletonCard, Tag } from '@/components/ui';
 import { Body, Heading, Muted } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
+import { feedDest, feedLabel, getFeed, markFeedSeen, type FeedItem } from '@/lib/feed';
 import { listNotifications, markRead, routeFor, type AppNotification } from '@/lib/notifications';
 
 /** Taille d'une page côté serveur (list_notifications). */
@@ -35,6 +36,13 @@ function ago(iso: string): string {
  */
 export default function NotificationsScreen() {
   const router = useRouter();
+  // Deux vues, deux promesses (décision PO 2026-07-30) : « Pour toi » —
+  // quelqu'un t'attend ; « Tes amis » — le fil, informatif. Le bandeau de
+  // l'accueil ouvre directement la seconde (?vue=amis).
+  const { vue: vueParam } = useLocalSearchParams<{ vue?: string }>();
+  const [vue, setVue] = useState<'toi' | 'amis'>(vueParam === 'amis' ? 'amis' : 'toi');
+  const [feed, setFeed] = useState<FeedItem[] | null>(null);
+  const [feedError, setFeedError] = useState(false);
   const [items, setItems] = useState<AppNotification[] | null>(null);
   const [error, setError] = useState(false);
   // Une page pleine signale qu'il y en a peut-être d'autres derrière.
@@ -78,20 +86,91 @@ export default function NotificationsScreen() {
     }
   }
 
+  const loadFeed = useCallback(async (alive: () => boolean = () => true) => {
+    setFeedError(false);
+    try {
+      // Une page de 50 couvre toute la fenêtre de 90 jours au volume réel :
+      // pas de pagination (le curseur strict sauterait des jumeaux d'instant).
+      const rows = await getFeed(null, 50);
+      if (!alive()) return;
+      setFeed(rows);
+    } catch {
+      if (!alive()) return;
+      setFeed([]);
+      setFeedError(true);
+    }
+  }, []);
+
+  // « J'ai vu le fil » SEULEMENT quand l'onglet « Tes amis » est réellement
+  // affiché avec son contenu : arriver sur « Pour toi » ne doit pas tuer la
+  // pastille or d'un fil jamais montré (revue adversariale — une pastille qui
+  // a menti une fois est morte pour de bon).
+  useEffect(() => {
+    if (vue === 'amis' && feed !== null && !feedError) markFeedSeen().catch(() => {});
+  }, [vue, feed, feedError]);
+
   useFocusEffect(
     useCallback(() => {
       let active = true;
       void load(() => active);
+      void loadFeed(() => active);
       return () => {
         active = false;
       };
-    }, [load]),
+    }, [load, loadFeed]),
   );
+
+
 
   return (
     <Screen
       title={t.inbox.title}
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}>
+      <View style={styles.filters}>
+        <Tag label={t.feed.tabYou} selected={vue === 'toi'} onPress={() => setVue('toi')} />
+        <Tag label={t.feed.tabFriends} selected={vue === 'amis'} onPress={() => setVue('amis')} />
+      </View>
+
+      {vue === 'amis' ? (
+        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+          {feed === null ? (
+            <SkeletonCard />
+          ) : feedError ? (
+            <View style={styles.empty}>
+              <Muted>{t.inbox.error}</Muted>
+              <Button label={t.inbox.retry} variant="ghost" onPress={() => void loadFeed()} />
+            </View>
+          ) : feed.length === 0 ? (
+            <View style={styles.empty}>
+              <Muted>{t.feed.empty}</Muted>
+            </View>
+          ) : (
+            <Card>
+              {feed.map((item, i) => {
+                const { title, sub } = feedLabel(item);
+                const dest = feedDest(item);
+                return (
+                  <ListRow
+                    key={`${item.kind}-${item.at}-${item.actorId}-${item.raceId ?? ''}-${item.badgeKey ?? ''}`}
+                    first={i === 0}
+                    onPress={
+                      dest
+                        ? // Destination construite à l'exécution : les routes
+                          // typées ne peuvent pas la vérifier (formes /race/:id
+                          // et /pilot/:id seulement, garanties par feedDest).
+                          () => router.push(dest as Parameters<typeof router.push>[0])
+                        : undefined
+                    }
+                    title={title}
+                    sub={sub ?? undefined}
+                    right={<Muted style={styles.ago}>{ago(item.at)}</Muted>}
+                  />
+                );
+              })}
+            </Card>
+          )}
+        </ScrollView>
+      ) : (
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         {items === null ? (
           <>
@@ -150,11 +229,13 @@ export default function NotificationsScreen() {
           />
         ) : null}
       </ScrollView>
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  filters: { flexDirection: 'row', gap: spacing.sm },
   list: { gap: spacing.sm, paddingBottom: spacing.xl, paddingTop: spacing.xs },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   flex: { flex: 1, gap: 2 },

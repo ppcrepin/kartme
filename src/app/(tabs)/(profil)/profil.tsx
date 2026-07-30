@@ -1,22 +1,14 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { EloCurve } from '@/components/elo-curve';
 import { Screen } from '@/components/screen';
-import { Avatar, BadgeIcon, Button, Card, Gauge, GradeMedal, SkeletonCard } from '@/components/ui';
-import {
-  AvatarError,
-  avatarPickSupported,
-  pickImage,
-  removeMyAvatar,
-  signedAvatarUrls,
-  uploadAvatar,
-} from '@/lib/avatar';
+import { Avatar, Button, Card, Gauge, GradeMedal, ListRow, SkeletonCard } from '@/components/ui';
+import { signedAvatarUrls } from '@/lib/avatar';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
-import { colors, fonts, spacing, states } from '@/constants/theme';
+import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
-import { useAuth } from '@/lib/auth';
 import { BADGE_KEYS, listBadges, type BadgeKey, type UnlockedBadge } from '@/lib/badges';
 import { formatRaceDate } from '@/lib/datetime';
 import { CALIBRATION_RACES, gradeProgress, isCalibrating } from '@/lib/grade';
@@ -32,29 +24,18 @@ import {
 
 const fmtDelta = (d: number) => (d > 0 ? `▲ +${d}` : d < 0 ? `▼ ${d}` : '—');
 const deltaColor = (d: number) => (d > 0 ? colors.pos : d < 0 ? colors.accent : colors.inkDim);
-const HISTORY_CAP = 10; // on n'affiche que les 10 dernières courses par défaut (perf + accès au pied de page)
+// 5 dernières courses (décision PO 2026-07-30) : le profil complet tient d'un
+// coup ; l'historique entier vit sur son propre écran.
+const HISTORY_CAP = 5;
 
 export default function ProfilScreen() {
   const router = useRouter();
-  const { session, signOut } = useAuth();
 
   const [profile, setProfile] = useState<MyProfile | null>(null);
   const [curve, setCurve] = useState<EloPoint[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [showAllHistory, setShowAllHistory] = useState(false);
   const [badges, setBadges] = useState<Map<BadgeKey, UnlockedBadge>>(new Map());
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [photoBusy, setPhotoBusy] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
-  // Un envoi 3G peut survivre au changement d'onglet : on n'écrit pas dans un
-  // composant démonté.
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
 
   const load = useCallback(async (alive: () => boolean = () => true) => {
     const [p, c, h, b] = await Promise.all([
@@ -84,49 +65,6 @@ export default function ProfilScreen() {
     }, [load]),
   );
 
-  /**
-   * Message FRANÇAIS. La version précédente renvoyait `e.message` dès que
-   * l'erreur était une `Error` — c'est-à-dire toujours : les pilotes voyaient
-   * « The source image could not be decoded » sur une app entièrement en
-   * français, et le libellé traduit était du code mort.
-   */
-  function photoErrorLabel(e: unknown): string {
-    if (e instanceof AvatarError) {
-      if (e.code === 'tooBig') return t.profile.photoTooBig;
-      if (e.code === 'notAnImage') return t.profile.photoNotAnImage;
-      if (e.code === 'unreadable') return t.profile.photoUnreadable;
-    }
-    return t.profile.photoError;
-  }
-
-  async function onPickPhoto() {
-    setPhotoError(null);
-    const file = await pickImage();
-    if (!file) return;
-    setPhotoBusy(true);
-    try {
-      await uploadAvatar(file);
-      if (mounted.current) await load();
-    } catch (e) {
-      setPhotoError(photoErrorLabel(e));
-    } finally {
-      if (mounted.current) setPhotoBusy(false);
-    }
-  }
-
-  async function onRemovePhoto() {
-    setPhotoError(null);
-    setPhotoBusy(true);
-    try {
-      await removeMyAvatar();
-      if (mounted.current) await load();
-    } catch (e) {
-      setPhotoError(photoErrorLabel(e));
-    } finally {
-      if (mounted.current) setPhotoBusy(false);
-    }
-  }
-
   if (!profile) {
     return (
       <Screen title={t.tabs.profile}>
@@ -138,8 +76,6 @@ export default function ProfilScreen() {
 
   const gp = gradeProgress(profile.elo);
   const stats = statsFromHistory(history);
-
-  const shownHistory = showAllHistory ? history : history.slice(0, HISTORY_CAP);
 
   return (
     <Screen
@@ -154,174 +90,101 @@ export default function ProfilScreen() {
         </Pressable>
       }>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Identité + Elo + grade */}
+        {/* ── Carte d'identité FUSIONNÉE (A17, levier L5) : identité + Elo +
+            grade + jauge + courbe en un bloc. L'e-mail, la photo et la
+            déconnexion ont déménagé dans Réglages → Compte : des actions
+            « une fois dans la vie » occupaient le premier écran à chaque
+            visite. ── */}
         <Card>
           <View style={styles.identityRow}>
-            <Avatar name={profile.username} size={52} uri={avatarUrl} cacheKey={profile.avatarPath} />
+            <Avatar name={profile.username} size={48} uri={avatarUrl} cacheKey={profile.avatarPath} />
             <View style={styles.flex}>
               <Title style={styles.username}>{profile.username}</Title>
-              {session?.user.email ? <Muted>{session.user.email}</Muted> : null}
-              {/* Photo : proposée seulement là où on sait la choisir (web/PWA).
-                  Sur natif, le sélecteur viendra avec les builds iOS/Android. */}
-              {avatarPickSupported() ? (
-                <View style={styles.photoRow}>
-                  <Pressable
-                    onPress={onPickPhoto}
-                    disabled={photoBusy}
-                    accessibilityRole="button"
-                    accessibilityLabel={t.profile.photoChangeA11y}
-                    accessibilityState={{ disabled: photoBusy, busy: photoBusy }}>
-                    <Muted style={styles.photoLink}>
-                      {photoBusy
-                        ? t.profile.photoBusy
-                        : profile.avatarPath
-                          ? t.profile.photoChange
-                          : t.profile.photoAdd}
-                    </Muted>
-                  </Pressable>
-                  {/* Désactivé plutôt que masqué : le faire disparaître pendant
-                      l'envoi fait sauter la mise en page. */}
-                  {profile.avatarPath ? (
-                    <Pressable
-                      onPress={onRemovePhoto}
-                      disabled={photoBusy}
-                      accessibilityRole="button"
-                      accessibilityLabel={t.profile.photoRemoveA11y}
-                      accessibilityState={{ disabled: photoBusy }}>
-                      <Muted style={styles.photoLink}>{t.profile.photoRemove}</Muted>
-                    </Pressable>
-                  ) : null}
-                </View>
-              ) : null}
-              {/* `colors.err` et non `colors.accent` : le rouge de marque sert
-                  déjà au lien juste au-dessus — une erreur de la même couleur
-                  que l'action est illisible. Annoncée aux lecteurs d'écran. */}
-              {photoError ? (
-                <Muted style={styles.photoError} accessibilityLiveRegion="polite">
-                  {photoError}
-                </Muted>
-              ) : null}
+              <Body style={[styles.gradeName, { color: gp.current.color }]}>
+                {gp.current.name} · {profile.elo}
+              </Body>
             </View>
-            <GradeMedal grade={gp.current} size={46} />
+            <GradeMedal grade={gp.current} size={42} />
           </View>
 
-          <View style={styles.eloRow}>
-            <View>
-              <Label>{t.profile.eloLabel}</Label>
-              <Body style={styles.eloBig}>{profile.elo}</Body>
-            </View>
-            <View style={styles.flex}>
-              <Body style={[styles.gradeName, { color: gp.current.color }]}>{gp.current.name}</Body>
-              <Gauge value={gp.progress} color={gp.current.color} />
-              <Muted style={styles.nextGrade}>
-                {gp.next
-                  ? t.profile.nextGrade.replace('%n', String(gp.remaining)).replace('%g', gp.next.name)
-                  : t.profile.maxGrade}
-              </Muted>
-              {isCalibrating(stats.races) ? (
-                <Muted style={styles.nextGrade}>
-                  {t.profile.calibratingHint.replace(
-                    '%n',
-                    String(CALIBRATION_RACES - stats.races),
-                  )}
-                </Muted>
-              ) : null}
-            </View>
-          </View>
+          <Gauge value={gp.progress} color={gp.current.color} />
+          <Muted style={styles.nextGrade}>
+            {gp.next
+              ? t.profile.nextGrade.replace('%n', String(gp.remaining)).replace('%g', gp.next.name)
+              : t.profile.maxGrade}
+          </Muted>
+          {isCalibrating(stats.races) ? (
+            <Muted style={styles.nextGrade}>
+              {t.profile.calibratingHint.replace('%n', String(CALIBRATION_RACES - stats.races))}
+            </Muted>
+          ) : null}
+
+          {curve.length > 0 ? <EloCurve points={curve} height={72} /> : null}
         </Card>
 
-        {/* Stats */}
+        {/* ── Stats en 4 colonnes — les badges rejoignent la rangée (L6) : le
+            catalogue reste à un tap, la grille d'icônes ne coûte plus 120 px. ── */}
         <View style={styles.statsRow}>
           <Stat label={t.profile.races} value={stats.races} />
           <Stat label={t.profile.wins} value={stats.wins} />
           <Stat label={t.profile.podiums} value={stats.podiums} />
+          <Pressable
+            onPress={() => router.push('/badges')}
+            accessibilityRole="button"
+            accessibilityLabel={t.badges.seeAll}
+            style={styles.flex}>
+            <Card style={styles.stat}>
+              <Body style={styles.statValue}>
+                {badges.size}
+                <Body style={styles.statTotal}>/{BADGE_KEYS.length}</Body>
+              </Body>
+              <Muted style={styles.statLabel}>{t.profile.badges} ›</Muted>
+            </Card>
+          </Pressable>
         </View>
-
-        {/* Courbe */}
-        <Card>
-          <Label>{t.profile.curve}</Label>
-          {curve.length === 0 ? (
-            <Muted style={styles.curveEmpty}>{t.profile.curveEmpty}</Muted>
-          ) : (
-            <EloCurve points={curve} />
-          )}
-        </Card>
-
-        {/* Badges (R3 : catalogue complet via « Voir tous les badges ») */}
-        <Pressable onPress={() => router.push('/badges')} accessibilityRole="button">
-          <Card>
-            <View style={styles.badgesHead}>
-              <Label>{t.profile.badges}</Label>
-              <Muted style={styles.badgesLink}>{t.badges.seeAll} ›</Muted>
-            </View>
-            <View style={styles.badgesRow}>
-              {BADGE_KEYS.map((key) => {
-                const got = badges.has(key);
-                return (
-                  <View key={key} style={[styles.badgeMedal, got ? styles.badgeOn : styles.badgeOff]}>
-                    <BadgeIcon badge={key} size={26} color={got ? colors.accent : colors.inkDim} />
-                  </View>
-                );
-              })}
-            </View>
-            <Muted style={styles.badgesSoon}>
-              {badges.size === 0
-                ? t.badges.none
-                : t.badges.progress
-                    .replace('%u', String(badges.size))
-                    .replace('%t', String(BADGE_KEYS.length))}
-            </Muted>
-          </Card>
-        </Pressable>
 
         {/* Échelle des grades */}
         <Button label={t.profile.gradesLadder} variant="ghost" onPress={() => router.push('/grades')} />
 
-        {/* Historique */}
+        {/* ── Historique : 5 dernières + écran dédié (décision PO) — le
+            profil complet tient d'un coup, la tendance récente reste. ── */}
         <View style={styles.section}>
           <Label>{t.profile.history}</Label>
           {history.length === 0 ? (
             <Muted>{t.profile.historyEmpty}</Muted>
           ) : (
-            shownHistory.map((h, i) => (
-              <Pressable
-                key={`${h.raceId}-${i}`}
-                onPress={() => h.raceId && router.push(`/race/${h.raceId}`)}
-                accessibilityRole="button">
-                <Card>
-                  <View style={styles.historyRow}>
-                    {/* Un abandon a bien une position en base (l'index l'exige), mais
-    l'afficher laisserait croire qu'il a fini là. */}
-                            <Body style={[styles.historyPos, h.dnf && styles.historyPosDnf]}>
-                              {h.dnf ? t.races.dnfShort : h.position}
-                            </Body>
-                    <View style={styles.flex}>
-                      <Body>{h.circuitName ?? t.races.noCircuit}</Body>
-                      {h.scheduledAt ? <Muted>{formatRaceDate(h.scheduledAt)}</Muted> : null}
-                    </View>
+            <Card>
+              {history.slice(0, HISTORY_CAP).map((h, i) => (
+                <ListRow
+                  key={`${h.raceId}-${i}`}
+                  first={i === 0}
+                  onPress={h.raceId ? () => router.push(`/race/${h.raceId}`) : undefined}
+                  left={
+                    <Body style={[styles.historyPos, h.dnf && styles.historyPosDnf]}>
+                      {h.dnf ? t.races.dnfShort : h.position}
+                    </Body>
+                  }
+                  title={h.circuitName ?? t.races.noCircuit}
+                  sub={h.scheduledAt ? formatRaceDate(h.scheduledAt) : undefined}
+                  right={
                     <View style={styles.historyElo}>
                       <Body style={[styles.historyDelta, { color: deltaColor(h.eloDelta) }]}>
                         {fmtDelta(h.eloDelta)}
                       </Body>
-                      <Muted>{h.eloAfter}</Muted>
+                      <Muted style={styles.historyAfter}>{h.eloAfter}</Muted>
                     </View>
-                  </View>
-                </Card>
-              </Pressable>
-            ))
+                  }
+                />
+              ))}
+            </Card>
           )}
-          {history.length > HISTORY_CAP && !showAllHistory ? (
+          {history.length > HISTORY_CAP ? (
             <Button
               label={t.profile.historySeeAll.replace('%n', String(history.length))}
               variant="ghost"
-              onPress={() => setShowAllHistory(true)}
+              onPress={() => router.push('/historique')}
             />
           ) : null}
-        </View>
-
-        {/* Pied de page */}
-        <View style={styles.foot}>
-          <Button label={t.auth.signOut} variant="ghost" onPress={signOut} />
         </View>
       </ScrollView>
     </Screen>
@@ -338,47 +201,22 @@ function Stat({ label, value }: { label: string; value: number }) {
 }
 
 const styles = StyleSheet.create({
-  content: { gap: spacing.md, paddingBottom: spacing.xxl * 2 },
+  content: { gap: spacing.md, paddingBottom: spacing.xl },
   flex: { flex: 1 },
-  identityRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  username: { fontSize: 22, lineHeight: 26 },
-  eloRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing.lg,
-    marginTop: spacing.lg,
-  },
-  eloBig: { fontFamily: fonts.serifBlack, fontSize: 40, lineHeight: 44, color: colors.ink },
-  gradeName: { fontWeight: '800', marginBottom: spacing.xs },
-  nextGrade: { marginTop: spacing.xs, fontSize: 12 },
+  identityRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
+  username: { fontSize: 20, lineHeight: 24 },
+  gradeName: { fontWeight: '800' },
+  nextGrade: { marginTop: spacing.xs, fontSize: 12, marginBottom: spacing.sm },
   statsRow: { flexDirection: 'row', gap: spacing.sm },
-  stat: { flex: 1, alignItems: 'center', paddingVertical: spacing.md },
-  statValue: { fontFamily: fonts.serifBlack, fontSize: 24, color: colors.ink },
+  stat: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.xs },
+  statValue: { fontFamily: fonts.serifBlack, fontSize: 22, color: colors.ink },
+  statTotal: { fontFamily: fonts.sans, fontSize: 12, color: colors.inkDim },
   statLabel: { fontSize: 11 },
-  curveEmpty: { marginTop: spacing.sm },
-  badgesHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  badgesLink: { color: colors.accent, fontSize: 12, fontWeight: '700' },
-  badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginVertical: spacing.sm },
-  badgeMedal: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeOn: { borderColor: colors.accent, backgroundColor: colors.surface },
-  badgeOff: { borderColor: colors.line2, backgroundColor: colors.surface2, opacity: 0.6 },
-  badgesSoon: { fontSize: 12 },
   section: { gap: spacing.sm },
-  historyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  photoRow: { flexDirection: 'row', gap: spacing.md, marginTop: 2 },
-  photoLink: { color: colors.accent, fontWeight: '700', fontSize: 12 },
-  photoError: { color: states.err, fontSize: 12, marginTop: 2 },
-  historyPos: { fontFamily: fonts.serifBlack, fontSize: 18, minWidth: 22, textAlign: 'center', color: colors.ink },
+  historyPos: { fontFamily: fonts.serifBlack, fontSize: 16, minWidth: 22, textAlign: 'center', color: colors.ink },
   historyPosDnf: { fontFamily: fonts.sans, fontSize: 10, fontWeight: '800', color: colors.inkDim2 },
   historyElo: { alignItems: 'flex-end' },
-  historyDelta: { fontWeight: '800' },
-  foot: { gap: spacing.sm, marginTop: spacing.md, alignItems: 'flex-start' },
+  historyDelta: { fontWeight: '800', fontSize: 13 },
+  historyAfter: { fontSize: 11 },
   gear: { fontSize: 22, color: colors.ink },
 });

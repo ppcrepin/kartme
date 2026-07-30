@@ -6,14 +6,15 @@ import { Muted } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import type { EloPoint } from '@/lib/profile';
 
-const HEIGHT = 120;
 const PAD = 10;
 
 /**
  * Courbe d'évolution de l'Elo. Part de l'Elo de départ (1000) puis une valeur
  * par course. Ligne accent, point final marqué, repères min/max discrets.
+ * `height` : 120 par défaut ; 72 dans la carte d'identité fusionnée (A17).
  */
-export function EloCurve({ points }: { points: EloPoint[] }) {
+export function EloCurve({ points, height = 120 }: { points: EloPoint[]; height?: number }) {
+  const HEIGHT = height;
   const [width, setWidth] = useState(0);
   const values = [1000, ...points.map((p) => p.elo)];
 

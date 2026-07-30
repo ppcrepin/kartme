@@ -7,6 +7,8 @@ export { CheckeredRule } from './checkered-rule';
 export { Field } from './field';
 export { Gauge } from './gauge';
 export { GradeMedal } from './grade-medal';
+export { ListRow } from './list-row';
+export { Sheet } from './sheet';
 export { Skeleton, SkeletonCard } from './skeleton';
 export { Tag } from './tag';
 export { Body, Heading, Label, Muted, Title } from './text';

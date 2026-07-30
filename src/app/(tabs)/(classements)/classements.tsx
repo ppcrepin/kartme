@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
-import { Avatar, Button, Card, GradeMedal, Tag } from '@/components/ui';
+import { Avatar, Button, Card, GradeMedal, ListRow, Tag } from '@/components/ui';
 import { Body, Muted } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -23,7 +23,17 @@ type Loaded = {
   myRank: MyRank | null;
   /** false dès qu'une page revient incomplète : plus rien à charger. */
   mayHaveMore: boolean;
+  /** Fenêtre « autour de moi » (A17, décision PO) — absente si je suis déjà
+   *  dans le haut du tableau (la liste classique me montre alors d'office). */
+  aroundRows?: LeaderboardRow[];
 };
+
+/** Au-delà de ce rang, la vue par défaut est « autour de moi » : la question
+ *  n'est pas « qui est premier en France » mais « est-ce que je passe devant
+ *  Kévin ce week-end ». */
+const AROUND_THRESHOLD = 8;
+/** 3 pilotes devant moi, moi, jusqu'à 4 derrière. */
+const AROUND_WINDOW = 8;
 
 /** Clé stable d'une ligne (pilote inscrit ou fantôme). */
 const rowKey = (r: LeaderboardRow) => r.pilotId ?? '';
@@ -45,6 +55,10 @@ export default function ClassementsScreen() {
   const [moreFailed, setMoreFailed] = useState(false);
   // Liens signés des photos, cumulés au fil des pages.
   const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
+  // « Autour de moi » (défaut) ou liste classique depuis le sommet. Une seule
+  // barre de segments à l'écran (Amis/Global) : la bascule de vue passe par
+  // des liens dans la liste et par la carte « Ma position ».
+  const [viewMode, setViewMode] = useState<'me' | 'top'>('me');
   // Date de signature de chaque chemin. Indispensable ici et nulle part
   // ailleurs : un lien signé expire (SIGNED_TTL_S), et les autres écrans
   // re-signent tout à chaque retour dessus. Celui-ci cumule les pages, donc
@@ -78,13 +92,27 @@ export default function ClassementsScreen() {
     if (inFlight.current[sc]) return;
     inFlight.current[sc] = true;
     Promise.all([getLeaderboard(sc, LEADERBOARD_PAGE, 0), getMyRank(sc)])
-      .then(([rows, myRank]) => {
+      .then(async ([rows, myRank]) => {
+        // Fenêtre « autour de moi » : un simple décalage calculé du rang —
+        // aucun RPC nouveau côté serveur (audit A17).
+        let aroundRows: LeaderboardRow[] | undefined;
+        if (myRank && myRank.rank > AROUND_THRESHOLD) {
+          aroundRows = await getLeaderboard(
+            sc,
+            AROUND_WINDOW,
+            Math.max(0, myRank.rank - 4),
+          ).catch(() => undefined);
+          // L'Elo peut bouger entre getMyRank et cette fenêtre : si ma ligne
+          // n'y est plus, mieux vaut la liste classique qu'une fenêtre qui
+          // prétend m'entourer sans moi.
+          if (aroundRows && !aroundRows.some((r) => r.isMe)) aroundRows = undefined;
+        }
         setLoaded((prev) => ({
           ...prev,
-          [sc]: { rows, myRank, mayHaveMore: rows.length === LEADERBOARD_PAGE },
+          [sc]: { rows, myRank, mayHaveMore: rows.length === LEADERBOARD_PAGE, aroundRows },
         }));
         setFailed((prev) => ({ ...prev, [sc]: false }));
-        void mergeAvatars(rows);
+        void mergeAvatars([...rows, ...(aroundRows ?? [])]);
         if (sc === 'friends' && rows.length === 0 && !autoSwitched.current) {
           autoSwitched.current = true;
           setScope('global');
@@ -143,6 +171,7 @@ export default function ClassementsScreen() {
   function switchScope(sc: LeaderboardScope) {
     setScope(sc);
     setMoreFailed(false);
+    setViewMode('me');
   }
 
   const mr = current?.myRank ?? null;
@@ -165,8 +194,10 @@ export default function ClassementsScreen() {
         />
       </View>
 
-      {/* Ma position — carte de statut relatif épinglée */}
+      {/* Ma position — carte de statut relatif épinglée ; un tap ramène la
+          liste autour de moi. */}
       {mr && myGrade ? (
+        <Pressable onPress={() => setViewMode('me')} accessibilityRole="button">
         <Card style={styles.posCard}>
           <View style={styles.posRow}>
             <View>
@@ -193,6 +224,7 @@ export default function ClassementsScreen() {
             </View>
           </View>
         </Card>
+        </Pressable>
       ) : null}
 
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
@@ -211,50 +243,54 @@ export default function ClassementsScreen() {
           <Muted>…</Muted>
         ) : current.rows.length === 0 ? (
           <Muted>{scope === 'friends' ? t.rankings.emptyFriends : t.rankings.emptyGlobal}</Muted>
+        ) : viewMode === 'me' && (current.aroundRows?.length ?? 0) > 0 ? (
+          /* ── « Autour de toi » (défaut, décision PO) : 3 devant, moi, ceux
+             qui suivent — la question « qui je peux doubler » est répondue
+             sans défiler. Top et liste complète restent à un tap. ── */
+          <>
+            <Card>
+              {(current.aroundRows ?? []).map((row, i) => (
+                <RangRow
+                  key={rowKey(row)}
+                  row={row}
+                  first={i === 0}
+                  avatars={avatars}
+                  onPress={() => openPilot(row)}
+                />
+              ))}
+            </Card>
+            <Button
+              label={t.rankings.seeTop}
+              variant="ghost"
+              onPress={() => setViewMode('top')}
+            />
+          </>
         ) : (
           <>
-            {current.rows.map((row) => {
-              const grade = gradeForElo(row.elo);
-              // Nouveau pilote : niveau en calibration → pas de grade figé.
-              const calibrating = isCalibrating(row.races);
-              return (
-                <Pressable key={rowKey(row)} onPress={() => openPilot(row)} accessibilityRole="button">
-                  <Card style={row.isMe ? styles.meCard : undefined}>
-                    <View style={styles.row}>
-                      <Body style={styles.rank}>{row.rank}</Body>
-                      <Avatar
-                        name={row.username}
-                        size={36}
-                        uri={row.avatarPath ? (avatars.get(row.avatarPath) ?? null) : null}
-                        cacheKey={row.avatarPath}
-                      />
-                      <View style={styles.flex}>
-                        <Body>
-                          {row.username}
-                          {row.isMe ? ` ${t.rankings.me}` : ''}
-                        </Body>
-                        {calibrating ? (
-                          <Muted>
-                            {t.profile.calibrating} · {row.elo}
-                          </Muted>
-                        ) : (
-                          <Muted style={{ color: grade.color }}>
-                            {grade.name} · {row.elo}
-                          </Muted>
-                        )}
-                      </View>
-                      {!calibrating ? <GradeMedal grade={grade} size={28} /> : null}
-                    </View>
-                  </Card>
-                </Pressable>
-              );
-            })}
+            <Card>
+              {current.rows.map((row, i) => (
+                <RangRow
+                  key={rowKey(row)}
+                  row={row}
+                  first={i === 0}
+                  avatars={avatars}
+                  onPress={() => openPilot(row)}
+                />
+              ))}
+            </Card>
 
             {current.mayHaveMore ? (
               <Button label={t.rankings.loadMore} onPress={onLoadMore} disabled={loadingMore} />
             ) : null}
             {moreFailed ? <Muted>{t.rankings.loadError}</Muted> : null}
 
+            {(current.aroundRows?.length ?? 0) > 0 ? (
+              <Button
+                label={t.rankings.backToMe}
+                variant="ghost"
+                onPress={() => setViewMode('me')}
+              />
+            ) : null}
             {!current.myRank ? <Muted style={styles.hint}>{t.rankings.notRankedYet}</Muted> : null}
           </>
         )}
@@ -263,13 +299,71 @@ export default function ClassementsScreen() {
   );
 }
 
+/** Ligne de classement dense (44 px) — ma ligne est surlignée. */
+function RangRow({
+  row,
+  first,
+  avatars,
+  onPress,
+}: {
+  row: LeaderboardRow;
+  first: boolean;
+  avatars: Map<string, string>;
+  onPress: () => void;
+}) {
+  const grade = gradeForElo(row.elo);
+  const calibrating = isCalibrating(row.races);
+  const ligne = (
+    <ListRow
+      first={first}
+      onPress={onPress}
+      left={
+        <>
+          <Body style={styles.rank}>{row.rank}</Body>
+          <Avatar
+            name={row.username}
+            size={28}
+            uri={row.avatarPath ? (avatars.get(row.avatarPath) ?? null) : null}
+            cacheKey={row.avatarPath}
+          />
+        </>
+      }
+      title={
+        <Body style={styles.rowName} numberOfLines={1}>
+          {row.username}
+          {row.isMe ? ` ${t.rankings.me}` : ''}
+        </Body>
+      }
+      sub={
+        calibrating ? (
+          <Muted style={styles.rowSub}>
+            {t.profile.calibrating} · {row.elo}
+          </Muted>
+        ) : (
+          <Muted style={[styles.rowSub, { color: grade.color }]}>
+            {grade.name} · {row.elo}
+          </Muted>
+        )
+      }
+      right={!calibrating ? <GradeMedal grade={grade} size={24} /> : undefined}
+    />
+  );
+  // Ma ligne : fond surligné, coins doux — le regard la trouve sans lire.
+  return row.isMe ? <View style={styles.meRow}>{ligne}</View> : ligne;
+}
+
 const styles = StyleSheet.create({
   filters: { flexDirection: 'row', gap: spacing.sm },
   list: { gap: spacing.sm, paddingBottom: spacing.xxl * 2, paddingTop: spacing.xs },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  rank: { fontFamily: fonts.serifBlack, fontSize: 18, color: colors.inkDim, minWidth: 30, textAlign: 'center' },
-  flex: { flex: 1 },
-  meCard: { borderColor: colors.accent },
+  rank: { fontFamily: fonts.serifBlack, fontSize: 16, color: colors.inkDim, minWidth: 26, textAlign: 'center' },
+  rowName: { fontSize: 14, lineHeight: 18, fontWeight: '600' },
+  rowSub: { fontSize: 11, lineHeight: 14 },
+  meRow: {
+    backgroundColor: colors.surface2,
+    borderRadius: 8,
+    paddingHorizontal: spacing.xs,
+    marginHorizontal: -spacing.xs,
+  },
   hint: { marginTop: spacing.xs },
   center: { gap: spacing.md, alignItems: 'flex-start' },
   posCard: { borderColor: colors.accent, marginBottom: spacing.xs },

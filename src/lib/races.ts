@@ -185,13 +185,27 @@ const RACE_SELECT =
 
 export async function listMyRaces(): Promise<{ upcoming: Race[]; past: Race[] }> {
   const { data: auth } = await supabase.auth.getUser();
-  const { data, error } = await supabase
-    .from('races')
-    .select(RACE_SELECT)
-    .eq('admin_id', auth.user?.id ?? '')
-    .order('scheduled_at', { ascending: false });
-  if (error) throw new Error(error.message);
-  const races = (data ?? []) as unknown as Race[];
+  const uid = auth.user?.id ?? '';
+  // Deux volets : les courses que J'ADMINISTRE et celles où JE SUIS INSCRIT.
+  // L'accueil ne filtrait que sur admin_id — une course où un ami m'avait mis
+  // sur la grille n'apparaissait NULLE PART (elle n'était joignable que par
+  // la notification, puis par l'historique après coup). Les deux volets sont
+  // nécessaires : un admin peut se retirer de sa propre grille et doit
+  // continuer de voir sa course.
+  const [admin, inscrit] = await Promise.all([
+    supabase.from('races').select(RACE_SELECT).eq('admin_id', uid),
+    supabase.from('participations').select(`race:races(${RACE_SELECT})`).eq('profile_id', uid),
+  ]);
+  if (admin.error) throw new Error(admin.error.message);
+  if (inscrit.error) throw new Error(inscrit.error.message);
+  const parId = new Map<string, Race>();
+  for (const r of (admin.data ?? []) as unknown as Race[]) parId.set(r.id, r);
+  for (const ligne of (inscrit.data ?? []) as unknown as { race: Race | null }[]) {
+    if (ligne.race) parId.set(ligne.race.id, ligne.race);
+  }
+  const races = [...parId.values()].sort(
+    (a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime(),
+  );
   return {
     // Les courses clôturées (« prêtes ») restent dans « à venir ».
     upcoming: races.filter((r) => r.status !== 'completed'),

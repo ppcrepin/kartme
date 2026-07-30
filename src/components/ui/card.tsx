@@ -18,6 +18,8 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderWidth: 1,
     borderRadius: radius.card,
-    padding: spacing.lg,
+    // 12 et non 16 : l'audit A17 a mesuré que le rembourrage des cartes
+    // comptait pour ~10 % de la hauteur des écrans de listes.
+    padding: spacing.md,
   },
 });
