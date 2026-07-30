@@ -706,7 +706,15 @@ export default function RaceDetailScreen() {
                           const self = pairInputs.find(
                             (p) => p.participationId === r.participationId,
                           );
-                          const duels = isOpen && self ? pairwiseBreakdown(self, pairInputs) : [];
+                          // Le delta RÉEL du serveur est passé en ancre : il
+                          // sert à résoudre le K du barème (64 installé, 128 en
+                          // calibration, moyenne par duel). Sans lui, l'écran
+                          // annonçait la moitié des points à un nouveau, tout
+                          // en affichant le bon total juste à côté.
+                          const duels =
+                            isOpen && self
+                              ? pairwiseBreakdown(self, pairInputs, r.eloDelta)
+                              : [];
                           return (
                             <View key={r.participationId}>
                               <ListRow
