@@ -1,8 +1,13 @@
 name: CI
 
+# ⚠️ La branche de travail est ICI, et pas seulement `main`.
+# Elle en était absente, alors que c'est ELLE qui déclenche `deploy-web.yml` :
+# on publiait en production sans qu'aucun contrôle automatique n'ait tourné.
+# La CI n'avait d'ailleurs jamais été exécutée sur ce lot — ses seules
+# exécutions dataient du dernier passage par `main`.
 on:
   push:
-    branches: [main]
+    branches: [main, claude/karting-app-requirements-d5xm1t]
   pull_request:
 
 concurrency:
