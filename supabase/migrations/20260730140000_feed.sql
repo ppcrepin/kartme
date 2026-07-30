@@ -70,6 +70,10 @@ create index if not exists races_completed_idx on public.races (completed_at des
   where completed_at is not null;
 create index if not exists user_badges_unlocked_idx
   on public.user_badges (unlocked_at desc);
+-- elo_history est la PLUS GROSSE des quatre sources (une ligne par pilote et
+-- par course) : sans cet index, chaque ouverture du fil la balaye entière.
+create index if not exists elo_history_created_idx
+  on public.elo_history (created_at desc);
 
 -- ── 3. Qui est mon ami ? ─────────────────────────────────────────────────
 -- Extrait en fonction : la condition est reprise cinq fois dans get_feed, et
@@ -158,7 +162,9 @@ language sql stable security definer set search_path = public as $$
     select 'race_upcoming'::text as kind, r.created_at as at,
            r.admin_id as actor_id, r.id as race_id, r.circuit_id, r.scheduled_at
     from races r, moi, fenetre
-    where r.status = 'upcoming'
+    -- 'locked' inclus : une grille clôturée reste une course À VENIR (même
+    -- classement que l'accueil) — sinon l'item s'évapore quand l'admin fige.
+    where r.status in ('upcoming', 'locked')
       and r.scheduled_at >= now()
       and r.created_at >= fenetre.depuis
       and r.admin_id <> moi.id
@@ -169,23 +175,34 @@ language sql stable security definer set search_path = public as $$
   --     pilote) : sinon une course à 6 amis produirait 6 lignes identiques.
   --     Exclut les courses dont je suis l'admin : c'est moi qui ai saisi le
   --     classement, l'annoncer m'informerait de ce que je viens de faire.
+  --
+  --     ⚠️ L'ACTEUR est L'AMI qui a couru, JAMAIS l'admin : l'admin peut être
+  --     un inconnu au profil privé, et le nommer par ce champ contournerait
+  --     la règle « un privé non-ami n'est jamais nommé » (trou attrapé par la
+  --     revue adversariale — la RLS profiles me cache ce profil, la fonction
+  --     SECURITY DEFINER l'aurait révélé). Corollaire voulu : la course de
+  --     mon ami reste au fil même si son admin inconnu supprime son compte.
   courses_finies as (
     select 'race_result'::text as kind, r.completed_at as at,
-           r.admin_id as actor_id, r.id as race_id, r.circuit_id,
+           ami.profile_id as actor_id, r.id as race_id, r.circuit_id,
            r.scheduled_at
-    from races r, moi, fenetre
+    from races r
+    cross join moi cross join fenetre
+    cross join lateral (
+      select pa.profile_id
+      from participations pa
+      join profiles p on p.id = pa.profile_id
+      where pa.race_id = r.id
+        and pa.profile_id is not null
+        and p.deleted_at is null and p.suspended_at is null
+        and public.feed_is_friend(pa.profile_id)
+      order by pa.created_at, pa.profile_id
+      limit 1
+    ) ami
     where r.status = 'completed'
       and r.completed_at is not null
       and r.completed_at >= fenetre.depuis
       and r.admin_id <> moi.id
-      and exists (
-        select 1 from participations pa
-        join profiles p on p.id = pa.profile_id
-        where pa.race_id = r.id
-          and pa.profile_id is not null
-          and p.deleted_at is null and p.suspended_at is null
-          and public.feed_is_friend(pa.profile_id)
-      )
   ),
 
   -- (3+4) Changement de GRADE, dérivé d'elo_history : la bande de l'Elo après
@@ -256,8 +273,14 @@ language sql stable security definer set search_path = public as $$
       and a.suspended_at is null
       and not public.is_blocked(b.actor_id, (select id from moi))
       and (p_before is null or b.at < p_before)
-    order by b.at desc
-    limit greatest(coalesce(p_limit, 20), 0)
+    -- Tie-breakers : submit_race_results insère grades et badges d'une même
+    -- course au MÊME instant — sans eux, l'ordre inter-appels varierait.
+    order by b.at desc, b.kind, b.actor_id, b.race_id
+    -- Plafond 50 : au volume réel (5 à 8 items/mois), UNE page couvre toute
+    -- la fenêtre de 90 jours. Le curseur `p_before` est strict (<) : sur des
+    -- timestamps égaux en frontière de page il peut sauter des jumeaux — on
+    -- ne pagine donc pas en pratique, on sert la fenêtre entière.
+    limit least(greatest(coalesce(p_limit, 20), 0), 50)
   )
 
   select f.kind, f.at, f.actor_id,
@@ -276,6 +299,9 @@ language sql stable security definer set search_path = public as $$
           join profiles p on p.id = pa.profile_id
           where re.race_id = f.race_id and re.position = 1
             and pa.profile_id is not null
+            -- Mêmes exclusions que l'acteur : un suspendu/supprimé n'est
+            -- jamais nommé (aligné sur get_leaderboard).
+            and p.deleted_at is null and p.suspended_at is null
           limit 1) as winner_username,
          -- Ma place et mon delta : ce qui transforme un fait en enjeu.
          (select re.position from results re
@@ -291,7 +317,7 @@ language sql stable security definer set search_path = public as $$
   join profiles a on a.id = f.actor_id
   left join races r on r.id = f.race_id
   left join circuits c on c.id = coalesce(f.circuit_id, r.circuit_id)
-  order by f.at desc;
+  order by f.at desc, f.kind, f.actor_id, f.race_id;
 $$;
 revoke all on function public.get_feed(timestamptz, int) from public, anon;
 grant execute on function public.get_feed(timestamptz, int) to authenticated;

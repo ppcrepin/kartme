@@ -70,7 +70,9 @@ insert into public.circuits (id, name, city, is_official, lat, lon) values
 -- r5 : TERMINÉE, admin MOI                       → non (j'ai saisi le classement).
 -- r6 : TERMINÉE, admin X (inconnu), sans ami     → non (aucun ami dedans).
 -- r7 : À VENIR, créée par A, mais DÉJÀ PASSÉE    → non (plus une actualité).
--- r8 : TERMINÉE, admin S (compte supprimé)       → non.
+-- r8 : TERMINÉE, admin S (compte supprimé), l'ami A y a couru
+--      → APPARAÎT : l'acteur est L'AMI, pas l'admin (revue adversariale) —
+--      la course de mon ami ne disparaît pas parce qu'un inconnu s'efface.
 insert into public.races (id, admin_id, circuit_id, scheduled_at, status, completed_at, created_at) values
   ('fd000000-0000-0000-0000-0000000000e1', 'fd000000-0000-0000-0000-00000000000a',
    'fd000000-0000-0000-0000-0000000000c1', now() + interval '3 days', 'upcoming', null, now() - interval '1 hour'),
@@ -132,15 +134,20 @@ insert into public.user_badges (profile_id, badge_key, unlocked_at) values
 -- ═══════════════════════ Vérifications ═══════════════════════
 select tests.as_uid('fd000000-0000-0000-0000-000000000001');
 
--- Le compte exact du fil : r1 (à venir de A) + r4 (résultat de A) + h1 + h2
--- (montée ET chute de A) + h3 (ma chute) + b1 (badge de A) = 6.
-select tests.eq((select count(*) from public.get_feed(null, 50)), 6,
-  'le fil de M contient exactement 6 items');
+-- Le compte exact du fil : r1 (à venir de A) + r4 + r8 (résultats où l'ami A
+-- a couru) + h1 + h2 (montée ET chute de A) + h3 (ma chute) + b1 (badge) = 7.
+select tests.eq((select count(*) from public.get_feed(null, 50)), 7,
+  'le fil de M contient exactement 7 items');
 
 select tests.eq((select count(*) from public.get_feed(null, 50) where kind = 'race_upcoming'), 1,
   'une seule course à venir (celle de l''ami, ni la mienne ni celle du pending)');
-select tests.eq((select count(*) from public.get_feed(null, 50) where kind = 'race_result'), 1,
-  'un seul résultat (ni ma course, ni celle sans ami, ni celle du compte supprimé)');
+select tests.eq((select count(*) from public.get_feed(null, 50) where kind = 'race_result'), 2,
+  'deux résultats : r4 et r8 (l''ami y a couru) — ni ma course, ni celle sans ami');
+-- L'ACTEUR de r8 est l'ami A, jamais l'admin supprimé : c'est le correctif
+-- de la revue (l'admin peut être un inconnu privé, son nom ne sort pas).
+select tests.eqt((select actor_username from public.get_feed(null, 50)
+                  where race_id = 'fd000000-0000-0000-0000-0000000000e8'),
+  'Ami_A', 'l''acteur d''un résultat est l''ami qui a couru, pas l''admin');
 select tests.eq((select count(*) from public.get_feed(null, 50) where kind = 'grade_friend'), 2,
   'DEUX changements de grade de l''ami : la montée ET la chute (décision PO)');
 select tests.eq((select count(*) from public.get_feed(null, 50) where kind = 'grade_me'), 1,
@@ -160,21 +167,23 @@ select tests.eq((select count(*) from public.get_feed(null, 50)
                  where actor_id = 'fd000000-0000-0000-0000-000000000002'), 0,
   'une demande d''ami PENDING ne donne aucun item');
 
--- Le compte supprimé et le suspendu sont hors du fil (filtres recopiés de
--- get_leaderboard).
+-- Le compte supprimé et le suspendu ne sont JAMAIS acteurs d'un item.
 select tests.eq((select count(*) from public.get_feed(null, 50)
                  where actor_id in ('fd000000-0000-0000-0000-000000000004',
                                     'fd000000-0000-0000-0000-000000000005')), 0,
-  'ni le compte supprimé ni le suspendu n''apparaissent');
+  'ni le compte supprimé ni le suspendu ne sont acteurs');
 
 -- Invités : COMPTÉS, jamais nommés. Sur r4 : 2 inscrits + 1 invité.
-select tests.eq((select pilots_count from public.get_feed(null, 50) where kind = 'race_result'), 2,
+select tests.eq((select pilots_count from public.get_feed(null, 50)
+                 where race_id = 'fd000000-0000-0000-0000-0000000000e4'), 2,
   'r4 compte 2 inscrits au compte');
-select tests.eq((select guests_count from public.get_feed(null, 50) where kind = 'race_result'), 1,
+select tests.eq((select guests_count from public.get_feed(null, 50)
+                 where race_id = 'fd000000-0000-0000-0000-0000000000e4'), 1,
   'r4 compte 1 invité');
 
 -- Le vainqueur est nommé parce que c'est mon ami.
-select tests.eqt((select winner_username from public.get_feed(null, 50) where kind = 'race_result'),
+select tests.eqt((select winner_username from public.get_feed(null, 50)
+                  where race_id = 'fd000000-0000-0000-0000-0000000000e4'),
   'Ami_A', 'le vainqueur ami est nommé');
 
 -- Le circuit remonte, même pour un item de course à venir.
@@ -186,9 +195,10 @@ select tests.eqt((select kind from public.get_feed(null, 50) limit 1), 'race_upc
   'le fil est trié du plus récent au plus ancien');
 
 -- Pagination par curseur : en repartant du `at` du premier item, on obtient
--- les 5 suivants et jamais deux fois le même.
+-- les 6 suivants et jamais deux fois le même. (En pratique le curseur ne
+-- sert plus : une page de 50 couvre toute la fenêtre de 90 jours.)
 select tests.eq((select count(*) from public.get_feed(
-                   (select at from public.get_feed(null, 50) limit 1), 50)), 5,
+                   (select at from public.get_feed(null, 50) limit 1), 50)), 6,
   'le curseur exclut l''item déjà reçu');
 
 -- ── Vue d'un vainqueur PRIVÉ, non-ami : le temps du fait reste, le nom part ──
@@ -235,12 +245,13 @@ delete from public.blocks where blocker_id = 'fd000000-0000-0000-0000-0000000000
 -- futur plancher de date ne soit pas ajouté par accident.
 insert into public.friendships (requester_id, addressee_id, status, created_at, updated_at) values
   ('fd000000-0000-0000-0000-000000000001', 'fd000000-0000-0000-0000-000000000003', 'accepted', now(), now());
--- Trois items d'un coup : sa montée de grade passée, la course qu'elle
--- administrait (un ami — elle — y a couru) et son badge. C'est exactement
--- l'étendue de la rétroactivité voulue.
+-- Cinq items d'un coup : sa montée de grade, son badge, sa course r6, et les
+-- courses partagées r9 ET r4 dont elle devient l'acteur (le départage « ami
+-- le plus ancien sur la grille, puis identifiant » la choisit). C'est
+-- l'étendue de la rétroactivité voulue par le PO.
 select tests.eq((select count(*) from public.get_feed(null, 50)
-                 where actor_id = 'fd000000-0000-0000-0000-000000000003'), 3,
-  'une amitié toute neuve ouvre les trois items passés de X');
+                 where actor_id = 'fd000000-0000-0000-0000-000000000003'), 5,
+  'une amitié toute neuve ouvre les cinq items passés de X');
 select tests.eq((select count(*) from public.get_feed(null, 50)
                  where actor_id = 'fd000000-0000-0000-0000-000000000003'
                    and kind = 'grade_friend'), 1,
@@ -249,13 +260,22 @@ delete from public.friendships
  where requester_id = 'fd000000-0000-0000-0000-000000000001'
    and addressee_id = 'fd000000-0000-0000-0000-000000000003';
 
+-- ── Une course CLÔTURÉE reste « à venir » au fil ────────────────────────
+-- L'accueil classe les 'locked' dans « à venir » : le fil fait pareil, sinon
+-- l'item s'évapore quand l'admin fige la grille.
+update public.races set status = 'locked'
+ where id = 'fd000000-0000-0000-0000-0000000000e1';
+select tests.eq((select count(*) from public.get_feed(null, 50) where kind = 'race_upcoming'), 1,
+  'une course clôturée reste au fil comme course à venir');
+update public.races set status = 'upcoming'
+ where id = 'fd000000-0000-0000-0000-0000000000e1';
+
 -- ── Compteur « ça bouge » et marquage ───────────────────────────────────
 -- Tout est plus récent que feed_seen_at reculé à 30 jours → 6 nouveautés.
 update public.profiles set feed_seen_at = now() - interval '30 days'
  where id = 'fd000000-0000-0000-0000-000000000001';
--- Sept, et non six : les scénarios précédents ont ajouté la course au
--- vainqueur privé (r9), qui est bien au fil.
-select tests.eq((select public.unread_feed_count()), 7, 'sept nouveautés avant lecture');
+-- Huit : les 7 du départ + la course au vainqueur privé (r9) ajoutée depuis.
+select tests.eq((select public.unread_feed_count()), 8, 'huit nouveautés avant lecture');
 
 select public.mark_feed_seen();
 select tests.eq((select public.unread_feed_count()), 0, 'plus aucune nouveauté après lecture');
@@ -288,8 +308,8 @@ select tests.eq((select count(*) from public.get_feed(null, 50)), 1,
 -- écrite.
 select tests.as_uid('fd000000-0000-0000-0000-000000000001');
 select tests.eq((select count(*) from public.get_feed(null, 50)
-                 where actor_id = 'fd000000-0000-0000-0000-00000000000a'), 6,
-  'avant suppression, l''ami A alimente 6 items');
+                 where actor_id = 'fd000000-0000-0000-0000-00000000000a'), 7,
+  'avant suppression, l''ami A alimente 7 items');
 update public.profiles set deleted_at = now()
  where id = 'fd000000-0000-0000-0000-00000000000a';
 select tests.eq((select count(*) from public.get_feed(null, 50)
