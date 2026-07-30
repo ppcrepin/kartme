@@ -38,6 +38,12 @@ export function Button({
 const styles = StyleSheet.create({
   base: {
     borderRadius: radius.pill,
+    // 44 px de HAUT au minimum : le plancher d'une zone tapable au doigt.
+    // `paddingVertical: spacing.md - 2` donnait 39 px pour un label de 19 —
+    // cinq de trop peu, sur TOUS les boutons de l'app. `minHeight` plutôt
+    // qu'un padding plus généreux : un label qui passe sur deux lignes garde
+    // sa hauteur naturelle au lieu de gagner 10 px de plus.
+    minHeight: 44,
     paddingVertical: spacing.md - 2,
     paddingHorizontal: spacing.xl,
     borderWidth: 1.5,

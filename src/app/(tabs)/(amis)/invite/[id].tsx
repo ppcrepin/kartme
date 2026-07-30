@@ -7,8 +7,9 @@ import { Avatar, Button, Card, SkeletonCard } from '@/components/ui';
 import { Body, Heading, Muted } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
-import { track } from '@/lib/analytics';
+import { clearReferrer, track } from '@/lib/analytics';
 import { signedAvatarUrls } from '@/lib/avatar';
+import { messageFr } from '@/lib/erreur-fr';
 import { acceptFriendInvite, getInviter } from '@/lib/friends';
 
 type Inviter = { id: string; username: string; avatarPath: string | null; isMe: boolean };
@@ -71,6 +72,14 @@ export default function InviteScreen() {
         // Son propre lien : le serveur le renvoie marqué, l'écran le dit —
         // c'est le premier geste de quelqu'un qui vient de le générer.
         setEtat(inv.isMe ? 'moi' : 'pret');
+        // …et ce geste EMPOISONNAIT le parrainage de l'appareil : la capture
+        // avait déjà écrit son propre identifiant dans `localStorage`, où il
+        // restait à vie (rien ne l'effaçait, faute d'une future inscription sur
+        // ce compte). Scénario karting très banal — « tiens, prends mon
+        // téléphone, inscris-toi » — et l'inscription de l'ami partait créditée
+        // à celui qui avait ouvert son propre lien, sans qu'aucun lien n'ait
+        // été envoyé.
+        if (inv.isMe) clearReferrer();
         const urls = await signedAvatarUrls([inv.avatarPath]);
         if (vivant) setAvatarUrl(inv.avatarPath ? (urls.get(inv.avatarPath) ?? null) : null);
       })
@@ -93,19 +102,22 @@ export default function InviteScreen() {
       else if (code === 'gone') setEtat('inconnu');
       else {
         setResultat(code);
-        // Mesure du canal d'acquisition : c'est le lien d'amitié qui a converti.
-        track('friend_invite_accepted').catch(() => {});
+        // Mesure du canal d'acquisition. Deux précisions qui décident de la
+        // justesse du chiffre :
+        //   · l'INVITANT est joint à l'événement — sans lui, le tableau de bord
+        //     ne pouvait pas vérifier que le parrain mémorisé était bien celui
+        //     dont on venait d'accepter le lien, et créditait au lien d'ami une
+        //     inscription venue d'un lien de course ;
+        //   · seul un `ok` compte. Sur `already` (lien rouvert, deuxième
+        //     appareil, double tap tardif) l'amitié existait DÉJÀ : compter là
+        //     laissait un pilote gonfler le compteur en rouvrant un lien.
+        if (code === 'ok') track('friend_invite_accepted', { inviter: id }).catch(() => {});
       }
     } catch (e) {
-      // Les exceptions MÉTIER de nos fonctions SQL sont en français et passent
-      // telles quelles ; un refus TECHNIQUE (RLS, droits) sortirait en anglais
-      // brut dans une app entièrement française.
-      const m = e instanceof Error ? e.message : '';
-      setErreur(
-        m && !/permission denied|row-level security|violates|duplicate key|invalid input/i.test(m)
-          ? m
-          : t.invite.error,
-      );
+      // Filtre partagé : les exceptions MÉTIER de nos fonctions SQL sont en
+      // français et passent telles quelles ; un refus TECHNIQUE (RLS, droits)
+      // sortirait en anglais brut dans une app entièrement française.
+      setErreur(messageFr(e, t.invite.error));
     } finally {
       setBusy(false);
     }

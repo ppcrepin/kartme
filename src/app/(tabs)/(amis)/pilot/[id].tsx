@@ -8,6 +8,7 @@ import { Avatar, BadgeIcon, Button, Card, GradeMedal, ListRow, SkeletonCard, Tag
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
+import { pluriel } from '@/lib/nombre';
 import { useAuth } from '@/lib/auth';
 import { listBadges, type BadgeKey, type UnlockedBadge } from '@/lib/badges';
 import { formatRaceDate } from '@/lib/datetime';
@@ -61,10 +62,18 @@ export default function PilotScreen() {
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [busy, setBusy] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  // `panne` ≠ `introuvable` : sans cette distinction, l'écran restait sur un
+  // squelette gris SANS AUCUN TEXTE, indéfiniment — `refresh().catch(() => {})`
+  // avalait l'erreur et il n'existait pas d'état terminal. Or on arrive ici
+  // d'un tap sur « Voir son profil » juste après avoir accepté un lien d'ami :
+  // le geste qui suit immédiatement la conversion du canal d'acquisition n°1.
+  const [etat, setEtat] = useState<'chargement' | 'pret' | 'introuvable' | 'panne'>('chargement');
+  const [essai, setEssai] = useState(0);
 
   const refresh = useCallback(async () => {
     if (!id) return;
     const [p, f, d] = await Promise.all([getPilot(id), getFriendshipWith(id), faceToFace(id)]);
+    setEtat(p ? 'pret' : 'introuvable');
     setPilot(p);
     setFriendship(f);
     setDuel(d);
@@ -97,8 +106,11 @@ export default function PilotScreen() {
         router.replace('/profil');
         return;
       }
-      refresh().catch(() => {});
-    }, [id, session?.user.id, router, refresh]),
+      // `essai` (incrémenté par « Réessayer ») est dans les dépendances : c'est
+      // ce qui relance le chargement sans appeler de setState hors gestionnaire.
+      void essai;
+      refresh().catch(() => setEtat('panne'));
+    }, [id, session?.user.id, router, refresh, essai]),
   );
 
   async function act(fn: () => Promise<void>) {
@@ -147,7 +159,26 @@ export default function PilotScreen() {
           <Muted>←</Muted>
         </Pressable>
 
-        {!pilot || !grade ? (
+        {etat === 'panne' ? (
+          <View style={styles.etatBloc}>
+            <Muted>{t.friends.loadError}</Muted>
+            <Button label={t.inbox.retry} onPress={() => setEssai((n) => n + 1)} />
+            <Button
+              label={t.invite.toFriends}
+              variant="ghost"
+              onPress={() => router.replace('/amis')}
+            />
+          </View>
+        ) : etat === 'introuvable' ? (
+          <View style={styles.etatBloc}>
+            <Muted>{t.friends.notFound}</Muted>
+            <Button
+              label={t.invite.toFriends}
+              variant="ghost"
+              onPress={() => router.replace('/amis')}
+            />
+          </View>
+        ) : !pilot || !grade ? (
           <SkeletonCard />
         ) : blocked ? (
           <Muted>{t.friends.blocked}</Muted>
@@ -248,7 +279,7 @@ export default function PilotScreen() {
               {/* Courses où aucun des deux n'a fini : ni victoire, ni défaite. */}
               {duel && duel.draws > 0 ? (
                 <Muted style={styles.duelEmpty}>
-                  {t.friends.faceToFaceDraws.replace('%n', String(duel.draws))}
+                  {t.friends.faceToFaceDraws.replace('%c', pluriel(duel.draws, 'course'))}
                 </Muted>
               ) : null}
             </Card>
@@ -378,7 +409,17 @@ function StatTile({ label, value }: { label: string; value: number }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl * 2 },
-  back: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
+  // 44 px RÉELS. `hitSlop` était censé agrandir la cible, mais
+  // react-native-web ne l'implémente pas sur `Pressable` : la zone mesurait
+  // 13 × 27 px et un clic 8 px sous le glyphe ne déclenchait rien.
+  back: {
+    alignSelf: 'flex-start',
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    marginLeft: -spacing.sm,
+  },
+  etatBloc: { gap: spacing.md, paddingTop: spacing.md },
   flex: { flex: 1 },
   identity: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   username: { fontSize: 22, lineHeight: 26 },

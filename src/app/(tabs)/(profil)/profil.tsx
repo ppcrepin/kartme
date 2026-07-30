@@ -9,6 +9,7 @@ import { signedAvatarUrls } from '@/lib/avatar';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
+import { pluriel } from '@/lib/nombre';
 import { BADGE_KEYS, listBadges, type BadgeKey, type UnlockedBadge } from '@/lib/badges';
 import { formatRaceDate } from '@/lib/datetime';
 import { CALIBRATION_RACES, gradeProgress, isCalibrating } from '@/lib/grade';
@@ -115,7 +116,7 @@ export default function ProfilScreen() {
           </Muted>
           {isCalibrating(stats.races) ? (
             <Muted style={styles.nextGrade}>
-              {t.profile.calibratingHint.replace('%n', String(CALIBRATION_RACES - stats.races))}
+              {t.profile.calibratingHint.replace('%c', pluriel(CALIBRATION_RACES - stats.races, 'course'))}
             </Muted>
           ) : null}
 

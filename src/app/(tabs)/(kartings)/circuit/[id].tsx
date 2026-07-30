@@ -7,6 +7,7 @@ import { Button, Card, CheckeredRule, Tag } from '@/components/ui';
 import { Body, Label, Muted } from '@/components/ui/text';
 import { colors, fonts, radius, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
+import { nombreFr } from '@/lib/nombre';
 import {
   getCircuitPage,
   getCircuitTopTimes,
@@ -141,18 +142,30 @@ export default function CircuitPageScreen() {
         </View>
 
         {page.lengthM ||
+        page.widthM ||
         (page.motorKind && t.races.circuitPage.motorKinds[page.motorKind]) ||
         (page.usageKind && t.races.circuitPage.usageKinds[page.usageKind]) ? (
           <View style={styles.specsRow}>
+            {/* La largeur était IMBRIQUÉE dans la condition de la longueur : un
+                circuit dont on connaît la largeur mais pas la longueur perdait
+                silencieusement la donnée. Elle a désormais son propre rendu, et
+                reste en `Body` — en `Muted` elle se confondait avec
+                « Karts thermiques » et « Loisir et compétition » sur la même
+                ligne, et « × 8 m » se lisait comme une quatrième étiquette
+                plutôt que comme la seconde dimension. */}
             {page.lengthM ? (
               <Body style={styles.spec}>
-                {t.races.circuitPage.meters.replace('%n', String(Math.round(page.lengthM)))}
-                {page.widthM ? (
-                  <Muted style={styles.specDim}>
-                    {' × '}
-                    {t.races.circuitPage.meters.replace('%n', String(Math.round(page.widthM)))}
-                  </Muted>
-                ) : null}
+                {t.races.circuitPage.meters.replace('%n', nombreFr(Math.round(page.lengthM)))}
+                {page.widthM
+                  ? ` × ${t.races.circuitPage.meters.replace('%n', nombreFr(Math.round(page.widthM)))}`
+                  : ''}
+              </Body>
+            ) : page.widthM ? (
+              <Body style={styles.spec}>
+                {t.races.circuitPage.width.replace(
+                  '%n',
+                  nombreFr(Math.round(page.widthM)),
+                )}
               </Body>
             ) : null}
             {page.motorKind ? (

@@ -61,7 +61,18 @@ export { Muted } from '@/components/ui/text';
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.md, gap: spacing.md },
-  back: { alignSelf: 'flex-start', paddingVertical: 2 },
+  // 44 px RÉELS. `hitSlop` était censé suffire, mais react-native-web ne
+  // l'implémente pas sur `Pressable` : la zone mesurait 13 × 23 px, et un clic
+  // 8 px sous la flèche ne déclenchait rien — vérifié au navigateur. La marge
+  // négative compense l'agrandissement pour que la flèche ne bouge pas.
+  back: {
+    alignSelf: 'flex-start',
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    marginLeft: -spacing.sm,
+    marginBottom: -spacing.sm,
+  },
   rule: { width: 48, marginLeft: spacing.sm, flexShrink: 0 },
   spacer: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

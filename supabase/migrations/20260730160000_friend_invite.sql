@@ -41,7 +41,22 @@ drop function if exists public.get_inviter(uuid);
 create function public.get_inviter(p_inviter uuid)
 returns table (id uuid, username text, avatar_path text, is_me boolean)
 language sql stable security definer set search_path = public as $$
-  select p.id, p.username, p.avatar_path, (p.id = auth.uid())
+  -- `avatar_path` masqué pour un profil privé non-ami, comme le fait
+  -- `get_pilot` : la règle du dépôt est de ne pas révéler au passage qu'un
+  -- profil privé A une photo. Aucune fuite d'image n'était possible
+  -- (`can_read_avatar` exige non-privé ou amitié acceptée, donc l'écran
+  -- retombait déjà sur les initiales) — mais deux fonctions qui appliquent des
+  -- règles différentes au même champ finissent par diverger pour de bon.
+  select p.id, p.username,
+         case when p.is_private and p.id <> auth.uid()
+                   and not exists (
+                     select 1 from friendships f
+                      where f.status = 'accepted'
+                        and ((f.requester_id = auth.uid() and f.addressee_id = p.id)
+                          or (f.requester_id = p.id and f.addressee_id = auth.uid()))
+                   )
+              then null else p.avatar_path end,
+         (p.id = auth.uid())
   from profiles p
   where p.id = p_inviter
     and p.deleted_at is null
@@ -60,8 +75,15 @@ grant execute on function public.get_inviter(uuid) to authenticated;
 -- chaque cas, et pour 'gone' il doit RETIRER le bouton, pas le laisser sous un
 -- message d'erreur qui invite à retaper.
 --
--- Seul le plafond horaire lève encore : il est TRANSITOIRE, son message est
--- actionnable (« réessaie dans un moment »), et l'invitation reste valable.
+-- Deux chemins lèvent encore, et tous deux à bon droit :
+--   · le plafond horaire — TRANSITOIRE, message actionnable (« réessaie dans un
+--     moment »), et l'invitation reste valable ;
+--   · l'invité lui-même SUSPENDU — le trigger `friendships_guard_suspended` est
+--     `before insert`, il coupe avant l'écriture avec « Compte suspendu :
+--     action impossible. ». Message français, donc l'écran le sert tel quel.
+-- (« pas de session » lève aussi, mais la RPC n'est ouverte qu'à
+-- `authenticated` : ce cas n'arrive que sur un jeton expiré entre le
+-- chargement de l'écran et le tap.)
 create or replace function public.accept_friend_invite(p_inviter uuid)
 returns text
 language plpgsql security definer set search_path = public as $$
@@ -84,10 +106,16 @@ begin
   -- fantôme réglementaire.
   --
   -- ⚠️ UNE SEULE réponse pour « inconnu », « parti », « suspendu » ET « te
-  -- bloque ». Des réponses distinctes formaient un oracle : en les comparant,
-  -- on apprenait qu'un identifiant existe et qu'il nous a bloqué — exactement
-  -- ce que `get_inviter` refuse de dire en ne renvoyant aucune ligne dans tous
-  -- ces cas. Le serveur ne doit pas contredire ailleurs ce qu'il tait ici.
+  -- bloque ». Des réponses distinctes formaient un oracle FIN : « ce pilote
+  -- n'est plus joignable » d'un côté, « impossible d'ajouter ce pilote » de
+  -- l'autre, et l'on savait lequel des quatre cas s'appliquait.
+  --
+  -- Précision honnête sur ce que cela protège : `get_inviter` renvoie 0 ou 1
+  -- ligne pour EXACTEMENT le même prédicat, donc le bit « ce compte est-il
+  -- ajoutable ? » est de toute façon lisible par tout inscrit sur n'importe
+  -- quel identifiant. Ce qui disparaît ici, c'est la DISTINCTION entre les
+  -- quatre causes — la seule information réellement sensible, puisque c'est
+  -- elle qui révèle un blocage.
   select username into v_name from profiles
    where id = p_inviter
      and deleted_at is null

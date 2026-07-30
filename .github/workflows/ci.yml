@@ -80,10 +80,26 @@ jobs:
 
       # Le navigateur seul : `--with-deps` installe aussi Firefox et WebKit,
       # inutiles ici (un seul projet, chromium).
+      #
+      # Mis en cache sur la version de @playwright/test : sans cela, chaque
+      # exécution retélécharge ~150 Mo de navigateur.
+      - name: Playwright version
+        id: pw
+        run: echo "v=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ steps.pw.outputs.v }}
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      # `timeout-minutes` : sans lui, un serveur Expo qui ne démarre jamais
+      # occupe un exécutant pendant six heures (le défaut GitHub).
       - name: End-to-end tests
+        timeout-minutes: 20
         run: npm run test:e2e
 
       # Les traces ne sont produites qu'au premier échec (`trace:

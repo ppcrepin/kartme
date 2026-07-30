@@ -148,6 +148,9 @@ export const fr = {
       // lit seul — un mot devant chaque nombre allongeait l'écran sans rien
       // apprendre, et l'objectif du lot de densité est l'inverse.
       meters: '%n m',
+      // Servi SEULEMENT quand la longueur manque : « 8 m » nu se lirait
+      // comme une longueur de piste de huit mètres.
+      width: 'Largeur %n m',
       envKinds: {
         indoor: 'Indoor',
         outdoor: 'Extérieur',
@@ -334,6 +337,12 @@ export const fr = {
     remove: 'Retirer des amis',
     block: 'Bloquer',
     blocked: 'Pilote bloqué.',
+    // Deux états DISTINCTS, et c'est le point : la fiche restait sur un
+    // squelette gris muet, sans fin, quelle que soit la cause. On y arrive
+    // d'un tap sur « Voir son profil » juste après avoir accepté un lien
+    // d'ami — le geste qui suit la conversion.
+    loadError: 'Impossible de charger cette fiche. Vérifie ta connexion.',
+    notFound: 'Ce pilote n’est plus là.',
     report: 'Signaler',
     reportTitle: 'Pourquoi signales-tu ce pilote ?',
     reportSent: 'Signalement envoyé. Merci.',
@@ -348,7 +357,9 @@ export const fr = {
     privateProfile: 'Profil privé — deviens son ami pour voir ses stats.',
     faceToFace: 'Face-à-face',
     faceToFaceEmpty: 'Aucune course commune pour l’instant.',
-    faceToFaceDraws: 'Dont %n course(s) où aucun des deux n’a fini.',
+    // %c = « 1 course » / « 3 courses » composé par `pluriel()` : la forme
+    // « %n course(s) » laissait la parenthèse VISIBLE en pleine phrase.
+    faceToFaceDraws: 'Dont %c où aucun des deux n’a fini.',
     you: 'Toi',
     addToRace: 'Ajouter un ami à la course',
   },
@@ -387,7 +398,7 @@ export const fr = {
     maxGrade: 'Grade maximal atteint 🏆',
     // Période de calibration : les 5 premières courses, le niveau se règle vite.
     calibrating: 'En calibration',
-    calibratingHint: 'En calibration : ton niveau se règle plus vite (encore %n course(s)).',
+    calibratingHint: 'En calibration : ton niveau se règle plus vite (encore %c).',
     stats: 'Statistiques',
     races: 'Courses',
     wins: 'Victoires',
@@ -469,10 +480,12 @@ export const fr = {
     shares: 'Partages',
     signups: 'Inscriptions',
     viralityNote: 'K-factor = part des inscriptions arrivées via un lien de parrainage.',
-    inviteAccepts: 'Liens d’ami acceptés',
+    inviteTitle: 'Lien d’ami',
+    inviteAccepts: 'Liens acceptés',
     inviteSignups: 'dont nouveaux comptes',
     inviteNote:
-      'Un lien accepté par un pilote déjà inscrit compte dans le premier chiffre, pas dans le second.',
+      'Un lien accepté par un pilote déjà inscrit compte dans « Liens acceptés », pas dans « nouveaux comptes ».',
+    loadError: 'Impossible de charger le tableau de bord.',
     activationTitle: 'Activation',
     activationRate: 'Ont une course',
     racedRate: 'Ont couru',

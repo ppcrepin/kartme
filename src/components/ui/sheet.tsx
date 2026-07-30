@@ -46,14 +46,23 @@ export function Sheet({
   return (
     <Modal transparent visible animationType="none" onRequestClose={onClose}>
       <View style={styles.voileZone}>
-        <Pressable
-          style={styles.voile}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Fermer"
-        />
+        {/* Le voile ferme au tap mais n'est PAS annoncé comme un bouton : la
+            poignée ci-dessous est la commande de fermeture, et deux boutons
+            « Fermer » identiques dans la même vue sont une gêne pour un lecteur
+            d'écran autant qu'une ambiguïté pour un test — `getByLabel('Fermer')`
+            en trouvait deux, et le premier dans l'ordre du DOM était ce voile
+            plein écran, dont le centre est RECOUVERT par une feuille haute.
+            D'où un clic parfois intercepté, donc un test instable. */}
+        <Pressable style={styles.voile} onPress={onClose} />
         <Animated.View style={[styles.feuille, { transform: [{ translateY }] }]}>
-          <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Fermer" hitSlop={10}>
+          {/* Zone tapable de 44 px : `hitSlop` seul ne fait rien sur web, la
+              poignée ne mesurait que 13 px de haut. */}
+          <Pressable
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Fermer"
+            hitSlop={10}
+            style={styles.zonePoignee}>
             <View style={styles.poignee} />
           </Pressable>
           {title ? <Heading style={styles.titre}>{title}</Heading> : null}
@@ -92,6 +101,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     maxHeight: '85%',
   },
+  zonePoignee: { minHeight: 44, justifyContent: 'center' },
   poignee: {
     alignSelf: 'center',
     width: 44,

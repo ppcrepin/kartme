@@ -8,11 +8,17 @@ import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { getMetrics, type Metrics } from '@/lib/analytics';
+import { messageFr } from '@/lib/erreur-fr';
+import { nombreFr } from '@/lib/nombre';
 
 function Stat({ value, label }: { value: string | number; label: string }) {
   return (
     <View style={styles.stat}>
-      <Body style={styles.statValue}>{value}</Body>
+      {/* Un compteur à six positions (« 128400 ») se relit chiffre à chiffre :
+          séparateur de milliers insécable, comme partout ailleurs. */}
+      <Body style={styles.statValue}>
+        {typeof value === 'number' ? nombreFr(value) : value}
+      </Body>
       <Muted style={styles.statLabel}>{label}</Muted>
     </View>
   );
@@ -25,15 +31,22 @@ export default function StatsScreen() {
   const router = useRouter();
   const [m, setM] = useState<Metrics | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fini, setFini] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
+      // `fini` distinct de `m` : en échec, `m` reste nul et l'écran affichait
+      // « … » indéfiniment SOUS le bandeau d'erreur — un chargement qui
+      // n'aboutira jamais. Et le message partait brut : le bandeau annonçait
+      // « permission denied for function get_metrics » dans une app
+      // entièrement française.
       getMetrics()
         .then((data) => {
           setM(data);
           setError(null);
         })
-        .catch((e) => setError(e instanceof Error ? e.message : 'Erreur'));
+        .catch((e) => setError(messageFr(e, t.stats.loadError)))
+        .finally(() => setFini(true));
     }, []),
   );
 
@@ -51,7 +64,7 @@ export default function StatsScreen() {
 
         {error ? <Banner kind="err" title={error} /> : null}
         {!m ? (
-          <Muted>…</Muted>
+          fini ? null : <Muted>…</Muted>
         ) : (
           <>
             <Label>{t.stats.overview}</Label>
@@ -71,12 +84,24 @@ export default function StatsScreen() {
                 <Stat value={m.referred_signups} label={t.stats.referred} />
                 <Stat value={m.shares} label={t.stats.shares} />
                 <Stat value={m.signups_tracked} label={t.stats.signups} />
-                {/* Le lien d'ami (A19) : deux chiffres distincts, parce qu'un
-                    tap entre habitués n'est pas de la croissance. */}
+              </View>
+              <Muted style={styles.note}>{t.stats.viralityNote}</Muted>
+            </Card>
+
+            {/* ── Lien d'ami (A19), dans sa PROPRE carte ──
+                Les deux compteurs avaient d'abord été ajoutés à la grille
+                ci-dessus, portée à 6 tuiles. À 390 px elle se casse en 3/2/1 :
+                « dont nouveaux comptes » se retrouvait seul sur une troisième
+                ligne, aligné sous « Inscriptions » — et non sous son parent,
+                relégué en haut à droite. L'œil lisait « Inscriptions 128 400,
+                dont nouveaux comptes 9 100 », ce qui est faux. Deux chiffres
+                dont l'un est un sous-ensemble de l'autre doivent se toucher. */}
+            <Label>{t.stats.inviteTitle}</Label>
+            <Card>
+              <View style={styles.grid}>
                 <Stat value={m.invite_accepts} label={t.stats.inviteAccepts} />
                 <Stat value={m.invite_signups} label={t.stats.inviteSignups} />
               </View>
-              <Muted style={styles.note}>{t.stats.viralityNote}</Muted>
               <Muted style={styles.note}>{t.stats.inviteNote}</Muted>
             </Card>
 

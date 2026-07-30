@@ -35,8 +35,13 @@ end $$;
 -- ═══ Scénario 1 : volumétrie et complétude ═══
 do $$
 begin
-  perform tests.ge((select count(*) from public.circuits), 380,
-    'le référentiel dépasse 380 circuits après import');
+  -- 378 et non 380 : deux lignes du relevé étaient d'abord entrées comme
+  -- circuits NEUFS alors qu'elles décrivaient un karting déjà connu, planté sur
+  -- la position d'une commune homonyme (59 km et 85 km d'écart). Elles sont
+  -- devenues des enrichissements — le référentiel perd deux fiches et gagne
+  -- deux fiches justes.
+  perform tests.ge((select count(*) from public.circuits), 378,
+    'le référentiel dépasse 378 circuits après import');
   perform tests.ge((select count(*) from public.circuits where length_m is not null), 140,
     'au moins 140 circuits ont une longueur (contre UN avant l''import)');
   perform tests.ge((select count(*) from public.circuits where env_kind is not null), 250,
@@ -226,22 +231,54 @@ begin
    );
   perform tests.eq(v_hors, 0, 'aucun circuit hors du cadre géographique France');
 
-  -- 9b. Le code postal s'accorde au DÉPARTEMENT déduit de la position. C'est
-  --     l'assertion qui attrape l'homonymie de communes : un « Saint-Cyprien »
-  --     des Pyrénées-Orientales (66) recopié sur un circuit de Dordogne garde
-  --     les coordonnées de la Dordogne mais reçoit un code postal en 66.
-  --     Approximation assumée : on ne compare pas au département exact (il
-  --     faudrait un découpage administratif), on vérifie que le code postal
-  --     n'est pas à plus de 300 km d'un AUTRE circuit du même département —
-  --     un département français tient largement dans ce rayon.
+  -- 9b. Le code postal s'accorde à la POSITION. C'est l'assertion qui attrape
+  --     l'homonymie de communes : un « Saint-Cyprien » des Pyrénées-Orientales
+  --     (66) recopié sur un circuit de Dordogne garde les coordonnées de la
+  --     Dordogne et reçoit un code postal en 66.
+  --
+  --     Deux corrections par rapport à la première version, l'une et l'autre
+  --     mesurées :
+  --       · le seuil était de 300 km, or les deux VRAIES erreurs de ce lot
+  --         faisaient 59 et 85 km — le test passait sur les cas mêmes qu'il
+  --         visait. 120 km : deux circuits d'un même département français
+  --         tiennent dans ce rayon (le plus étendu, la Gironde, fait ~150 km de
+  --         diagonale mais ses kartings sont bien plus groupés), et l'on
+  --         attrape désormais les homonymies de commune, qui dépassent
+  --         largement 120 km ;
+  --       · `left(postal_code, 2)` mettait la Guadeloupe, la Martinique, la
+  --         Guyane et La Réunion dans un même « département 97 », et la
+  --         Nouvelle-Calédonie avec la Polynésie dans « 98 ». Dès qu'un code
+  --         postal d'outre-mer est renseigné, le test ÉCHOUAIT sur de la donnée
+  --         parfaitement juste — exactement le piège que 9a dit vouloir éviter.
+  --         L'outre-mer se compare donc sur TROIS chiffres.
   select count(*), min(a.name || ' / ' || b.name) into v_cp, v_ex
     from public.circuits a
     join public.circuits b
-      on left(b.postal_code, 2) = left(a.postal_code, 2) and b.id <> a.id
+      on b.id <> a.id
+     -- 97/98 (outre-mer) ET 20 (Corse) : trois départements ou plus partagent
+     -- ces deux premiers chiffres. Guadeloupe, Martinique, Guyane et Réunion
+     -- se retrouvaient dans un même « 97 » ; la Nouvelle-Calédonie avec la
+     -- Polynésie dans « 98 » ; et la Corse-du-Sud (200xx/201xx) avec la
+     -- Haute-Corse (202xx–206xx) dans « 20 » — Biguglia et Figari, 150 km
+     -- d'île, faisaient échouer le test sur de la donnée parfaitement juste.
+     and case when left(a.postal_code, 2) in ('97', '98', '20')
+              then left(b.postal_code, 3) = left(a.postal_code, 3)
+              else left(b.postal_code, 2) = left(a.postal_code, 2)
+         end
    where a.postal_code is not null and b.postal_code is not null
-     and public.km_between(a.lat, a.lon, b.lat, b.lon) > 300;
+     and public.km_between(a.lat, a.lon, b.lat, b.lon) > 120;
   if v_cp > 0 then
-    raise exception 'ÉCHEC : % paires de même département à plus de 300 km (ex. %) — homonymie de communes', v_cp, v_ex;
+    raise exception 'ÉCHEC : % paires de même département à plus de 120 km (ex. %) — homonymie de communes', v_cp, v_ex;
+  end if;
+
+  -- 9b-bis. Un code postal RETIRÉ est aussi grave qu'un code postal faux : il
+  --     rend 9b aveugle. C'est ce qui s'est produit — la ligne fautive de
+  --     Neuilly a perdu son « 60 » et l'assertion passait faute de pièce à
+  --     conviction. On plafonne donc le nombre de circuits sans code postal :
+  --     il ne doit pas AUGMENTER sans qu'on le sache.
+  select count(*) into v_hors from public.circuits where postal_code is null;
+  if v_hors > 125 then
+    raise exception 'ÉCHEC : % circuits sans code postal (125 connus) — 9b devient aveugle sur les nouveaux', v_hors;
   end if;
 
   -- 9c. DEUX FICHES POUR UN MÊME LIEU : à moins de 500 m ET avec un nom dont
@@ -256,7 +293,12 @@ begin
     from public.circuits a
     join public.circuits b on b.id > a.id
    where public.km_between(a.lat, a.lon, b.lat, b.lon) < 0.5
-     and length(public.kart_normalize(least(a.name, b.name))) >= 6
+     -- `least(a.name, b.name)` était le minimum ALPHABÉTIQUE et non le nom le
+     -- plus COURT : le garde de longueur s'appliquait à l'un des deux au hasard
+     -- de la première lettre, si bien que le même doublon physique était
+     -- détecté ou non selon qu'il s'appelait « Alpha Kart » ou « Zulu Kart ».
+     and least(length(public.kart_normalize(a.name)),
+               length(public.kart_normalize(b.name))) >= 4
      and (public.kart_normalize(a.name) like '%' || public.kart_normalize(b.name) || '%'
        or public.kart_normalize(b.name) like '%' || public.kart_normalize(a.name) || '%');
   if v_proches > 0 then

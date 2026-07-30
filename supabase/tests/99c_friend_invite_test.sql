@@ -63,8 +63,23 @@ select tests.as_uid('fe000000-0000-0000-0000-000000000001');
 select tests.eqt((select username from public.get_inviter('fe000000-0000-0000-0000-00000000000e')),
   'Invitant_I', 'l''invité voit le pseudo de l''invitant, même privé');
 
+-- …mais PAS sa photo, s'il est privé et pas encore ami : c'est la règle que
+-- `get_pilot` applique déjà. Aucune fuite d'image n'était possible de toute
+-- façon (`can_read_avatar` exige non-privé ou amitié acceptée, l'écran retombe
+-- sur les initiales) — mais deux fonctions qui traitent le même champ
+-- différemment finissent par diverger pour de bon.
+select tests.as_uid('fe000000-0000-0000-0000-000000000001');
+update public.profiles set avatar_path = 'fe000000-0000-0000-0000-00000000000e/photo.jpg'
+ where id = 'fe000000-0000-0000-0000-00000000000e';
+select tests.eqt((select avatar_path from public.get_inviter('fe000000-0000-0000-0000-00000000000e')),
+  null, 'la photo d''un invitant PRIVÉ non-ami reste masquée');
+
 select tests.eqt((select public.accept_friend_invite('fe000000-0000-0000-0000-00000000000e')),
   'ok', 'le tap crée l''amitié');
+
+-- Une fois amis, la photo apparaît — même règle que la fiche pilote.
+select tests.eqt((select avatar_path from public.get_inviter('fe000000-0000-0000-0000-00000000000e')),
+  'fe000000-0000-0000-0000-00000000000e/photo.jpg', 'devenus amis, la photo de l''invitant est servie');
 
 -- Amitié ACCEPTÉE d'emblée, avec l'INVITANT comme demandeur (c'est lui qui a
 -- lancé l'invitation) — aucune demande à valider de part ni d'autre.

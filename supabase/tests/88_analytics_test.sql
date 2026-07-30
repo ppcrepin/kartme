@@ -116,10 +116,12 @@ declare
   B uuid := 'a0000000-0000-0000-0000-00000000000b';  -- inscrit SANS parrain valable
   met jsonb;
 begin
-  -- Les deux acceptent un lien d'ami. Mais seul A s'est inscrit avec un parrain
-  -- réel : B est un habitué qui accepte un lien, pas une acquisition.
-  insert into analytics_events (profile_id, name) values
-    (A, 'friend_invite_accepted'), (B, 'friend_invite_accepted');
+  -- Les deux acceptent un lien d'ami. A a été parrainé par B (scénario 3) ET
+  -- c'est bien le lien de B qu'il accepte → conversion réelle. B, lui, est un
+  -- habitué qui accepte un lien : un tap, pas une acquisition.
+  insert into analytics_events (profile_id, name, props) values
+    (A, 'friend_invite_accepted', jsonb_build_object('inviter', B::text)),
+    (B, 'friend_invite_accepted', jsonb_build_object('inviter', A::text));
 
   perform tests.as_uid(M);
   met := public.get_metrics();
@@ -132,6 +134,73 @@ begin
   raise notice 'Scénario 4 (mesure du lien d''ami) ✔';
 end $$;
 
+-- ═══ Scénario 4bis : l'inscription doit venir du lien QU'ON A ACCEPTÉ ═══
+-- Le défaut que ce scénario verrouille : la première version exigeait seulement
+-- qu'un `friend_invite_accepted` existe pour le profil, SANS le relier au
+-- parrain. Un pilote inscrit via un lien de COURSE `?ref=B`, qui acceptait plus
+-- tard le lien d'ami d'un tiers, était compté comme une conversion du lien
+-- d'ami — le tableau de bord gonflait le chiffre même sur lequel se décide le
+-- lot suivant.
+do $$
+declare
+  M uuid := 'a0000000-0000-0000-0000-00000000000e';
+  B uuid := 'a0000000-0000-0000-0000-00000000000b';
+  D uuid := 'a0000000-0000-0000-0000-00000000000d';  -- filleul de B
+  T uuid := 'a0000000-0000-0000-0000-00000000000f';  -- un TIERS, jamais parrain
+  met jsonb; avant bigint;
+begin
+  insert into auth.users (id, email) values (D, 'd@t'), (T, 'f@t');
+  insert into public.profiles (id, username, elo) values (D, 'Filleul', 1000), (T, 'Tiers', 1000);
+
+  perform tests.as_uid(M);
+  avant := (public.get_metrics() ->> 'invite_signups')::bigint;
+
+  -- D s'inscrit parrainé par B (un lien de COURSE), puis accepte le lien d'ami
+  -- de T. Les deux événements existent, mais ils ne parlent pas du même pilote.
+  insert into analytics_events (profile_id, name, props) values
+    (D, 'signup', jsonb_build_object('ref', B::text)),
+    (D, 'friend_invite_accepted', jsonb_build_object('inviter', T::text));
+
+  met := public.get_metrics();
+  perform tests.eq((met ->> 'invite_signups')::bigint, avant,
+    'une inscription venue d''un lien de COURSE n''est pas créditée au lien d''ami');
+
+  -- La même inscription, cette fois avec le bon invitant : elle compte.
+  update analytics_events set props = jsonb_build_object('inviter', B::text)
+   where profile_id = D and name = 'friend_invite_accepted';
+  met := public.get_metrics();
+  perform tests.eq((met ->> 'invite_signups')::bigint, avant + 1,
+    'l''inscription compte quand le parrain EST l''invitant');
+  raise notice 'Scénario 4bis (attribution vérifiée) ✔';
+end $$;
+
+-- ═══ Scénario 4ter : le compteur de taps résiste au matraquage ═══
+-- La policy `analytics_insert_self` laisse un client insérer n'importe quel nom
+-- d'événement : cinquante appels faisaient passer le compteur de 1 à 51. On
+-- compte donc des PILOTES DISTINCTS — falsifier exige alors autant de comptes
+-- que de points, c'est-à-dire le travail que la métrique prétend mesurer.
+do $$
+declare
+  M uuid := 'a0000000-0000-0000-0000-00000000000e';
+  T uuid := 'a0000000-0000-0000-0000-00000000000f';
+  met jsonb; avant bigint; i int;
+begin
+  perform tests.as_uid(M);
+  avant := (public.get_metrics() ->> 'invite_accepts')::bigint;
+
+  perform tests.as_uid(T);
+  for i in 1..50 loop
+    insert into analytics_events (profile_id, name, props) values
+      (T, 'friend_invite_accepted', jsonb_build_object('inviter', M::text));
+  end loop;
+
+  perform tests.as_uid(M);
+  met := public.get_metrics();
+  perform tests.eq((met ->> 'invite_accepts')::bigint, avant + 1,
+    'cinquante insertions d''un même pilote ne valent qu''UN point');
+  raise notice 'Scénario 4ter (matraquage sans effet) ✔';
+end $$;
+
 -- ═══ Scénario 5 : un compte supprimé ne gonfle pas le compteur ═══
 -- Un compte supprimé est ANONYMISÉ et non effacé (leçon A5/A13) : ses
 -- événements restent en base. Sans le filtre, le compteur ne redescendait
@@ -140,14 +209,18 @@ do $$
 declare
   M uuid := 'a0000000-0000-0000-0000-00000000000e';
   B uuid := 'a0000000-0000-0000-0000-00000000000b';
-  met jsonb;
+  avant bigint; apres bigint;
 begin
-  update profiles set deleted_at = now() where id = B;
   perform tests.as_uid(M);
-  met := public.get_metrics();
-  perform tests.eq((met ->> 'invite_accepts')::bigint, 1,
+  avant := (public.get_metrics() ->> 'invite_accepts')::bigint;
+  -- Delta et non valeur absolue : le compteur dépend des scénarios précédents,
+  -- et un test qui fige un total casse dès qu'on en ajoute un — sans rien dire
+  -- de la propriété vérifiée.
+  update profiles set deleted_at = now() where id = B;
+  apres := (public.get_metrics() ->> 'invite_accepts')::bigint;
+  perform tests.eq(apres, avant - 1,
     'le tap d''un compte supprimé sort du compteur');
-  raise notice 'Scénario 5 (comptes supprimés exclus) ✔';
+  raise notice 'Scénario 5 (comptes supprimés exclus : % → %) ✔', avant, apres;
 end $$;
 
 do $$ begin raise notice 'Tous les tests analytics sont passés ✔'; end $$;

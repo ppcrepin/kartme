@@ -8,7 +8,7 @@
 --
 -- CE QUE CE COLLAGE ÉCRIT RÉELLEMENT (chiffres de l'import, pas du fichier —
 -- la décision « une piste par lieu » en écarte une partie) :
---   · 161 circuits existants enrichis · 103 nouveaux · 3 alias ajoutés ;
+--   · 163 circuits existants enrichis · 101 nouveaux · 3 alias ajoutés ;
 --   · 142 longueurs de piste (contre UNE avant) · 262 intérieur/extérieur ;
 --   · 190 motorisations · 253 usages · 63 homologations FFSA/CIK-FIA ;
 --   · 33 lieux notent leurs tracés multiples.
@@ -38,7 +38,7 @@
 -- Le rapprochement retenu croise donc TROIS signaux :
 --   (78) nom ou alias + ville normalisés — les alias du lot A4c portent les
 --       sigles (BRK, RKC, CKB…) et font une partie du travail ;
---   (17) nom seul, MAIS la ville du fichier doit se géocoder à moins de 30 km
+--   (19) nom seul, MAIS la ville du fichier doit se géocoder à moins de 30 km
 --       de nos coordonnées — un rapprochement invérifiable est REJETÉ, jamais
 --       conservé par défaut (c'est ce défaut qui laissait passer « Karting
 --       City / Dordogne ») ;
@@ -90,7 +90,7 @@ alter table public.circuits drop constraint if exists circuits_length_sane;
 alter table public.circuits add constraint circuits_length_sane
   check (length_m is null or length_m between 200 and 1600);
 
--- ── 2. Mises à jour : 161 circuits existants enrichis ──────────────────────
+-- ── 2. Mises à jour : 163 circuits existants enrichis ──────────────────────
 -- L'IDENTIFIANT NE BOUGE PAS : garantie que les courses jouées gardent leur
 -- circuit (une suppression/recréation les aurait orphelinisées — leçon A4b).
 create temp table maj_circuits (
@@ -261,13 +261,23 @@ insert into maj_circuits values
   ('Karting Buffo', 'Ozouer-le-Voulgis', 'Racing Kart Buffo', 'Ozouer-le-Voulgis', 1000.0, 7.5, 'outdoor', 'thermique', 'mixte', 'FFSA', 'RN19', '77390', '0164076166', 'https://karting-buffo.com', 'Grande piste 1000 m · Piste 600 m · Piste indoor', 'Karting Buffo'),
   ('Karting Saint-Cyprien', 'Saint-Cyprien', 'Saint Cyp Kart', 'Saint-Cyprien', 600.0, null, 'outdoor', 'thermique', 'mixte', null, 'Chemin du Prat d''en Veil', '66750', null, 'https://kartingstcyprien.fr', 'Piste 600 m (pont + tunnel) · Circuit enfants (100cc) · Circuit baby (électrique)', 'Karting Saint-Cyprien'),
   ('Circuit de Karting du Parc', 'Le Parc', 'Circuit Karting du Parc (Team ASK)', 'Le Parc', 1300.0, 7.0, 'outdoor', null, null, 'FFSA', 'RN/D175, Sainte-Pience', '50870', '0233585024', 'https://kartingduparc.fr', null, 'Circuit de Karting du Parc'),
-  ('Family Fun Kart', 'Lagord', 'Family Fun Park', 'Lagord', null, null, 'indoor', 'electrique', 'loisir', null, null, '17140', null, null, null, 'Family Fun Kart')
+  ('Family Fun Kart', 'Lagord', 'Family Fun Park', 'Lagord', null, null, 'indoor', 'electrique', 'loisir', null, null, '17140', null, null, null, 'Family Fun Kart'),
+  -- Ces deux lignes du relevé ont d'abord été REJETÉES par le contrôle
+  -- géographique (leur ville géocode loin de nos coordonnées), puis insérées
+  -- comme circuits neufs — donc en doublon, sur la position d'une commune
+  -- HOMONYME : Aigues-Vives de l'Aude au lieu de l'Ariège (59 km), un
+  -- « Neuilly » qui n'existe pas au lieu de Neuilly-sous-Clermont (85 km).
+  -- Le contrôle avait raison de douter ; la conclusion tirée était fausse.
+  -- « Je ne sais pas situer cette ligne » n'est pas « ce n'est pas le même
+  -- circuit » : ici c'est bien le même, et c'est NOTRE géographie qui vaut.
+  ('Circuit International de Lavelanet', 'Aigues-Vives', 'Kart''Are Aigues-Vives', 'Aigues-Vives', 1400.0, 8.5, 'outdoor', 'thermique', 'mixte', 'FFSA', 'D625 entre Lavelanet et Mirepoix', '09500', '0632099616', 'https://karting-ariege.fr', null, 'Circuit International de Lavelanet'),
+  ('Karting', 'Neuilly-sous-Clermont', 'Karting Loisirs Neuilly', 'Neuilly-sous-Clermont', 720.0, null, 'outdoor', 'thermique', 'mixte', null, null, '60290', null, null, null, 'Karting')
 ;
 
 -- ── 2bis. PRÉ-VOL : l'identité cible est-elle déjà prise ? ───────────────
 -- `circuits_ident_uniq` est un index unique NON déférable sur (nom normalisé,
 -- ville normalisée). Un renommage vers une identité déjà occupée fait échouer
--- TOUTE la migration sur un message anglais, sans dire laquelle des 161
+-- TOUTE la migration sur un message anglais, sans dire laquelle des 163
 -- lignes fautait. Or la base du PO n'est pas la base de référence : l'ajout
 -- libre de circuits a été ouvert quelques jours en juillet, et le PO traite
 -- les signalements A13 à la main — un renommage manuel vers le nom commercial
@@ -329,7 +339,7 @@ where public.kart_normalize(c.name) = public.kart_normalize(m.old_name)
 
   -- `row_count` et NON un recomptage par nom : la première version comptait les
   -- circuits qui PORTENT les nouveaux noms, si bien qu'un SECOND collage
-  -- affichait « 161 sur 161 » sans rien renommer du tout. Un import partiel se
+  -- affichait « 163 sur 163 » sans rien renommer du tout. Un import partiel se
   -- serait annoncé complet. `get diagnostics` n'est fiable que dans le bloc qui
   -- exécute la requête — d'où cet emballage.
   get diagnostics v_fait = row_count;
@@ -363,7 +373,7 @@ from alias_circuits a
 where public.kart_normalize(c.name) = public.kart_normalize(a.old_name)
   and public.kart_normalize(coalesce(c.city,'')) = public.kart_normalize(coalesce(a.old_city,''));
 
--- ── 3. Nouveaux lieux : 103 kartings absents de notre base ────────────────
+-- ── 3. Nouveaux lieux : 101 kartings absents de notre base ────────────────
 -- Géocodés (Nominatim, 1 requête/seconde) : 26 à l'adresse, 68 au code
 -- postal, 9 à la commune. Un lieu que le relevé lui-même ne sait pas situer
 -- (« commune à préciser ») est ÉCARTÉ : sans coordonnées il serait invisible
@@ -482,9 +492,7 @@ from (values
   ('BKI – Brest Kart Indoor', 'Brest', 48.42415, -4.4691, null, null, 'indoor', null, 'loisir', null, '10 rue Alain Le Berre', '29200', null, null, null),
   ('Kart''In (Park Events)', 'Vénissieux', 45.71566, 4.8599, 600.0, null, 'indoor', 'mixte', 'loisir', 'FFSA', '17 chemin du Génie', '69200', '0472780505', null, null),
   ('Le Kart', 'Saint-Gorgon', 48.32454, 6.64758, 490.0, null, 'indoor', 'thermique', 'mixte', null, null, '88700', null, 'https://le-kart.fr', null),
-  ('Kart''Are Aigues-Vives', 'Aigues-Vives', 43.23104, 2.53383, 1400.0, 8.5, 'outdoor', 'thermique', 'mixte', 'FFSA', 'D625 entre Lavelanet et Mirepoix', '09500', '0632099616', 'https://karting-ariege.fr', null),
-  ('Performances Drive', 'Saint-Cyprien', 45.53777, 4.23605, null, null, 'outdoor', null, 'loisir', null, null, '42160', null, 'https://performances-drive.fr', null),
-  ('Karting Loisirs Neuilly', 'Neuilly', 48.93214, 1.42091, 720.0, null, 'outdoor', 'thermique', 'mixte', null, null, null, null, null, null)
+  ('Performances Drive', 'Saint-Cyprien', 45.53777, 4.23605, null, null, 'outdoor', null, 'loisir', null, null, '42160', null, 'https://performances-drive.fr', null)
 ) as v(name, city, lat, lon, length_m, width_m, env_kind, motor_kind, usage_kind,
        homologation, address, postal_code, phone, website, tracks_note)
 where not exists (

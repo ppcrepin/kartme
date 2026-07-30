@@ -39,11 +39,15 @@ export function captureReferralFromUrl(): void {
   if (typeof window === 'undefined') return;
   try {
     const u = new URL(window.location.href);
-    const ref =
-      u.searchParams.get('ref') ??
-      // Le déploiement vit sous /kartme : on cherche le segment, pas un préfixe.
-      /(?:^|\/)invite\/([^/?#]+)/.exec(u.pathname)?.[1] ??
-      null;
+    // Le déploiement vit sous /kartme : on cherche le SEGMENT, pas un préfixe.
+    const duChemin = /(?:^|\/)invite\/([^/?#]+)/.exec(u.pathname)?.[1] ?? null;
+    const deLaQuery = u.searchParams.get('ref');
+    // ⚠️ On ne prend la query que si elle VALIDE. Avec un simple `??`, elle
+    // court-circuitait le chemin même vide ou fantaisiste : coller `?ref=` à un
+    // lien d'ami effaçait l'attribution de l'invitant d'un seul caractère, et
+    // `?ref=<autre>` la lui VOLAIT — sur un lien public, trivial à altérer
+    // avant de le repartager.
+    const ref = deLaQuery && UUID_RE.test(deLaQuery) ? deLaQuery : duChemin;
     const store = safeLocalStorage();
     if (ref && UUID_RE.test(ref)) {
       referrer = ref;

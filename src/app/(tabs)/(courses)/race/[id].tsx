@@ -25,6 +25,7 @@ import { useAuth } from '@/lib/auth';
 import { badgesForRace, type BadgeKey } from '@/lib/badges';
 import { formatRaceDate } from '@/lib/datetime';
 import { pairwiseBreakdown } from '@/lib/elo';
+import { messageFr } from '@/lib/erreur-fr';
 import { digitsToMs, formatLap, msToDigits } from '@/lib/laptime';
 import { listFriends, searchPilots, type FriendEntry, type Pilot } from '@/lib/friends';
 import { gradeForElo, isCalibrating } from '@/lib/grade';
@@ -175,15 +176,9 @@ export default function RaceDetailScreen() {
     }, [refresh, id]),
   );
 
-  // Une erreur serveur TECHNIQUE (RLS, contrainte) sort en anglais brut ;
-  // les exceptions MÉTIER de nos fonctions SQL sont déjà en français et
-  // passent telles quelles.
-  const messageFr = (e: unknown) => {
-    const m = e instanceof Error ? e.message : '';
-    return m && !/row-level security|violates|permission denied|duplicate key/i.test(m)
-      ? m
-      : t.races.actionError;
-  };
+  // Filtre partagé (`lib/erreur-fr`) : il vivait recopié ici avec sa propre
+  // liste de motifs, différente des deux autres écrans.
+  const messageErreur = (e: unknown) => messageFr(e, t.races.actionError);
 
   const isAdmin = !!race && race.admin_id === selfId;
   const completed = race?.status === 'completed';
@@ -258,7 +253,7 @@ export default function RaceDetailScreen() {
     } catch (e) {
       // Sans ce catch, un refus serveur (grille figée entre-temps, RLS, réseau)
       // ne produisait AUCUN retour : le champ gardait le nom, rien n'apparaissait.
-      setActionError(messageFr(e));
+      setActionError(messageErreur(e));
     } finally {
       setBusy(false);
     }
@@ -281,7 +276,7 @@ export default function RaceDetailScreen() {
       await addProfileParticipant(id!, profileId);
       await refresh();
     } catch (e) {
-      setActionError(messageFr(e));
+      setActionError(messageErreur(e));
     } finally {
       setBusy(false);
     }
@@ -300,7 +295,7 @@ export default function RaceDetailScreen() {
     } catch (e) {
       // Cas réels : blocage apparu entre-temps, compte suspendu, grille figée
       // par le temps réel… L'échec doit se voir, pas rester muet.
-      setActionError(messageFr(e));
+      setActionError(messageErreur(e));
     } finally {
       setBusy(false);
     }
@@ -960,7 +955,8 @@ export default function RaceDetailScreen() {
                                   onPress={() => onRemove(p.id)}
                                   accessibilityRole="button"
                                   accessibilityLabel={t.races.remove}
-                                  hitSlop={10}>
+                                  hitSlop={10}
+                                  style={styles.removeZone}>
                                   <Muted style={styles.remove}>✕</Muted>
                                 </Pressable>
                               ) : null}
@@ -1264,6 +1260,11 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   section: { gap: spacing.sm },
   remove: { color: colors.inkDim2 },
+  // Retirer un pilote de la grille est DESTRUCTIF et la croix ne mesurait que
+  // 11 × 19 px, à six pixels du médaillon de grade voisin (`hitSlop` n'existe
+  // pas sur `Pressable` en react-native-web). 40 px de large : de quoi viser
+  // sans repousser la ligne au-delà de sa hauteur de 44.
+  removeZone: { minWidth: 40, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
   // Une « marche » du bloc d'ajout : léger encart pour que les trois options
   // se lisent comme une descente d'escalier, pas comme trois champs en vrac.
   addStep: {
