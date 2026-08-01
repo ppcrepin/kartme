@@ -6,7 +6,7 @@
  *
  * Le corps du push (envoyé par l'Edge Function) est un JSON :
  *   { title, body, url, tag }
- * url = chemin relatif au sein de l'app (ex. "race/123", "amis").
+ * url = chemin relatif au sein de l'app (ex. "race/123", "pilot/<id>").
  */
 
 self.addEventListener('install', (event) => {

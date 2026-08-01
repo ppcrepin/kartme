@@ -96,12 +96,15 @@ select tests.eq((select count(*) from public.notifications
                    and type = 'friend_request'
                    and actor_id = 'fe000000-0000-0000-0000-000000000001'), 1,
   'l''invitant est notifié que son lien a fonctionné');
--- URL décalée : « amis » aurait heurté l'index de déduplication d'une
--- « Demande d'ami » non lue du même pilote, et l'annonce aurait disparu.
+-- La FICHE de l'invité, et non plus une liste : c'est là qu'on va voir qui
+-- vient d'arriver (fusion de l'onglet Amis, 2026-08-01). Le discriminant
+-- « ?invite » reste : sans lui, l'annonce heurterait l'index de déduplication
+-- d'une « Demande d'ami » non lue du même pilote et disparaîtrait.
 select tests.eqt((select url from public.notifications
                   where profile_id = 'fe000000-0000-0000-0000-00000000000e'
                     and actor_id = 'fe000000-0000-0000-0000-000000000001'),
-  'amis?invite', 'l''annonce échappe à la déduplication de « Demande d''ami »');
+  'pilot/fe000000-0000-0000-0000-000000000001?invite',
+  'l''annonce mène à la fiche, et échappe à la déduplication');
 
 -- Rejouer le lien (double tap, deux onglets, lien rouvert) : pas d'erreur,
 -- pas de doublon.
@@ -146,7 +149,7 @@ select tests.eq((select count(*) from public.friendships
 select tests.eq((select count(*) from public.notifications
                  where profile_id = 'fe000000-0000-0000-0000-00000000000e'
                    and actor_id = 'fe000000-0000-0000-0000-000000000005'
-                   and url = 'amis?invite'), 1,
+                   and url = 'pilot/fe000000-0000-0000-0000-000000000005?invite'), 1,
   'l''invitant est prévenu même quand une demande dormait dans l''autre sens');
 
 -- ═══ Scénario 4 : les refus ═══

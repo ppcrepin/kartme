@@ -1,7 +1,8 @@
 import { ColorValue } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
-export type TabName = 'races' | 'rankings' | 'friends' | 'profile' | 'tracks';
+// « friends » a disparu avec l'onglet du même nom (fusion du 2026-08-01).
+export type TabName = 'races' | 'rankings' | 'profile' | 'tracks';
 
 /** Icônes d'onglet line-art distinctes (drapeau · podium · amis · casque · repère). */
 export function TabIcon({ name, color }: { name: TabName; color: ColorValue }) {
@@ -28,14 +29,6 @@ export function TabIcon({ name, color }: { name: TabName; color: ColorValue }) {
         <>
           <Path d="M12 21c-4-4.6-6-7.6-6-10a6 6 0 1 1 12 0c0 2.4-2 5.4-6 10z" {...common} />
           <Circle cx="12" cy="11" r="2.2" {...common} />
-        </>
-      ) : name === 'friends' ? (
-        // Deux pilotes.
-        <>
-          <Circle cx="8.5" cy="8" r="3" {...common} />
-          <Path d="M3.5 20c0-3 2.2-5 5-5s5 2 5 5" {...common} />
-          <Circle cx="16.5" cy="9" r="2.4" {...common} />
-          <Path d="M14.8 15.2c2.8-.6 5.7 1.3 5.7 4.8" {...common} />
         </>
       ) : (
         // Casque de pilote.

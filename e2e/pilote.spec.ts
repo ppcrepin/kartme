@@ -63,7 +63,11 @@ test('un pilote introuvable le dit, SANS « Réessayer »', async ({ page }) => 
     page.getByText(/Ce pilote n’est plus là/).and(sceneActive(page)).first(),
   ).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText('Réessayer', { exact: true })).toHaveCount(0);
-  await expect(page.getByText('Voir mes amis', { exact: true }).and(sceneActive(page)).first()).toBeVisible();
+  // Le libellé a suivi la destination : l'écran « Amis » n'existe plus depuis
+  // la fusion du 2026-08-01, et un bouton qui promet un écran disparu ment.
+  await expect(
+    page.getByText('Voir le classement', { exact: true }).and(sceneActive(page)).first(),
+  ).toBeVisible();
 });
 
 /**

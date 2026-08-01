@@ -14,7 +14,6 @@ export const fr = {
     // Singulier : « Classements » déborde du libellé d'onglet sur iPhone
     // (390 px → « Classem… »).
     rankings: 'Classement',
-    friends: 'Amis',
     tracks: 'Kartings',
     profile: 'Profil',
   },
@@ -392,11 +391,12 @@ export const fr = {
   friends: {
     search: 'Chercher un pilote…',
     searchEmpty: 'Aucun pilote trouvé.',
+    actionFailed: 'Action impossible pour l’instant. Réessaie.',
+    // Un échec réseau laissait l'écran vide, sans un mot : le classement
+    // disparaît dès le 2e caractère, il ne restait donc rien du tout.
+    searchFailed: 'Recherche impossible pour l’instant — vérifie ta connexion.',
     received: 'Demandes reçues',
     sent: 'Demandes envoyées',
-    list: 'Mes amis',
-    listEmpty: 'Cherche des pilotes par leur pseudo pour lancer la compétition.',
-    seeAll: 'Voir tous les amis (%n)',
     accept: 'Accepter',
     decline: 'Refuser',
     cancel: 'Annuler',
@@ -448,6 +448,7 @@ export const fr = {
     // preuve que le lien d'invitation a fonctionné.
     friendsUnranked: 'Pas encore classés',
     noRaceYet: 'Aucune course pour l’instant',
+    searching: 'Recherche…',
     notRankedYet: 'Termine ta première course pour entrer au classement.',
     emptyFriends: 'Aucun pilote classé parmi tes amis — courez ensemble !',
     emptyGlobal: 'Aucun pilote classé pour l’instant.',
@@ -806,7 +807,10 @@ export const fr = {
     unknown: 'Cette invitation n’est plus valable.',
     loadError: 'Impossible de charger l’invitation. Vérifie ta connexion.',
     error: 'Impossible d’ajouter ce pilote pour le moment.',
-    toFriends: 'Voir mes amis',
+    // Destination réelle depuis la fusion du 2026-08-01 : le classement.
+    // « Voir mes amis » désignait un écran qui n'existe plus, et pouvait
+    // ouvrir la portée Global — un bouton qui ment sur ce qu'il fait.
+    toFriends: 'Voir le classement',
   },
   // ── Prise en main (retour de test réel 2026-08-01) ────────────────────────
   // « La plateforme pour un nouvel utilisateur n'est pas si simple. » Le geste

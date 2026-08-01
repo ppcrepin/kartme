@@ -26,14 +26,8 @@ const AMITIES = [
 
 test.use({ viewport: { width: 390, height: 844 } });
 
-test('la barre ne porte plus que QUATRE onglets', async ({ page }) => {
-  await sessionSimulee(page);
-  await reseauSimule(page);
-  await page.goto('/');
-  await expect(page.getByRole('tab', { name: 'Classement' })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole('tab')).toHaveCount(4);
-  await expect(page.getByRole('tab', { name: 'Amis' })).toHaveCount(0);
-});
+// Le compte d'onglets est déjà gardé par e2e/smoke.spec.ts, sur l'accueil ET
+// sur un écran de détail — le répéter ici ne prouvait rien de plus.
 
 test('chercher un pilote se fait depuis le CLASSEMENT, et sa fiche s’y ouvre', async ({ page }) => {
   await sessionSimulee(page);
@@ -104,6 +98,12 @@ test('une demande d’ami reste traitable, et l’acceptation part', async ({ pa
 
   await page.getByRole('button', { name: 'Accepter · Kévin_R', exact: true }).click();
   await expect.poll(() => partis.length, { timeout: 10_000 }).toBeGreaterThan(0);
+
+  // Et le clic ne NAVIGUE pas : le bouton est imbriqué dans une ligne qui,
+  // elle, ouvre la fiche. Si l'événement remontait, on accepterait ET on
+  // quitterait l'écran — et le test précédent aurait passé quand même.
+  await page.waitForTimeout(400);
+  await expect(page).toHaveURL(/classements/);
 });
 
 test('sans demande en attente, le classement reste un classement', async ({ page }) => {
@@ -119,6 +119,62 @@ test('sans demande en attente, le classement reste un classement', async ({ page
   // dire qu'il n'y a rien.
   await expect(page.getByText(/Demandes reçues/)).toHaveCount(0);
   await expect(page.getByText(/Demandes envoyées/)).toHaveCount(0);
+});
+
+test('chercher puis effacer ne fait pas perdre sa place dans le classement', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, {
+    // Assez de lignes pour qu'il y ait quelque chose à perdre.
+    'rpc/get_leaderboard': Array.from({ length: 40 }, (_, i) => ({
+      rank: i + 1,
+      profile_id: `p${i}`,
+      ghost_id: null,
+      username: `Pilote_${i}`,
+      elo: 1500 - i * 10,
+      races: 9,
+      is_me: false,
+      avatar_path: null,
+    })),
+    'rpc/get_my_rank': [{ rank: 40, elo: 1110, races: 6, total: 40 }],
+    'rpc/search_pilots': [],
+  });
+  await page.goto('/classements');
+  await expect(page.getByText('Pilote_0', { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+
+  // Le panneau de recherche REMPLAÇAIT le classement dans un ternaire, ce qui
+  // démontait sa liste : après un défilement, taper puis effacer deux
+  // caractères ramenait tout en haut (900 px perdus, mesuré à l'audit).
+  // Le conteneur qui défile RÉELLEMENT : `ScrollView` rend un div à
+  // `overflow-y`, et une molette envoyée à la fenêtre ne l'atteint pas.
+  const poser = async (y: number) =>
+    page.evaluate((v) => {
+      const e = [...document.querySelectorAll('div')].find(
+        (x) => x.scrollHeight > x.clientHeight + 200 && getComputedStyle(x).overflowY !== 'visible',
+      );
+      if (e) e.scrollTop = v;
+      return e ? e.scrollTop : -1;
+    }, y);
+  const lire = async () =>
+    page.evaluate(() => {
+      const e = [...document.querySelectorAll('div')].find(
+        (x) => x.scrollHeight > x.clientHeight + 200 && getComputedStyle(x).overflowY !== 'visible',
+      );
+      return e ? e.scrollTop : -1;
+    });
+
+  await poser(600);
+  await page.waitForTimeout(200);
+  const avant = await lire();
+  expect(avant).toBeGreaterThan(100);
+
+  const champ = page.getByLabel('Chercher un pilote…').and(sceneActive(page)).first();
+  await champ.fill('zo');
+  await expect(page.getByText('Aucun pilote trouvé.').first()).toBeVisible({ timeout: 15_000 });
+  await champ.fill('');
+  await expect(page.getByText('Pilote_0', { exact: true }).first()).toBeVisible();
+
+  const apres = await lire();
+  expect(apres).toBe(avant);
 });
 
 test('un ami qui n’a jamais couru reste VISIBLE', async ({ page }) => {
