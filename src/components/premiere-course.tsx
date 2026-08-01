@@ -67,10 +67,11 @@ export function PremiereCourse({
               disabled={!active}
               // Le rôle est TOUJOURS `button`, y compris sur les lignes
               // inactives : un `aria-label` posé sur un élément sans rôle est
-              // ignoré par la plupart des lecteurs d'écran, et l'état
-              // (`aria-checked`) n'est pas supporté sur `role="button"` — il
-              // n'y a donc que le nom pour porter « fait » ou « à faire ».
-              // `disabled` reste ce qui empêche l'activation.
+              // ignoré par la plupart des lecteurs d'écran. Et l'état passe par
+              // le NOM, pas par `aria-checked` : react-native-web ne lit pas
+              // `accessibilityState` (seules les props `aria-*` atteignent le
+              // DOM), et `aria-checked` n'a de toute façon pas de sens sur un
+              // bouton. `disabled` reste ce qui empêche l'activation.
               accessibilityRole="button"
               accessibilityLabel={t.onboarding.stepAria
                 .replace('%n', String(e.n))

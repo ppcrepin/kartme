@@ -1,5 +1,5 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -151,6 +151,9 @@ export default function RaceDetailScreen() {
   const [vue, setVue] = useState<'classement' | 'chronos' | 'duels'>('classement');
   const [shareOpen, setShareOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Le champ « Qui court ? », pour le ramener sous les yeux après un ajout
+  // (voir `ramenerChamp`). Lu uniquement dans un gestionnaire, jamais au rendu.
+  const champAjout = useRef<unknown>(null);
 
   const refresh = useCallback(async () => {
     if (!id) return;
@@ -264,6 +267,39 @@ export default function RaceDetailScreen() {
     setPilotResultsFor('');
   }
 
+  /**
+   * Ramène le bloc d'ajout — et surtout sa RÉPONSE — sous les yeux.
+   *
+   * Le bloc vit SOUS la grille (décision PO), et la grille grandit de 44 px par
+   * pilote. À huit pilotes, l'audit navigateur a mesuré le champ visible à deux
+   * pixels près et TOUT ce qui vient dessous hors écran : on tape un nom, et il
+   * ne se passe visiblement rien — ni « aucun pilote inscrit », ni la ligne
+   * « ajouter comme invité ». Aucun indice de coupe (barre de défilement
+   * masquée, barre fixe sans ombre) ne dit qu'il y a une suite. C'est
+   * exactement le mode d'échec que la refonte devait supprimer.
+   *
+   * On mesure donc le BAS du bloc, pas le champ : c'est la réponse qu'il faut
+   * voir, pas le champ qu'on regarde déjà. Et on ne bouge QUE si elle est hors
+   * cadre — replacer ce qui est déjà lisible ferait sauter la page sous les
+   * doigts de qui ajoute deux amis d'affilée sur une grille courte.
+   *
+   * La marge de 100 px couvre la barre d'action fixe, qui coupe la fenêtre de
+   * lecture sans faire partie du défilement.
+   */
+  function ramenerChamp() {
+    if (typeof window === 'undefined') return;
+    window.requestAnimationFrame(() => {
+      const noeud = champAjout.current as {
+        getBoundingClientRect?: () => DOMRect;
+        scrollIntoView?: (o: object) => void;
+      } | null;
+      const boite = noeud?.getBoundingClientRect?.();
+      if (!boite) return;
+      const dehors = boite.top < 0 || boite.bottom > window.innerHeight - 100;
+      if (dehors) noeud?.scrollIntoView?.({ block: 'end', behavior: 'smooth' });
+    });
+  }
+
   /** Ajoute le nom tapé comme invité (fantôme, hors Elo) — la dernière ligne. */
   async function onAddGuest() {
     const check = validateGhostName(pilotQuery);
@@ -274,6 +310,7 @@ export default function RaceDetailScreen() {
       await addGhostParticipant(id!, check.value);
       resetRecherche();
       await refresh();
+      ramenerChamp();
     } catch (e) {
       // Sans ce catch, un refus serveur (grille figée entre-temps, RLS, réseau)
       // ne produisait AUCUN retour : le champ gardait le nom, rien n'apparaissait.
@@ -300,6 +337,7 @@ export default function RaceDetailScreen() {
       await addProfileParticipant(id!, profileId);
       resetRecherche();
       await refresh();
+      ramenerChamp();
     } catch (e) {
       setActionError(messageErreur(e));
     } finally {
@@ -315,6 +353,7 @@ export default function RaceDetailScreen() {
       await addProfileParticipant(id!, profileId);
       resetRecherche();
       await refresh();
+      ramenerChamp();
     } catch (e) {
       // Cas réels : blocage apparu entre-temps, compte suspendu, grille figée
       // par le temps réel… L'échec doit se voir, pas rester muet.
@@ -482,6 +521,10 @@ export default function RaceDetailScreen() {
     setBusy(true);
     try {
       await lockRace(id!);
+      // Le bloc d'ajout se démonte, mais la saisie lui survivrait : rouvrir la
+      // grille dix minutes plus tard ramènerait « ➕ Ajouter "Tonton Rob" comme
+      // invité » déjà armé sous le pouce.
+      resetRecherche();
       await refresh();
     } finally {
       setBusy(false);
@@ -583,21 +626,40 @@ export default function RaceDetailScreen() {
       ? t.races.nameErrors[nomInvite.error ?? 'generic']
       : null;
 
+  // La réponse à la saisie naît SOUS le champ : suggestions, « aucun pilote
+  // inscrit », ligne « comme invité ». Sur une grille garnie elle naît hors
+  // cadre, et l'écran paraît ne rien faire. Pas de `setState` ici — la règle du
+  // dépôt vise les cascades de rendu, un défilement n'en est pas une.
+  useEffect(() => {
+    ramenerChamp();
+  }, [suggestionsVues.length, proposerInvite, aucuneSuggestion, rechercheHS]);
+
   /**
    * Le contenu du bloc « ajouter des pilotes », monté EN CLAIR sous la grille.
    *
-   * Extrait en variable parce qu'il vit au milieu d'un rendu déjà profond :
-   * l'inliner ajouterait six niveaux d'indentation à trente lignes de JSX,
-   * pour un bloc qui se lit très bien seul.
+   * Extrait parce qu'il vit au milieu d'un rendu déjà profond : l'inliner
+   * ajouterait six niveaux d'indentation à quarante lignes de JSX, pour un
+   * bloc qui se lit très bien seul. FONCTION et non constante : sur une course
+   * terminée il n'est jamais monté, et le rebâtir à chaque frappe de la saisie
+   * groupée des chronos ne produirait que du déchet.
    */
-  const blocAjout = (
+  const blocAjout = () => (
     <>
+      {/* L'admin retiré de sa propre grille : la barre fixe ne lui propose
+          jamais « Rejoindre » (elle est réservée aux non-admins). C'est donc
+          ici, et EN TÊTE — s'inscrire soi-même n'est pas la suite de
+          « invite-le à s'inscrire ». */}
+      {!selfParticipating ? (
+        <Button label={t.races.rejoin} variant="ghost" onPress={onToggleSelf} />
+      ) : null}
       <Field
         label={t.races.addSearchLabel}
         value={pilotQuery}
         onChangeText={setPilotQuery}
         autoCapitalize="words"
         placeholder={t.races.addSearchPlaceholder}
+        // Prendre le champ, c'est s'apprêter à lire ce qui s'affichera dessous.
+        onFocus={ramenerChamp}
       />
       {/* « Tes amis sont déjà là » ne se dit que si c'est VRAI : sous une
           grille complète, la ligne d'état juste en dessous annonce déjà
@@ -629,13 +691,19 @@ export default function RaceDetailScreen() {
 
       {aucuneSuggestion && !rechercheEnCours && !rechercheHS ? (
         <Muted>
-          {q
-            ? alreadyOnGrid
-              ? t.races.invitePilotAlready
-              : t.races.addNoMatch
-            : friends.length
+          {!q
+            ? friends.length
               ? t.races.addFriendsEmpty
-              : t.races.addNoFriendsYet}
+              : t.races.addNoFriendsYet
+            : /* À UN caractère on ne cherche pas (seuil de deux, anti-rebond) :
+                 affirmer « aucun pilote inscrit sous ce pseudo » serait exactement
+                 le mensonge que `addSearchDown` s'interdit deux lignes plus haut,
+                 et il mène au même endroit — un fantôme homonyme d'un inscrit. */
+              !pilotSearchReady
+              ? t.races.addKeepTyping
+              : alreadyOnGrid
+                ? t.races.invitePilotAlready
+                : t.races.addNoMatch}
         </Muted>
       ) : null}
 
@@ -663,11 +731,6 @@ export default function RaceDetailScreen() {
         <Muted style={styles.guestNudge}>{t.races.guestNudge}</Muted>
       ) : null}
       {erreurInvite ? <Muted style={styles.rematchErr}>{erreurInvite}</Muted> : null}
-
-      {!selfParticipating ? (
-        <Button label={t.races.rejoin} variant="ghost" onPress={onToggleSelf} />
-      ) : null}
-      {actionError ? <Muted style={styles.rematchErr}>{actionError}</Muted> : null}
     </>
   );
 
@@ -727,8 +790,9 @@ export default function RaceDetailScreen() {
             <Pressable
               onPress={() => setMenuOpen(true)}
               accessibilityRole="button"
-              accessibilityLabel={t.races.menu}
-              hitSlop={10}>
+              // Pas de `hitSlop` : il est inerte sur `Pressable` en
+              // react-native-web. La zone tapable vient de `menuDots`.
+              accessibilityLabel={t.races.menu}>
               <Body style={styles.menuDots}>⋯</Body>
             </Pressable>
           ) : null}
@@ -1151,9 +1215,11 @@ export default function RaceDetailScreen() {
                       même. ── */}
                   {isAdmin && !locked ? (
                     <>
-                      <Label>{t.races.addPilots}</Label>
+                      <Label style={styles.addLabel}>{t.races.addPilots}</Label>
                       <Card>
-                        <View style={styles.addBox}>{blocAjout}</View>
+                        <View style={styles.addBox} ref={champAjout as React.Ref<View>}>
+                          {blocAjout()}
+                        </View>
                       </Card>
                     </>
                   ) : null}
@@ -1235,7 +1301,6 @@ export default function RaceDetailScreen() {
           </View>
         ) : null
       ) : null}
-
 
       {/* ── Feuille : inviter / partager ── */}
       <Sheet open={shareOpen} onClose={() => setShareOpen(false)}>
@@ -1338,6 +1403,9 @@ const styles = StyleSheet.create({
     minHeight: 44,
     lineHeight: 44,
     textAlign: 'center',
+    // La zone de 44 px éloigne le glyphe du bord ; on le recolle, comme le
+    // « ← » le fait de son côté.
+    marginRight: -spacing.sm,
   },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   titleCompact: { fontSize: 23, lineHeight: 27 },
@@ -1379,6 +1447,10 @@ const styles = StyleSheet.create({
   // Une « marche » du bloc d'ajout : léger encart pour que les trois options
   // se lisent comme une descente d'escalier, pas comme trois champs en vrac.
   addBox: { gap: spacing.sm },
+  // Le libellé flottait à équidistance des deux cartes (8 px de chaque côté) :
+  // rien ne disait s'il coiffait ce qui suit ou clôturait ce qui précède. Il se
+  // relie à SA carte, comme « PILOTES · n » se relie à la sienne.
+  addLabel: { marginTop: spacing.md },
   guestNudge: { fontStyle: 'italic' },
   // La ligne « ajouter comme invité » : pleine largeur et détachée des pastilles
   // au-dessus, pour qu'un tap approximatif ne transforme pas un pilote inscrit
@@ -1392,7 +1464,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.line,
   },
-  guestRowTxt: { fontWeight: '800' },
+  guestRowTxt: { fontSize: 14, fontWeight: '700' },
   guestRowHint: { fontSize: 12 },
   friendChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   friendChip: {
@@ -1411,7 +1483,7 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
     paddingRight: spacing.md,
   },
-  friendChipTxt: { fontSize: 13, fontWeight: '700' },
+  friendChipTxt: { fontSize: 14, fontWeight: '700' },
   posNumDnf: { fontSize: 11, fontWeight: '800', color: colors.inkDim2 },
   posNum: { fontFamily: fonts.serifBlack, fontSize: 18, minWidth: 22, textAlign: 'center', color: colors.ink },
   delta: { fontWeight: '800' },

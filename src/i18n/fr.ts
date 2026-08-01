@@ -224,6 +224,9 @@ export const fr = {
     addFriendsEmpty: 'Tes amis sont tous sur la grille. Tape un nom pour ajouter quelqu’un d’autre.',
     addNoFriendsYet: 'Tape le nom de la personne à ajouter.',
     addNoMatch: 'Aucun pilote inscrit sous ce pseudo.',
+    // Une lettre ne déclenche aucune recherche : on n'a rien à conclure, et
+    // surtout rien à affirmer.
+    addKeepTyping: 'Continue à taper pour chercher un pilote inscrit…',
     invitePilotAlready: 'Ce pilote est déjà sur la grille.',
     // L'invité (fantôme) : on dit franchement ce qu'il ne fait PAS, sinon
     // l'admin croit inscrire un vrai pilote et s'étonne que l'Elo ne bouge pas.
@@ -246,7 +249,6 @@ export const fr = {
     joinRace: 'Rejoindre la course',
     joinError: 'Impossible de rejoindre cette course.',
     deleteError: 'Suppression impossible pour le moment.',
-    lapTimes: 'Meilleurs tours ⏱',
     circuitRecord: 'Record du circuit : %t · %n',
     lapAdd: 'Ajouter mon temps',
     lapAddOther: 'Ajouter un temps',

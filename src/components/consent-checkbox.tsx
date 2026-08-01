@@ -19,7 +19,7 @@ export function ConsentCheckbox({
       <Pressable
         onPress={() => onChange(!checked)}
         accessibilityRole="checkbox"
-        accessibilityState={{ checked }}
+        aria-checked={checked}
         accessibilityLabel={t.auth.consentLabel}
         style={[styles.box, checked && styles.boxOn]}>
         <Body style={styles.check}>{checked ? '✓' : ''}</Body>

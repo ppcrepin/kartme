@@ -44,7 +44,9 @@ export function Field({
 const styles = StyleSheet.create({
   wrap: { gap: spacing.xs },
   label: {
-    color: colors.inkDim2,
+    // `inkDim2` sur une carte donne 4,27:1 — sous le seuil AA de 4,5:1, à 11 px
+    // et en capitales. `inkDim` monte à ~5,9:1 sans rien changer d'autre.
+    color: colors.inkDim,
     fontFamily: fonts.sans,
     fontSize: 11,
     fontWeight: '700',

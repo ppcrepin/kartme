@@ -212,7 +212,7 @@ export function CircuitsExplorer({
           <Pressable
             key={v}
             accessibilityRole="button"
-            accessibilityState={{ selected: vue === v }}
+            aria-selected={vue === v}
             onPress={() => setVue(v)}
             style={[styles.segItem, vue === v && styles.segItemOn]}>
             <Body style={vue === v ? styles.segTxtOn : styles.segTxt}>

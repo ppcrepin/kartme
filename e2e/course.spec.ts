@@ -61,8 +61,15 @@ test('course à venir (admin) : barre fixe visible d’entrée, ajout en clair, 
   // Le bloc d'ajout est EN CLAIR sous la grille : aucun tap pour y accéder
   // (décision PO 2026-08-01 — remplir la grille est le geste qui suit la
   // création d'une course, pas une section rare qu'on descend en feuille).
-  await expect(page.getByText('Qui court ?', { exact: true })).toBeVisible();
+  const champ = page.getByText('Qui court ?', { exact: true });
+  await expect(champ).toBeVisible();
   await expect(page.getByText('+ Ajouter', { exact: true })).toHaveCount(0);
+  // `toBeVisible` ne dit QUE « boîte non vide » : il passerait sur un bloc
+  // entièrement sous la ligne de flottaison. Sur une grille de trois pilotes,
+  // « en clair » doit vouloir dire « sans défiler » — sinon on a remplacé un
+  // tap par un geste de défilement, ce qui ne règle rien.
+  const bChamp = await champ.boundingBox();
+  expect(bChamp && bChamp.y + bChamp.height <= 844).toBeTruthy();
 
   // Le menu ⋯ : Modifier + suppression EN DEUX TEMPS, et la confirmation ne
   // survit pas à une fermeture au voile (revue adversariale).
@@ -119,8 +126,12 @@ test('bloc d’ajout : un seul champ qui suggère (amis, filtre, invité)', asyn
   // 2bis. À UN caractère, aucune ligne « invité » : on ne peut pas encore
   //       chercher, donc la proposer reviendrait à créer un fantôme nommé « a »
   //       en pleine frappe — pile sous le pouce qui vise les pastilles.
-  await page.getByLabel('Qui court ?').fill('a');
+  //       Et l'écran ne doit RIEN affirmer : « aucun pilote inscrit sous ce
+  //       pseudo » sans avoir cherché est le mensonge qui mène au doublon.
+  await page.getByLabel('Qui court ?').fill('z');
   await expect(page.getByText(/comme invité/)).toHaveCount(0);
+  await expect(page.getByText(/Aucun pilote inscrit/)).toHaveCount(0);
+  await expect(page.getByText(/Continue à taper/)).toBeVisible();
 
   // 3. Aucun inscrit sous ce nom : la dernière ligne propose l'invité, et
   //    annonce sur la ligne même qu'il ne rapporte aucun point.
@@ -132,6 +143,24 @@ test('bloc d’ajout : un seul champ qui suggère (amis, filtre, invité)', asyn
   // au pouce, et la rater ici veut dire ajouter le mauvais pilote.
   const boite = await invite.boundingBox();
   expect(boite && boite.height >= 44).toBeTruthy();
+});
+
+test('grille CLÔTURÉE : le bloc d’ajout disparaît, la grille est figée', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, {
+    'rest/v1/races': { ...raceAVenir(UID), status: 'locked' },
+    'rest/v1/participations': PARTICIPANTS,
+    'rest/v1/results': [],
+  });
+  await page.goto('/race/r1');
+  await expect(page.getByText('Sologne Karting', { exact: true }).and(sceneActive(page))).toBeVisible({
+    timeout: 20_000,
+  });
+  // Le verrou peut arriver par le TEMPS RÉEL pendant qu'on tape un nom : le
+  // bloc doit se retirer, sinon l'admin ajoute dans le vide et lit une erreur
+  // serveur sans comprendre ce qui a changé.
+  await expect(page.getByText('Qui court ?', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Rouvrir les invitations', { exact: false })).toBeVisible();
 });
 
 test('course à venir (non-admin, non inscrit) : « Rejoindre » en barre fixe, pas de commandes d’admin', async ({ page }) => {

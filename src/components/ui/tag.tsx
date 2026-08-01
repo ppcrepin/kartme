@@ -16,7 +16,10 @@ export function Tag({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityState={{ selected: !!selected }}
+      // `accessibilityState` n'est pas lu par react-native-web : seules les
+      // props `aria-*` atteignent le DOM. Un état non annoncé, c'est une
+      // sélection qui n'existe que dans la couleur.
+      aria-selected={!!selected}
       style={[styles.base, selected ? styles.on : styles.off]}>
       <Text style={[styles.label, selected ? styles.labelOn : styles.labelOff]}>{label}</Text>
     </Pressable>

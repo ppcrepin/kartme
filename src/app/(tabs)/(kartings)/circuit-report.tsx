@@ -85,7 +85,7 @@ export default function CircuitReportScreen() {
                     <Pressable
                       key={k}
                       accessibilityRole="button"
-                      accessibilityState={{ selected: kind === k }}
+                      aria-selected={kind === k}
                       onPress={() => setKind(k)}
                       style={[styles.kindItem, kind === k && styles.kindItemOn]}>
                       <Body style={kind === k ? styles.kindTxtOn : styles.kindTxt}>

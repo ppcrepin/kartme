@@ -276,7 +276,7 @@ export default function CircuitPageScreen() {
                     <Pressable
                       key={p}
                       accessibilityRole="button"
-                      accessibilityState={{ selected: period === p }}
+                      aria-selected={period === p}
                       onPress={() => onPeriod(p)}
                       style={[styles.tab, period === p && styles.tabOn]}>
                       <Body style={period === p ? styles.tabTxtOn : styles.tabTxt}>

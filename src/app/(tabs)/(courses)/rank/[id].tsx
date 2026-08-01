@@ -367,7 +367,7 @@ export default function RankScreen() {
                     // couleur, donc invisible au lecteur d'écran ET à qui
                     // distingue mal le rouge.
                     accessibilityRole="radio"
-                    accessibilityState={{ checked: mode === m }}
+                    aria-checked={mode === m}
                     style={[styles.modeChip, mode === m && styles.modeChipOn]}>
                     <Body style={[styles.modeChipTxt, mode === m && styles.modeChipTxtOn]}>
                       {m === 'tap' ? t.races.modeTap : t.races.modeDrag}
@@ -384,6 +384,12 @@ export default function RankScreen() {
               {isCorrect ? t.races.correctHint : mode === 'drag' ? t.races.dragHint : t.races.tapHint}
             </Muted>
             {isLocked && !isCorrect ? <Muted>{t.races.lockedRankHint}</Muted> : null}
+            {/* Le rappel vit ICI, pas sous le bouton : sous le bouton il
+                tombait hors écran, et l'on ne voyait qu'un « Valider » grisé
+                sans savoir ce qu'il attendait. */}
+            {mode === 'drag' && !ordreEtabli && !isCorrect ? (
+              <Muted style={styles.dragAttente}>{t.races.dragUntouched}</Muted>
+            ) : null}
 
             {mode === 'drag' ? (
               <DragList
@@ -395,7 +401,11 @@ export default function RankScreen() {
                   const out = dnfs.has(p.id);
                   return (
                     <View style={styles.dragRow}>
-                      <View style={[styles.pos, out ? styles.posOut : styles.posOn]}>
+                      <View
+                        style={[
+                          styles.pos,
+                          out ? styles.posOut : ordreEtabli ? styles.posOn : styles.posEnAttente,
+                        ]}>
                         <Body style={out ? styles.posTxtOut : styles.posTxtOn}>
                           {out ? t.races.dnfShort : finishRank(index)}
                         </Body>
@@ -463,7 +473,7 @@ export default function RankScreen() {
                       key={p.id}
                       onPress={() => toggleDnf(p.id)}
                       accessibilityRole="button"
-                      accessibilityState={{ selected: out }}
+                      aria-pressed={out}
                       style={[styles.dnfChip, out && styles.dnfChipOn]}>
                       <Body style={[styles.dnfChipTxt, out && styles.dnfChipTxtOn]}>
                         {out ? '✕ ' : ''}{p.name}
@@ -492,9 +502,6 @@ export default function RankScreen() {
               />
             </View>
             {finishersCount < 1 ? <Muted>{t.races.needOneFinisher}</Muted> : null}
-            {finishersCount >= 1 && mode === 'drag' && !ordreEtabli ? (
-              <Muted>{t.races.dragUntouched}</Muted>
-            ) : null}
           </>
         )}
       </ScrollView>
@@ -505,6 +512,11 @@ export default function RankScreen() {
 const styles = StyleSheet.create({
   draft: { gap: spacing.xs },
   posOut: { backgroundColor: 'transparent', borderColor: colors.line, borderWidth: 1 },
+  // Ordre pas encore établi : le chiffre reste, en gris — il dit la position
+  // dans la liste, pas un classement. Le rouge plein est réservé à ce qui a
+  // été VOULU, comme les numéros du mode toucher.
+  posEnAttente: { backgroundColor: 'transparent', borderColor: colors.line2, borderWidth: 1 },
+  dragAttente: { color: colors.accent },
   posTxtOut: { color: colors.inkDim2, fontSize: 10, fontWeight: '800' },
   dnfBlock: { gap: spacing.xs, marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.line },
   dnfTitle: { color: colors.ink, fontWeight: '700' },
