@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
-import { CARREAUX_DAMIER, CREUX_DAMIER, RANGS_DAMIER } from '@/lib/marque';
+import { CARREAUX_DAMIER, CASE_DAMIER, CREUX_DAMIER, RANGS_DAMIER } from '@/lib/marque';
 
 /**
  * Filet damier — le motif signature, en séparateur.
@@ -18,7 +18,10 @@ import { CARREAUX_DAMIER, CREUX_DAMIER, RANGS_DAMIER } from '@/lib/marque';
  */
 export function CheckeredRule({ cells = CARREAUX_DAMIER }: { cells?: number }) {
   return (
-    <View style={styles.bloc} accessibilityElementsHidden importantForAccessibility="no">
+    // `aria-hidden` et NON `accessibilityElementsHidden` : react-native-web ne
+    // connaît pas la propriété native et la relaie telle quelle au DOM, ce qui
+    // fait japper React deux fois par filet monté — douze fois par page.
+    <View style={styles.bloc} aria-hidden>
       {Array.from({ length: RANGS_DAMIER }).map((_, rang) => (
         <View key={rang} style={styles.row}>
           {Array.from({ length: cells }).map((_, i) => (
@@ -38,6 +41,9 @@ export function CheckeredRule({ cells = CARREAUX_DAMIER }: { cells?: number }) {
 
 const styles = StyleSheet.create({
   bloc: { borderRadius: 2, overflow: 'hidden' },
-  row: { flexDirection: 'row', height: 5 },
-  cell: { flex: 1, height: '100%' },
+  row: { flexDirection: 'row', height: CASE_DAMIER },
+  // Cases CARRÉES, à taille fixe. En `flex: 1` elles s'étiraient à la largeur
+  // disponible (6 × 5 ici, 6,4 × 5 là) : le filet paraissait tramé quand
+  // l'icône, elle, a des cases carrées.
+  cell: { width: CASE_DAMIER, height: CASE_DAMIER },
 });

@@ -32,10 +32,30 @@ export function fichierMarque(quoi: string): string {
  * l'image partagée ne ressemblait plus au filet de l'application.
  */
 export const RANGS_DAMIER = 2;
-/** Nombre de cases par rang dans le filet d'interface. */
-export const CARREAUX_DAMIER = 24;
-/** La case « creuse » du filet d'interface : un carbone très légèrement rougi,
- *  qui garde le motif visible sur les fonds de carte comme sur le fond. */
+/**
+ * Le CÔTÉ d'une case du filet d'interface, en points.
+ *
+ * Une seule valeur pour la largeur ET la hauteur : les cases étaient
+ * rectangulaires (6 × 5, 6,4 × 5 selon l'écran) là où celles de l'icône sont
+ * carrées, et côte à côte le filet paraissait « tramé » quand l'icône paraissait
+ * drapeau. Un damier de drapeau a des cases carrées.
+ */
+export const CASE_DAMIER = 6;
+/** Nombre de cases par rang dans le filet d'interface, à défaut d'indication. */
+export const CARREAUX_DAMIER = 8;
+/**
+ * La case « creuse ».
+ *
+ * Un carbone très légèrement rougi : sur un fond de carte (`colors.card`), le
+ * carbone pur du fond d'écran disparaît presque, et le damier retombe sur une
+ * ligne de tirets rouges — exactement ce que le PO a fait retirer.
+ *
+ * C'est la MÊME teinte dans le filet d'interface et dans l'image de podium
+ * partagée : les deux avaient divergé, si bien que l'image ne ressemblait plus
+ * à l'application. Les icônes d'application, elles, gardent un creux carbone —
+ * là, le creux EST le fond (et il est même transparent sur les variantes
+ * Android et l'écran de démarrage, qui se posent sur autre chose).
+ */
 export const CREUX_DAMIER = '#3a0f0c';
 
 /** La police d'affichage, si elle a fini de charger (voir `policeMarque`). */
@@ -92,7 +112,7 @@ export function dessinerDamier(
       // Décalage d'un rang à l'autre : c'est lui qui fait le damier plutôt que
       // deux lignes de tirets superposées.
       const plein = (col + rang) % 2 === 0;
-      ctx.fillStyle = plein ? colors.accent : colors.bg;
+      ctx.fillStyle = plein ? colors.accent : CREUX_DAMIER;
       const l = Math.min(carreau, x + largeur - (x + col * carreau));
       ctx.fillRect(x + col * carreau, y + rang * carreau, l, carreau);
     }

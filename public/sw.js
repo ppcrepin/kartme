@@ -33,7 +33,11 @@ self.addEventListener('push', (event) => {
     // renotify si un tag identique : on veut réveiller l'utilisateur.
     renotify: !!payload.tag,
     data: { url: payload.url || '' },
-    icon: payload.icon || undefined,
+    // Icône par DÉFAUT : sans elle, le navigateur affiche sa pastille
+    // générique — et la notification push est le seul endroit où la marque se
+    // voit hors de l'application. Résolue contre le scope du service worker,
+    // donc le sous-chemin de déploiement est pris en compte tout seul.
+    icon: payload.icon || new URL('icone-192.png', self.registration.scope).href,
     badge: payload.badge || undefined,
   };
   event.waitUntil(self.registration.showNotification(title, options));

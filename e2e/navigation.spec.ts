@@ -90,7 +90,10 @@ test('MA ligne de classement ne mène nulle part — et ne le promet pas', async
   const bords = await page.evaluate(() =>
     [...document.querySelectorAll('[aria-hidden="true"]')]
       .map((e) => e.getBoundingClientRect())
-      .filter((r) => r.width > 0 && r.width < 80)
+      // La hauteur écarte le filet damier de l'en-tête, qui porte lui aussi
+      // `aria-hidden` (48 × 12) depuis qu'il a cessé d'utiliser une propriété
+      // native que react-native-web ne traduit pas.
+      .filter((r) => r.width > 0 && r.width < 80 && r.height > 20)
       .map((r) => Math.round(r.right)),
   );
   expect(bords.length).toBeGreaterThanOrEqual(2);

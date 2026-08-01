@@ -7,14 +7,24 @@ import { colors, fonts } from '@/constants/theme';
 // Palette d'avatars — teintes chaudes/froides distinctes, hors rouge de marque.
 const AVATAR_COLORS = ['#c6503f', '#5b9bd5', '#5fb27d', '#ef7f27', '#b9793f', '#8f6fae'];
 
+// `name` est TYPÉ `string`, mais il arrive d'une ligne de base : un profil créé
+// dont le pseudo n'est pas encore choisi porte `null`, et TypeScript ne voit
+// rien. `colorFor` bouclait alors sur `undefined.length` et l'écran Profil
+// tombait en page blanche d'erreur — pour un état parfaitement normal, juste
+// après l'inscription.
+function texteSur(name: string): string {
+  return typeof name === 'string' ? name : '';
+}
+
 function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const parts = texteSur(name).trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function colorFor(name: string): string {
+function colorFor(nom: string): string {
+  const name = texteSur(nom);
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
   return AVATAR_COLORS[hash % AVATAR_COLORS.length];

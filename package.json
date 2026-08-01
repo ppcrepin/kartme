@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:e2e": "playwright test",
-    "db:test": "bash supabase/tests/run.sh"
+    "db:test": "bash supabase/tests/run.sh",
+    "icons": "python3 scripts/logo.py"
   },
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",
