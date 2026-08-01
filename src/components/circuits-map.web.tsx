@@ -12,6 +12,17 @@ import type { Circuit } from '@/lib/races';
 const FRANCE: Position = { lat: 46.6, lon: 2.4 };
 
 /**
+ * Dernière vue de la carte, gardée HORS du composant.
+ *
+ * L'explorateur démonte Leaflet dès qu'on bascule sur « Liste » ou qu'on tape
+ * dans la recherche. Au remontage, le constructeur repartait sur la France au
+ * zoom 5 : quelqu'un qui avait zoomé sur son département, cherché un nom, puis
+ * effacé sa recherche, retrouvait la carte au point de départ. Mesuré à
+ * l'audit : zoom 7 → Liste → Carte → zoom 5.
+ */
+let derniereVue: { lat: number; lon: number; zoom: number } | null = null;
+
+/**
  * Carte des kartings — Leaflet + tuiles OpenStreetMap.
  *
  * Web uniquement (voir `circuits-map.tsx` pour le repli natif) : Leaflet
@@ -63,7 +74,10 @@ export function CircuitsMap({
       const m = L.map(host.current, {
         zoomControl: true,
         attributionControl: true,
-      }).setView([FRANCE.lat, FRANCE.lon], 5);
+      }).setView(
+        derniereVue ? [derniereVue.lat, derniereVue.lon] : [FRANCE.lat, FRANCE.lon],
+        derniereVue?.zoom ?? 5,
+      );
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 18,
         // Attribution obligatoire (politique d'usage des tuiles ET licence
@@ -86,6 +100,13 @@ export function CircuitsMap({
       };
       taille();
       m.on('zoomend', taille);
+      // Mémorise la vue à chaque geste : c'est elle qu'on restaure au retour.
+      const retenir = () => {
+        const c = m.getCenter();
+        derniereVue = { lat: c.lat, lon: c.lng, zoom: m.getZoom() };
+      };
+      m.on('moveend', retenir);
+      m.on('zoomend', retenir);
       setReady(true);
     })();
     return () => {
@@ -131,13 +152,36 @@ export function CircuitsMap({
   }, [ready, circuits]);
 
   // Mise en évidence : on ne touche QUE les deux épingles concernées.
+  // `circuits` EN DÉPENDANCE : l'effet des marqueurs les reconstruit tous à
+  // chaque changement de liste — et « Me localiser » recharge la liste pour
+  // ajouter les distances. Sans cette dépendance, les icônes neuves ne
+  // recevaient jamais le halo : le karting choisi restait sélectionné dans la
+  // fiche, mais plus rien ne le désignait sur la carte (audit navigateur).
   useEffect(() => {
     if (!ready) return;
     for (const [id, marker] of markers.current) {
       const pin = marker.getElement()?.firstChild as HTMLElement | undefined;
       pin?.classList.toggle('ks-pin-on', id === selectedId);
     }
-  }, [ready, selectedId]);
+  }, [ready, selectedId, circuits]);
+
+  // ── M1 : la carte suit le karting choisi, mais SEULEMENT s'il est sorti ──
+  // Choisir un karting dans la liste sous la carte ne bougeait jamais la vue :
+  // on pouvait sélectionner Marseille avec la carte centrée sur la Loire, et
+  // l'épingle sélectionnée se retrouvait hors écran, sans halo visible. C'est
+  // la seconde moitié du signalement (« au lieu de la vue courante »).
+  //
+  // On ne recentre QUE si l'épingle est hors du cadre : déplacer le sol sous
+  // le doigt de quelqu'un qui vient de toucher une épingle déjà visible serait
+  // le défaut inverse.
+  useEffect(() => {
+    if (!ready || !map.current || !selectedId) return;
+    const cible = circuits.find((c) => c.id === selectedId);
+    if (!cible || cible.lat === null || cible.lon === null) return;
+    const m = map.current;
+    if (m.getBounds().pad(-0.15).contains([cible.lat, cible.lon])) return;
+    m.panTo([cible.lat, cible.lon], { animate: true });
+  }, [ready, selectedId, circuits]);
 
   // Recentrage sur le pilote dès qu'on connaît sa position. `ready` en
   // dépendance : une position obtenue avant la fin du chargement de Leaflet
@@ -152,6 +196,27 @@ export function CircuitsMap({
       <style
         dangerouslySetInnerHTML={{
           __html: `
+            /* LA correction du bug signalé au test du 2026-08-01 : « au clic
+               sur certains kartings, retient la localisation précédente ».
+               La boîte du marqueur fait 16 px, la pastille visible 10 px au
+               zoom « loin ». Les 6 px invisibles autour recouvraient la
+               pastille du voisin — et Leaflet empile par latitude, le plus au
+               SUD au-dessus : on visait un karting, on sélectionnait celui
+               d'à côté, systématiquement le précédent dans la liste triée par
+               distance. Mesuré : 42 à 47 % de recouvrement, 4 clics sur 4.
+               Rendre la BOÎTE transparente aux clics et la pastille seule
+               cliquable règle le cas à TOUS les zooms, sans reconstruire un
+               marqueur à chaque changement d'échelle. L'événement remonte
+               ensuite jusqu'au marqueur : le gestionnaire de Leaflet, posé
+               sur la boîte, s'exécute normalement. */
+            /* Même spécificité que la règle de Leaflet qu'on neutralise
+               (.leaflet-marker-icon.leaflet-interactive, leaflet.css ligne 250)
+               — un simple .leaflet-marker-icon perdait la cascade, et le
+               correctif n'avait AUCUN effet. Vérifié au navigateur.
+               (Pas d'accent grave dans ce bloc : il vit dans un gabarit de
+               chaîne, et un seul le refermerait.) */
+            .leaflet-marker-icon.leaflet-interactive{pointer-events:none}
+            .ks-pin{pointer-events:auto}
             .ks-pin{display:block;width:14px;height:14px;border-radius:50%;
               background:${colors.accent};border:2px solid #fff;
               box-shadow:0 1px 3px rgba(0,0,0,.5);cursor:pointer;

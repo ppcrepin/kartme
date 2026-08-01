@@ -178,6 +178,20 @@ export function CircuitsExplorer({
       .slice(0, 40);
   }, [circuits, recents, query]);
 
+  /**
+   * Choisir un karting. Efface la recherche au passage : c'est ce qui rend la
+   * sélection VISIBLE — la fiche réapparaît, la carte revient, et l'épingle
+   * choisie se met en évidence. Sans cela, toucher un résultat ne changeait
+   * rien à l'écran.
+   */
+  const choisir = useCallback(
+    (c: Circuit) => {
+      setQuery('');
+      onSelect(c);
+    },
+    [onSelect],
+  );
+
   return (
     <ScrollView
       style={styles.page}
@@ -237,14 +251,20 @@ export function CircuitsExplorer({
               <Button label={t.inbox.retry} onPress={() => load(me ?? FRANCE, me !== null)} />
             </View>
           ) : (
-            <CircuitsMap circuits={circuits} me={me} selectedId={selectedId} onSelect={onSelect} />
+            <CircuitsMap circuits={circuits} me={me} selectedId={selectedId} onSelect={choisir} />
           )}
         </View>
       ) : null}
 
       {/* Chercher, c'est passer à autre chose : la fiche du circuit
           sélectionné s'efface pendant la saisie — les résultats d'abord.
-          Elle revient telle quelle si on efface la recherche. */}
+          Elle revient telle quelle si on efface la recherche.
+
+          Et TOUCHER un résultat efface la recherche (voir `choisir`) : sans
+          cela l'écran ne bougeait pas d'un pixel — la fiche restait masquée,
+          la ligne ne prenait aucun état, et rien ne disait que le tap avait
+          été pris en compte. Puis la fiche surgissait toute seule plus tard,
+          quand on effaçait la recherche. */}
       {query ? null : extra}
 
       <View style={styles.list}>
@@ -252,7 +272,7 @@ export function CircuitsExplorer({
           <>
             <Label>{t.races.circuitRecents}</Label>
             {recents.map((c) => (
-              <CircuitRow key={c.id} c={c} onSelect={onSelect} />
+              <CircuitRow key={c.id} c={c} onSelect={choisir} />
             ))}
           </>
         ) : null}
@@ -264,7 +284,7 @@ export function CircuitsExplorer({
         </Label>
         {filtre.length === 0 && !loading ? <Muted>{t.races.mapNone}</Muted> : null}
         {filtre.map((c) => (
-          <CircuitRow key={c.id} c={c} onSelect={onSelect} />
+          <CircuitRow key={c.id} c={c} onSelect={choisir} />
         ))}
 
         {footer}

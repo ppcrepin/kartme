@@ -70,17 +70,31 @@ test('MA ligne de classement ne mène nulle part — et ne le promet pas', async
   });
   await page.goto('/classements');
 
-  const maLigne = page.getByRole('button', { name: /Moi/ }).first();
-  await expect(maLigne).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText('Moi', { exact: false }).first()).toBeVisible({ timeout: 20_000 });
 
   // Elle envoyait sur l'onglet Profil, qui est une RACINE d'onglet : zéro
   // bouton retour, mesuré au navigateur. On tapait une ligne de liste et on
   // se retrouvait téléporté, sans marche arrière. Et tout ce qu'elle
   // promettait est déjà dans la carte « Ma position », juste au-dessus.
-  await expect(maLigne).not.toContainText('›');
-  await maLigne.click();
-  await page.waitForTimeout(700);
-  await expect(page).toHaveURL(/classements/);
+  //
+  // Elle ne doit pas non plus SE PRÉSENTER comme un bouton : un gestionnaire
+  // vide laissait un `role="button"` tabulable, avec retour visuel au tap et
+  // rien au bout — annoncé « bouton » à un lecteur d'écran, arrêt au clavier.
+  await expect(page.getByRole('button', { name: /Moi \(toi\)/ })).toHaveCount(0);
+
+  // Et le bord droit ne se déforme pas : sans espaceur, retirer le chevron
+  // décalait la médaille de 10 px sur la SEULE ligne que l'œil doit trouver
+  // sans lire.
+  // La colonne de droite de chaque ligne porte `aria-hidden` (médaille +
+  // chevron) : c'est le repère stable pour comparer les bords.
+  const bords = await page.evaluate(() =>
+    [...document.querySelectorAll('[aria-hidden="true"]')]
+      .map((e) => e.getBoundingClientRect())
+      .filter((r) => r.width > 0 && r.width < 80)
+      .map((r) => Math.round(r.right)),
+  );
+  expect(bords.length).toBeGreaterThanOrEqual(2);
+  expect(new Set(bords).size).toBe(1);
 });
 
 // Deux jeux : le cas courant, et le PIRE — « 99+ » élargit la pastille rouge

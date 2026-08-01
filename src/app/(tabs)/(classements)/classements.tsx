@@ -164,12 +164,6 @@ export default function ClassementsScreen() {
   }
 
   function openPilot(row: LeaderboardRow) {
-    // MA ligne ne navigue plus. Elle envoyait sur l'onglet Profil, qui est une
-    // RACINE d'onglet : zéro bouton retour, mesuré au navigateur. On tape une
-    // ligne de liste et on se retrouve téléporté, sans marche arrière. Et tout
-    // ce qu'elle promettait est déjà dans la carte « Ma position » juste
-    // au-dessus. Le chevron disparaît avec elle (voir `RangRow`).
-    if (row.isMe) return;
     if (row.pilotId) router.push(`/pilot/${row.pilotId}`);
   }
 
@@ -321,7 +315,14 @@ function RangRow({
   const ligne = (
     <ListRow
       first={first}
-      onPress={onPress}
+      // MA ligne ne navigue PAS, et ne se présente pas comme si elle le
+      // faisait : `undefined` fait rendre une simple `View` à `ListRow`, là
+      // où un gestionnaire vide laissait un `role="button"` tabulable, avec
+      // retour visuel au tap et rien au bout. Elle envoyait sur l'onglet
+      // Profil — une RACINE d'onglet, donc zéro bouton retour, mesuré au
+      // navigateur : on tapait une ligne de liste et on n'avait plus de marche
+      // arrière. Ce qu'elle promettait est déjà dans « Ma position » au-dessus.
+      onPress={row.isMe ? undefined : onPress}
       left={
         <>
           <Body style={styles.rank}>{row.rank}</Body>
@@ -367,7 +368,14 @@ function RangRow({
         // et de l'Elo. Un lecteur d'écran finissait sur « guillemet fermant ».
         <View style={styles.rowRight} aria-hidden>
           {!calibrating ? <GradeMedal grade={grade} size={24} /> : null}
-          {!row.isMe && row.pilotId ? <Muted style={styles.chevron}>›</Muted> : null}
+          {!row.isMe && row.pilotId ? (
+            <Muted style={styles.chevron}>›</Muted>
+          ) : (
+            // Un espaceur de la largeur du chevron : sans lui, le bord droit
+            // se décalait de 10 px sur MA ligne — précisément celle que l'œil
+            // doit trouver sans lire (audit navigateur).
+            <View style={styles.chevronVide} />
+          )}
         </View>
       }
     />
@@ -382,6 +390,7 @@ const styles = StyleSheet.create({
   rank: { fontFamily: fonts.serifBlack, fontSize: 16, color: colors.inkDim, minWidth: 26, textAlign: 'center' },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   chevron: { fontSize: 18, lineHeight: 20 },
+  chevronVide: { width: 6 },
   rowName: { fontSize: 14, lineHeight: 18, fontWeight: '600' },
   rowSub: { fontSize: 11, lineHeight: 14 },
   meRow: {
