@@ -16,6 +16,28 @@ import { colors } from '@/constants/theme';
 /** Le nom, tel qu'il s'écrit. */
 export const MARQUE = 'KartSquad';
 
+/**
+ * Le nom d'un fichier exporté. Il porte la marque, il est LU (barre de
+ * téléchargement, feuille de partage système) : il vit donc ici, avec le reste.
+ * Codé en dur ailleurs, il aurait survécu au changement de logo.
+ */
+export function fichierMarque(quoi: string): string {
+  return `${MARQUE.toLowerCase()}-${quoi}.png`;
+}
+
+/**
+ * Le MOTIF du damier, partagé par le filet de l'interface
+ * (`components/ui/checkered-rule`) et l'image de podium. Les deux avaient
+ * divergé — un rang contre deux, `#3a0f0c` contre le fond carbone — si bien que
+ * l'image partagée ne ressemblait plus au filet de l'application.
+ */
+export const RANGS_DAMIER = 2;
+/** Nombre de cases par rang dans le filet d'interface. */
+export const CARREAUX_DAMIER = 24;
+/** La case « creuse » du filet d'interface : un carbone très légèrement rougi,
+ *  qui garde le motif visible sur les fonds de carte comme sur le fond. */
+export const CREUX_DAMIER = '#3a0f0c';
+
 /** La police d'affichage, si elle a fini de charger (voir `policeMarque`). */
 const FAMILLE_TITRE = 'Fraunces_900Black';
 

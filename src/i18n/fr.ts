@@ -304,7 +304,10 @@ export const fr = {
     // Écrit DANS l'image : elle circule chez des gens qui n'ont pas l'app, et
     // « +24 » tout seul ne dit rien. %n arrive déjà accordé.
     podiumImageResume: '%n · les points ne s’échangent qu’entre pilotes inscrits',
-    shareResultsOpen: 'Partager les résultats',
+    // DISTINCT de `shareResults`, qui titre la carte de lien À L'INTÉRIEUR de
+    // la feuille : deux commandes au texte identique dans la même vue, et un
+    // lecteur d'écran annonce deux fois la même chose.
+    shareResultsOpen: 'Partager cette course',
     shareResultsOpenHint: 'Le podium en image, ou le lien de la course.',
     shareOpen: 'Inviter la bande',
     shareOpenHint: 'Lien, QR code — la course en un tap.',

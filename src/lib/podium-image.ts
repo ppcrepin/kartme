@@ -45,17 +45,33 @@ export interface DonneesPodium {
   /** La ligne de pied : nombre de pilotes, règle de l'Elo. Fournie par
    *  l'appelant — ce module ne connaît aucune chaîne visible. */
   resume: string;
-  /** L'adresse à afficher (sans protocole : elle se lit, elle ne se clique pas). */
+  /** L'adresse à AFFICHER dans l'image, sans protocole : elle se lit, elle ne
+   *  se clique pas. */
   url: string;
+  /** L'adresse à PARTAGER, complète et cliquable. Distincte de la précédente :
+   *  une URL amputée de son protocole n'est auto-liée par aucune messagerie. */
+  partage: string;
   /** Le mot pour un abandon, fourni par l'i18n — ce module ne connaît aucune
    *  chaîne visible. */
   abandon: string;
 }
 
-/** Largeur/hauteur de l'image. Format 4:5, celui des fils et des stories. */
+/** Largeur de l'image. Fixe : c'est la hauteur qui s'adapte au contenu. */
 export const LARGEUR = 1080;
-export const HAUTEUR = 1350;
 const MARGE = 72;
+
+/**
+ * La hauteur dépend du NOMBRE de lignes, et les deux valeurs sont des formats
+ * standards de fil (4:5 et 1:1).
+ *
+ * À hauteur fixe, une course à deux pilotes laissait 290 px de noir au-dessus
+ * du podium et autant en dessous, et à un pilote près du double : l'image avait
+ * l'air ratée alors qu'elle était juste. Recentrer ne suffisait pas — il n'y
+ * avait rien à mettre dans le vide.
+ */
+export function hauteurPodium(nbLignes: number): number {
+  return nbLignes >= 3 ? 1350 : 1080;
+}
 
 /**
  * Un nom qui ne tient pas est COUPÉ, jamais rétréci : une image où un seul
@@ -80,6 +96,9 @@ export function nomCourt(nom: string, maxCaracteres: number): string {
  * l'image : le partage ne doit pas être une porte dérobée sur ce que l'écran
  * refuse de montrer.
  */
+/** Au-delà, les lignes déborderaient sur la signature. Voir `imagePodium`. */
+export const MAX_LIGNES = 4;
+
 export function lignesPodium(
   resultats: readonly ResultatSource[],
   anonyme: string,
@@ -87,11 +106,19 @@ export function lignesPodium(
 ): LignePodium[] {
   return [...resultats]
     .sort((a, b) => a.position - b.position)
-    .slice(0, combien)
+    // Borné DUR : le paramètre est public, et à cinq lignes le bloc passait
+    // sous la signature — l'image se serait cassée en silence le jour où
+    // quelqu'un aurait voulu « un top 5 ».
+    .slice(0, Math.min(Math.max(1, combien), MAX_LIGNES))
     .map((r) => ({
       rang: r.position,
       nom: nomCourt(r.hiddenProfile ? anonyme : r.name, 18),
-      delta: r.isGuest ? null : r.eloDelta,
+      // Le NOM masqué ne suffisait pas : « 2 · Pilote privé · +18 », avec le
+      // circuit et la date au-dessus, ré-identifie trivialement la personne
+      // pour quiconque a couru ce jour-là — et lui attribue un mouvement d'Elo
+      // qu'elle a précisément choisi de ne pas exposer. Dans une image, c'est
+      // irrattrapable.
+      delta: r.isGuest || r.hiddenProfile ? null : r.eloDelta,
       dnf: r.dnf,
     }));
 }
@@ -118,6 +145,7 @@ const MEDAILLES = ['#e2c14d', '#cfd4d8', '#b9793f'];
  */
 export async function imagePodium(d: DonneesPodium): Promise<string | null> {
   if (typeof document === 'undefined') return null;
+  const HAUTEUR = hauteurPodium(d.lignes.length);
   const canvas = document.createElement('canvas');
   canvas.width = LARGEUR;
   canvas.height = HAUTEUR;
@@ -129,10 +157,29 @@ export async function imagePodium(d: DonneesPodium): Promise<string | null> {
   // — et l'image part signée d'un Times New Roman.
   let policeDispo = false;
   try {
-    const polices = (document as unknown as { fonts?: { ready: Promise<unknown>; check: (f: string) => boolean } }).fonts;
+    const polices = (
+      document as unknown as {
+        fonts?: {
+          ready: Promise<unknown>;
+          load: (f: string) => Promise<unknown[]>;
+          check: (f: string) => boolean;
+        };
+      }
+    ).fonts;
     if (polices) {
-      await polices.ready;
-      policeDispo = polices.check('64px "Fraunces_900Black"');
+      // `load`, et pas seulement `ready` : `canvas` ne déclenche JAMAIS le
+      // téléchargement d'une webfont, si bien que `ready` peut se régler sur
+      // une police jamais demandée. Et un délai maximal, sans quoi une
+      // promesse qui ne retombe pas laisse l'aperçu bloqué sur « Préparation
+      // de l'image… », bouton grisé, sans issue ni message.
+      const chargee = polices.load('64px "Fraunces_900Black"').then(
+        (f) => f.length > 0,
+        () => false,
+      );
+      policeDispo = await Promise.race([
+        chargee,
+        new Promise<boolean>((r) => setTimeout(() => r(false), 2000)),
+      ]);
     }
   } catch {
     policeDispo = false;
@@ -151,20 +198,37 @@ export async function imagePodium(d: DonneesPodium): Promise<string | null> {
   ctx.textAlign = 'left';
   ctx.font = policeMarque(66, policeDispo);
   ctx.fillStyle = colors.ink;
-  ctx.fillText(couperAuCadre(ctx, d.circuit, LARGEUR - MARGE * 2), MARGE, 170);
+  // Sur DEUX lignes si besoin : « Circuit International de Karting de
+  // Saint-Laurent-de-Mure » tronqué à « Circuit International de… » ne dit plus
+  // de quel karting il s'agit — or l'image circule hors de l'application, où
+  // personne ne peut aller vérifier.
+  const titre = couperEnLignes(ctx, d.circuit, LARGEUR - MARGE * 2, 2);
+  titre.forEach((l, i) => ctx.fillText(l, MARGE, 170 + i * 78));
+  const basTitre = 170 + titre.length * 78;
 
   ctx.font = '500 34px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
   ctx.fillStyle = colors.inkDim;
-  ctx.fillText(d.date, MARGE, 260);
+  ctx.fillText(d.date, MARGE, basTitre + 12);
 
   // ── Le podium ─────────────────────────────────────────────────────────
   // Centré OPTIQUEMENT entre l'en-tête et le pied : à trois lignes sur 1350 px,
   // un bloc posé en haut laissait 300 px de vide au milieu de l'image, et le
   // regard tombait dans le trou plutôt que sur les noms.
   const hauteurLigne = 190;
-  const hautPodium = Math.max(
-    400,
-    Math.round((HAUTEUR - 260 - d.lignes.length * hauteurLigne) / 2) + 60,
+  // Le bas disponible : la signature, le résumé et leur air. On centre entre
+  // l'en-tête et cette limite, puis on BORNE des deux côtés — un `Math.max`
+  // seul laissait les lignes descendre sous la signature dès cinq pilotes.
+  const basDisponible = HAUTEUR - MARGE - 170 - 70;
+  const hautEntete = basTitre + 60;
+  // Centré entre l'en-tête et la signature, quel que soit le NOMBRE de lignes :
+  // calé sur une grille de trois, une course à deux pilotes laissait 290 px de
+  // noir au-dessus et autant en dessous, et l'image avait l'air ratée.
+  const hautPodium = Math.min(
+    Math.max(
+      hautEntete,
+      Math.round((hautEntete + basDisponible - d.lignes.length * hauteurLigne) / 2),
+    ),
+    basDisponible - d.lignes.length * hauteurLigne,
   );
   d.lignes.forEach((ligne, i) => {
     const y = hautPodium + i * hauteurLigne;
@@ -180,15 +244,28 @@ export async function imagePodium(d: DonneesPodium): Promise<string | null> {
     ctx.fillStyle = ligne.rang <= 3 ? colors.bg : colors.ink;
     ctx.fillText(String(ligne.rang), MARGE + taille / 2, y + 22);
 
+    // Le delta est mesuré AVANT le nom, pour lui réserver sa place : il est
+    // dessiné après, et se superposait aux dernières lettres d'un pseudo long.
+    // `nomCourt` coupe à 18 CARACTÈRES, une unité qui n'a aucun rapport avec
+    // des pixels — « MAXIMUS_WOLFGANG_M » en capitales dépasse 900 px.
+    const texteDelta = ecrireDelta(ligne.delta, d.abandon, ligne.dnf);
+    ctx.font = policeMarque(56, policeDispo);
+    const largeurDelta = ctx.measureText(texteDelta).width;
+
+    const gaucheNom = MARGE + taille + 40;
     ctx.textAlign = 'left';
     ctx.font = '700 56px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = colors.ink;
-    ctx.fillText(ligne.nom, MARGE + taille + 40, y + 24);
+    ctx.fillText(
+      couperAuCadre(ctx, ligne.nom, LARGEUR - MARGE - largeurDelta - 40 - gaucheNom),
+      gaucheNom,
+      y + 24,
+    );
 
     ctx.textAlign = 'right';
     ctx.font = policeMarque(56, policeDispo);
     ctx.fillStyle = couleurDelta(ligne.delta, ligne.dnf);
-    ctx.fillText(ecrireDelta(ligne.delta, d.abandon, ligne.dnf), LARGEUR - MARGE, y + 24);
+    ctx.fillText(texteDelta, LARGEUR - MARGE, y + 24);
   });
 
   // La règle de l'Elo, en petit : l'image circule chez des gens qui ne
@@ -203,6 +280,40 @@ export async function imagePodium(d: DonneesPodium): Promise<string | null> {
   dessinerSignature(ctx, MARGE, HAUTEUR - MARGE - hauteurSignature, LARGEUR - MARGE * 2, d.url, policeDispo);
 
   return canvas.toDataURL('image/png');
+}
+
+/**
+ * Répartit un texte sur au plus `maxLignes`, en coupant aux ESPACES. La
+ * dernière ligne est tronquée si elle déborde encore.
+ */
+function couperEnLignes(
+  ctx: Contexte2D,
+  texte: string,
+  largeur: number,
+  maxLignes: number,
+): string[] {
+  if (ctx.measureText(texte).width <= largeur) return [texte];
+  const mots = texte.split(' ');
+  const lignes: string[] = [];
+  let courante = '';
+  for (const mot of mots) {
+    const essai = courante ? `${courante} ${mot}` : mot;
+    if (ctx.measureText(essai).width <= largeur || !courante) {
+      courante = essai;
+    } else {
+      lignes.push(courante);
+      courante = mot;
+      // La dernière ligne autorisée absorbe tout le reste, et sera tronquée.
+      if (lignes.length === maxLignes - 1) {
+        courante = [mot, ...mots.slice(mots.indexOf(mot) + 1)].join(' ');
+        break;
+      }
+    }
+  }
+  lignes.push(courante);
+  return lignes.slice(0, maxLignes).map((l, i, tab) =>
+    i === tab.length - 1 ? couperAuCadre(ctx, l, largeur) : l,
+  );
 }
 
 /** Coupe un texte à la largeur disponible, en mesurant réellement. */

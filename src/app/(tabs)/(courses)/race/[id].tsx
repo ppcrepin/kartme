@@ -789,6 +789,7 @@ export default function RaceDetailScreen() {
             // Sans protocole ni chemin : l'image se lit, elle ne se clique pas,
             // et une URL de course n'apprendrait rien à qui n'a pas de compte.
             url: appBaseUrl().replace(/^https?:\/\//, '').replace(/\/$/, ''),
+            partage: appBaseUrl(),
             abandon: t.races.dnfShort,
             resume: t.races.podiumImageResume.replace('%n', pluriel(results.length, 'pilote')),
           }

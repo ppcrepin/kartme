@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { reseauSimule, sceneActive, sessionSimulee, UID } from './harness';
+import { reseauSimule, sessionSimulee, UID } from './harness';
 
 /**
  * C4 — l'image de podium partageable (décision PO 2026-08-01 : « le podium,
@@ -59,7 +59,7 @@ async function ouvrirPartage(page: import('@playwright/test').Page) {
   // La porte n'existait PAS avant ce lot : la feuille de partage n'était
   // atteignable que depuis une course à venir, et son titre « Partager les
   // résultats » n'avait donc jamais servi.
-  const porte = page.getByRole('button', { name: 'Partager les résultats' }).first();
+  const porte = page.getByRole('button', { name: 'Partager cette course' }).first();
   await expect(porte).toBeVisible({ timeout: 20_000 });
   await porte.click();
 }
@@ -109,26 +109,75 @@ test('l’image n’est pas une toile vide, et porte les points échangés', asy
     ctx.drawImage(img, 0, 0, 1080, 1350);
     const d = ctx.getImageData(0, 0, 1080, 1350).data;
     const teintes = new Set<string>();
-    let rouges = 0;
+    let rougesHaut = 0;
+    let rougesBas = 0;
     let verts = 0;
+    let clairsBas = 0;
     for (let i = 0; i < d.length; i += 4) {
+      const y = Math.floor(i / 4 / 1080);
       teintes.add(`${d[i]},${d[i + 1]},${d[i + 2]}`);
       // Le rouge de marque du damier (#e10600) et le vert d'un gain (#6fae82).
-      if (d[i] > 200 && d[i + 1] < 40 && d[i + 2] < 40) rouges++;
+      const rouge = d[i] > 200 && d[i + 1] < 40 && d[i + 2] < 40;
+      if (rouge && y < 200) rougesHaut++;
+      // La SIGNATURE : le damier du pied, et le texte clair (nom + adresse) qui
+      // le suit. Compter le rouge sur toute l'image laissait le damier de TÊTE
+      // satisfaire l'assertion à lui seul, avec seize fois la marge — la
+      // signature aurait pu disparaître entièrement sans que le test bronche.
+      if (y > 1050) {
+        if (rouge) rougesBas++;
+        if (d[i] > 120 && d[i + 1] > 110 && d[i + 2] > 100) clairsBas++;
+      }
       if (d[i] < 140 && d[i + 1] > 150 && d[i + 2] > 110 && d[i + 2] < 160) verts++;
     }
-    return { teintes: teintes.size, rouges, verts };
+    return { teintes: teintes.size, rougesHaut, rougesBas, verts, clairsBas };
     });
 
   expect(analyse).not.toBeNull();
   // Beaucoup de teintes : du texte antialiasé, pas un aplat.
   expect(analyse!.teintes).toBeGreaterThan(50);
-  // Le damier de la marque est là (des milliers de pixels rouges).
-  expect(analyse!.rouges).toBeGreaterThan(2000);
+  // Les DEUX damiers, comptés séparément : celui de tête et celui du pied.
+  expect(analyse!.rougesHaut).toBeGreaterThan(2000);
+  expect(analyse!.rougesBas).toBeGreaterThan(2000);
+  // Et du texte clair sous le damier du pied : le nom et l'adresse, c'est-à-dire
+  // la RAISON D'ÊTRE du lot — sans eux, l'image ne mène nulle part.
+  expect(analyse!.clairsBas).toBeGreaterThan(1000);
   // Et au moins un gain d'Elo s'affiche en vert : c'est le « points échangés »
   // de la demande, la seule information que le texte partagé ne donnait pas
   // d'un coup d'œil.
   expect(analyse!.verts).toBeGreaterThan(100);
+});
+
+test('un profil PRIVÉ ne fuit ni son pseudo ni ses points dans l’image', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, {
+    'rest/v1/races': COURSE_FINIE,
+    'rest/v1/participations': PARTICIPATIONS,
+    'rest/v1/results': [
+      // `profile_id` renseigné mais `profile` nul : c'est exactement ce que la
+      // RLS renvoie pour un compte privé dont on n'est pas ami.
+      { participation_id: 'p2', race_id: 'r1', position: 1, elo_before: 1310, elo_after: 1330, elo_delta: 20, best_lap_ms: null, dnf: false, participation: { profile_id: 'u9', profile: null, ghost: null } },
+      { participation_id: 'p1', race_id: 'r1', position: 2, elo_before: 1215, elo_after: 1210, elo_delta: -5, best_lap_ms: null, dnf: false, participation: part(UID, 'Moi') },
+    ],
+  });
+  await page.goto('/race/r1');
+  await page.getByRole('button', { name: 'Partager cette course' }).first().click({ timeout: 20_000 });
+
+  // LE risque du lot : l'image part dans des conversations, chez des gens qui
+  // ne sont pas inscrits, et rien ne la rattrape. Le test unitaire vérifie que
+  // `lignesPodium` sait anonymiser ; celui-ci vérifie que l'ÉCRAN lui passe
+  // bien la bonne clé — remplacer `t.races.privatePilot` par `r.name` laissait
+  // toute la campagne au vert.
+  const apercu = page.getByRole('img', { name: /Aperçu de l’image/ }).first();
+  await expect(apercu).toBeVisible({ timeout: 20_000 });
+  const lu = (await apercu.getAttribute('alt')) ?? '';
+  expect(lu).toContain('Pilote privé');
+  expect(lu).not.toContain('u9');
+
+  // Et son mouvement d'Elo ne sort pas non plus : « 1 · Pilote privé · +20 »,
+  // avec le circuit et la date au-dessus, ré-identifie la personne pour
+  // quiconque a couru ce jour-là.
+  expect(lu).not.toContain('+20');
+  expect(lu).toContain('—');
 });
 
 test('sur une course À VENIR, on n’offre pas d’image de podium', async ({ page }) => {
@@ -150,12 +199,40 @@ test('sur une course À VENIR, on n’offre pas d’image de podium', async ({ p
   await expect(page.getByRole('img', { name: /Aperçu de l’image/ })).toHaveCount(0);
 });
 
+test('« Partager l’image » produit vraiment un fichier, et le dit', async ({ page }) => {
+  await ouvrirPartage(page);
+  await expect(page.getByRole('img', { name: /Aperçu de l’image/ }).first()).toBeVisible({
+    timeout: 20_000,
+  });
+
+  // Chromium de bureau n'accepte pas le partage de FICHIER : on doit retomber
+  // sur le téléchargement. Rien ne le testait, et c'est précisément le chemin
+  // où le bouton pouvait rester sans effet — la construction du `File` levait à
+  // l'intérieur du même `try`, on sautait par-dessus le repli, et l'on
+  // atterrissait dans un `catch` muet.
+  const [telechargement] = await Promise.all([
+    page.waitForEvent('download', { timeout: 15_000 }),
+    page.getByRole('button', { name: 'Partager l’image' }).first().click(),
+  ]);
+  expect(telechargement.suggestedFilename()).toBe('kartsquad-podium.png');
+
+  // Et la confirmation s'affiche, PUIS s'efface : un bouton resté sur
+  // « enregistré » n'inviterait plus à repartager.
+  await expect(page.getByRole('button', { name: /Image enregistrée/ }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Partager l’image' }).first()).toBeVisible({
+    timeout: 8_000,
+  });
+});
+
 test('la feuille de partage reste ouvrable et fermable', async ({ page }) => {
   await ouvrirPartage(page);
   await expect(page.getByText('Partager le podium').first()).toBeVisible({ timeout: 20_000 });
   // Le lien texte survit à côté de l'image : c'est le repli quand le partage
-  // de fichier n'existe pas (ordinateur de bureau).
-  await expect(page.getByText(/Partager les résultats/).and(sceneActive(page)).first()).toBeVisible();
+  // de fichier n'existe pas (ordinateur de bureau). Le titre de cette carte est
+  // désormais DISTINCT de celui de la porte — deux commandes au même nom dans
+  // la même vue obligeaient ce test à ruser avec `sceneActive` pour lever
+  // l'ambiguïté, ce qui contournait un défaut d'interface au lieu de le dire.
+  await expect(page.getByText('Partager les résultats').first()).toBeVisible();
   await page.getByLabel('Fermer').first().click();
   await expect(page.getByText('Partager le podium')).toHaveCount(0);
 });
