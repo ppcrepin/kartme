@@ -16,7 +16,9 @@ export type BadgeKey =
   | 'chef_ecurie'
   | 'drs'
   | 'safety_car'
-  | 'push';
+  | 'push'
+  | 'sous_tension'
+  | 'haute_tension';
 
 const ICONS: Record<BadgeKey, ReactElement> = {
   // 1. Kart d'identité — carte avec photo et lignes de texte.
@@ -115,6 +117,25 @@ const ICONS: Record<BadgeKey, ReactElement> = {
     <>
       <Polyline points="7,34 16,25 21,29 33,14" />
       <Path d="M33 14l-7 1M33 14l-1 7" />
+    </>
+  ),
+  // 13. Sous tension — prise de recharge : l'éclair DANS le kart.
+  sous_tension: (
+    <>
+      <Line x1={9} y1={33} x2={39} y2={33} />
+      <Path d="M11 33v-6l5-5h16l5 5v6" />
+      <Circle cx={16} cy={33} r={3} />
+      <Circle cx={32} cy={33} r={3} />
+      <Path d="M25 12l-6 9h5l-2 7 7-10h-5z" />
+    </>
+  ),
+  // 14. Haute tension — le même éclair, doublé et cerclé : le palier d'après.
+  haute_tension: (
+    <>
+      <Circle cx={24} cy={24} r={15} />
+      <Path d="M23 11l-6 10h5l-2 8 7-11h-5z" />
+      <Path d="M31 15l-4 7" />
+      <Path d="M35 21l-4 5" />
     </>
   ),
 };

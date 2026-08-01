@@ -37,7 +37,7 @@ async function ouvrirKartings(page: Page) {
     'rpc/suggest_circuit': '00000000-0000-0000-0000-000000000001',
   });
   await page.goto('/kartings');
-  await expect(page.getByText('Kartings', { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText('Circuits', { exact: true }).first()).toBeVisible({ timeout: 20_000 });
 }
 
 test.describe('Onglet Kartings', () => {

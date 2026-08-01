@@ -13,7 +13,7 @@ test('le shell affiche les 4 onglets', async ({ page }) => {
   await reseauSimule(page);
   await page.goto('/');
 
-  for (const label of ['Courses', 'Classement', 'Kartings', 'Profil']) {
+  for (const label of ['Courses', 'Classement', 'Circuits', 'Profil']) {
     await expect(page.getByText(label, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
   }
   // Et Amis a bien DISPARU de la barre : le laisser aurait gardé deux écrans
@@ -47,7 +47,7 @@ test('la barre d’onglets reste visible sur un écran de détail', async ({ pag
   // fichier route égaré directement sous (tabs) deviendrait un 5e bouton.
   // Par RÔLE : la liste Kartings est montée sous la fiche dans la pile, et
   // son TITRE caché ferait trébucher un repérage par texte.
-  for (const label of ['Courses', 'Classement', 'Kartings', 'Profil']) {
+  for (const label of ['Courses', 'Classement', 'Circuits', 'Profil']) {
     await expect(page.getByRole('tab', { name: label })).toBeVisible();
   }
   await expect(page.getByRole('tab')).toHaveCount(4);

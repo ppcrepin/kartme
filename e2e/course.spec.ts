@@ -48,12 +48,18 @@ test('course à venir (admin) : barre fixe visible d’entrée, ajout en clair, 
     timeout: 20_000,
   });
 
-  // La promesse centrale de la refonte : « Saisir le classement » est visible
-  // SANS défiler, quelle que soit la longueur de la grille.
-  const cta = page.getByText('Saisir le classement', { exact: true });
+  // La promesse centrale de la refonte : l'action du jour est visible SANS
+  // défiler, quelle que soit la longueur de la grille.
+  //
+  // Sur une grille encore OUVERTE, cette action est « Valider la grille » —
+  // pas « Saisir le classement » (décision PO 2026-08-01). Les deux étaient
+  // offertes en même temps, et on saisissait une arrivée sur une grille où il
+  // manquait un pilote.
+  const cta = page.getByText('Valider la grille', { exact: true });
   await expect(cta).toBeVisible();
   const box = await cta.boundingBox();
   expect(box && box.y + box.height <= 844).toBeTruthy();
+  await expect(page.getByText('Saisir le classement', { exact: true })).toHaveCount(0);
 
   // L'invité est marqué, jamais assimilé à un inscrit.
   await expect(page.getByText('Invité · hors classement', { exact: true })).toBeVisible();
@@ -161,6 +167,12 @@ test('grille CLÔTURÉE : le bloc d’ajout disparaît, la grille est figée', a
   // serveur sans comprendre ce qui a changé.
   await expect(page.getByText('Qui court ?', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Rouvrir les invitations', { exact: false })).toBeVisible();
+
+  // Et c'est SEULEMENT ici que la saisie du classement s'ouvre : la grille est
+  // figée, donc la liste des partants ne bougera plus sous les doigts pendant
+  // qu'on remet les pilotes dans l'ordre d'arrivée.
+  await expect(page.getByText('Saisir le classement', { exact: true })).toBeVisible();
+  await expect(page.getByText('Valider la grille', { exact: true })).toHaveCount(0);
 });
 
 test('course à venir (non-admin, non inscrit) : « Rejoindre » en barre fixe, pas de commandes d’admin', async ({ page }) => {
@@ -208,7 +220,7 @@ test('course terminée : trois vues segmentées, « Toi : … » en sous-titre, 
   await expect(page.getByText('0:46.012', { exact: true })).toBeVisible();
 
   // Duels : un panneau à la fois, titré « ses points » pour un AUTRE pilote.
-  await page.getByText('Duels', { exact: true }).click();
+  await page.getByText('Évolution Elo', { exact: true }).click();
   await page.getByText('Sophie_K', { exact: true }).and(sceneActive(page)).first().click();
   await expect(page.getByText('D’où viennent ses points ?', { exact: true })).toBeVisible();
 

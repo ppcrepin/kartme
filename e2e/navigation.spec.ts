@@ -62,42 +62,63 @@ test('une ligne de classement DIT qu’elle s’ouvre, et elle s’ouvre', async
   await expect(page.getByText('Sophie_K', { exact: false }).first()).toBeVisible();
 });
 
-test('MA ligne de classement ne mène nulle part — et ne le promet pas', async ({ page }) => {
+test('MA ligne de classement ouvre MA fiche pilote', async ({ page }) => {
   await sessionSimulee(page);
   await reseauSimule(page, {
     'rpc/get_leaderboard': CLASSEMENT,
     'rpc/get_my_rank': [{ rank: 2, elo: 1210, races: 6, total: 2 }],
+    'rpc/get_pilot': [
+      { id: UID, username: 'Moi', elo: 1210, elo_exact: true, is_private: false, races: 6, avatar_path: null },
+    ],
   });
   await page.goto('/classements');
 
-  await expect(page.getByText('Moi', { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+  // Elle était INERTE : ni tapable, ni annoncée comme telle. Au milieu de
+  // lignes qui, elles, s'ouvrent, ça se lit comme une panne — c'est le retour
+  // du PO, mot pour mot : « on ne peut pas cliquer sur son profil dans le
+  // classement, ça ne fonctionne pas ».
+  const ligne = page.getByRole('button', { name: /Moi \(toi\)/ }).first();
+  await expect(ligne).toBeVisible({ timeout: 20_000 });
+  await expect(ligne).toContainText('›');
+  await ligne.click();
+  await expect(page).toHaveURL(new RegExp(`pilot/${UID}`), { timeout: 15_000 });
 
-  // Elle envoyait sur l'onglet Profil, qui est une RACINE d'onglet : zéro
-  // bouton retour, mesuré au navigateur. On tapait une ligne de liste et on
-  // se retrouvait téléporté, sans marche arrière. Et tout ce qu'elle
-  // promettait est déjà dans la carte « Ma position », juste au-dessus.
-  //
-  // Elle ne doit pas non plus SE PRÉSENTER comme un bouton : un gestionnaire
-  // vide laissait un `role="button"` tabulable, avec retour visuel au tap et
-  // rien au bout — annoncé « bouton » à un lecteur d'écran, arrêt au clavier.
-  await expect(page.getByRole('button', { name: /Moi \(toi\)/ })).toHaveCount(0);
+  // Et surtout : le RETOUR existe. La version précédente renvoyait sur
+  // l'onglet Profil, une racine d'onglet — zéro bouton retour, téléportation
+  // sans marche arrière. La fiche vit dans la pile du classement.
+  await page.getByLabel('Retour').first().click();
+  await expect(page).toHaveURL(/classements/, { timeout: 15_000 });
 
-  // Et le bord droit ne se déforme pas : sans espaceur, retirer le chevron
-  // décalait la médaille de 10 px sur la SEULE ligne que l'œil doit trouver
-  // sans lire.
-  // La colonne de droite de chaque ligne porte `aria-hidden` (médaille +
-  // chevron) : c'est le repère stable pour comparer les bords.
+  // Le bord droit reste aligné d'une ligne à l'autre : toutes portent
+  // désormais un chevron, plus aucune n'a besoin de l'espaceur.
   const bords = await page.evaluate(() =>
     [...document.querySelectorAll('[aria-hidden="true"]')]
       .map((e) => e.getBoundingClientRect())
       // La hauteur écarte le filet damier de l'en-tête, qui porte lui aussi
-      // `aria-hidden` (48 × 12) depuis qu'il a cessé d'utiliser une propriété
-      // native que react-native-web ne traduit pas.
+      // `aria-hidden` (48 × 12).
       .filter((r) => r.width > 0 && r.width < 80 && r.height > 20)
       .map((r) => Math.round(r.right)),
   );
   expect(bords.length).toBeGreaterThanOrEqual(2);
   expect(new Set(bords).size).toBe(1);
+});
+
+test('sur MA fiche, aucune commande qui ne veut rien dire', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, {
+    'rpc/get_pilot': [
+      { id: UID, username: 'Moi', elo: 1210, elo_exact: true, is_private: false, races: 6, avatar_path: null },
+    ],
+  });
+  await page.goto(`/pilot/${UID}`);
+  await expect(page.getByText('Moi', { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+
+  // On ne s'ajoute pas soi-même en ami, on ne se signale pas, on ne se bloque
+  // pas, et on n'a pas de face-à-face contre soi. La fiche est la MÊME que
+  // celle des autres : sans garde, elle aurait offert les quatre.
+  for (const mot of ['Demander en ami', 'Signaler', 'Bloquer', 'Face-à-face']) {
+    await expect(page.getByText(mot, { exact: false })).toHaveCount(0);
+  }
 });
 
 // Deux jeux : le cas courant, et le PIRE — « 99+ » élargit la pastille rouge
@@ -116,13 +137,13 @@ test(`la cloche reste une CLOCHE (${notifs}/${fil})`, async ({ page }) => {
   // mangeaient la moitié droite, et il ne restait qu'un amas de ronds — un
   // testeur l'a prise pour un menu d'options. Ils doivent border la cloche,
   // pas l'habiter.
-  const zone = page.getByLabel(/Ta boîte/).first();
+  const zone = page.getByLabel(/Quoi de neuf/).first();
   const b = await zone.boundingBox();
   expect(b && b.width >= 44 && b.height >= 44).toBeTruthy();
 
   const recouvrement = await page.evaluate(() => {
     const bouton = [...document.querySelectorAll('[role="button"]')].find((e) =>
-      (e.getAttribute('aria-label') ?? '').includes('Ta boîte'),
+      (e.getAttribute('aria-label') ?? '').includes('Quoi de neuf'),
     );
     const svg = bouton?.querySelector('svg')?.getBoundingClientRect();
     if (!svg || !bouton) return -1;

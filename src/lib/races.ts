@@ -26,6 +26,14 @@ export interface Circuit {
    * pilotes disent « BRK », pas « Circuit Beltoise-Trappes ».
    */
   aliases?: string | null;
+  /**
+   * Motorisation de la piste, telle qu'importée du référentiel (A16).
+   * Renseignée par `nearbyCircuits` seulement — c'est la carte qui en a besoin,
+   * pour distinguer l'électrique du thermique sans un aller-retour par
+   * karting. Souvent `null` : le relevé est partiel, et une épingle sans
+   * motorisation connue reste une épingle ordinaire.
+   */
+  motor_kind?: 'thermique' | 'electrique' | 'mixte' | null;
 }
 
 // 'locked' = grille figée (invitations clôturées), en attente de la saisie.

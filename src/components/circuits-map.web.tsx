@@ -3,7 +3,7 @@ import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { colors } from '@/constants/theme';
+import { colors, electriqueColor } from '@/constants/theme';
 import { t } from '@/i18n';
 import type { Position } from '@/lib/geo';
 import type { Circuit } from '@/lib/races';
@@ -140,7 +140,19 @@ export function CircuitsMap({
         keyboard: false,
         icon: L.divIcon({
           className: '',
-          html: '<span class="ks-pin"></span>',
+          // ÉLECTRIQUE : pastille verte + éclair (décision PO 2026-08-01,
+          // pour promouvoir ces circuits). La couleur SEULE n'aurait pas
+          // suffi — un daltonien deutéranope ne distingue pas ce vert du
+          // rouge de marque, et le rouge sert déjà à toutes les autres
+          // épingles. Le symbole double l'information : il reste lisible en
+          // noir et blanc comme sur une capture d'écran compressée.
+          //
+          // Le « mixte » n'est PAS marqué : on ne sait pas si l'on y roulera
+          // en électrique, et un éclair y promettrait plus que la donnée.
+          html:
+            c.motor_kind === 'electrique'
+              ? '<span class="ks-pin ks-pin-elec">\u26a1</span>'
+              : '<span class="ks-pin"></span>',
           iconSize: [16, 16],
           iconAnchor: [8, 8],
         }),
@@ -225,6 +237,13 @@ export function CircuitsMap({
               transform:translate(4px,4px)}
             [data-zoom="moyen"] .ks-pin{width:11px;height:11px;
               transform:translate(2px,2px)}
+            .ks-pin-elec{background:${electriqueColor};color:#06210f;font-size:9px;
+              line-height:10px;text-align:center;font-weight:700}
+            /* À l'échelle « loin », la pastille tombe à 8 px : l'éclair y
+               devient une tache. On le retire et il ne reste que la couleur —
+               à ce zoom, on ne choisit pas un karting, on repère une région. */
+            [data-zoom="loin"] .ks-pin-elec{font-size:0}
+            [data-zoom="moyen"] .ks-pin-elec{font-size:7px;line-height:7px}
             .ks-pin-on{outline:3px solid ${colors.accent};outline-offset:2px}
             .leaflet-container{background:${colors.surface};font-family:inherit}
           `,

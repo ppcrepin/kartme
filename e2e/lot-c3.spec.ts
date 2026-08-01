@@ -40,9 +40,10 @@ test('les badges qui punissent ont disparu du catalogue', async ({ page }) => {
     await expect(page.getByText(disparu, { exact: false })).toHaveCount(0);
   }
 
-  // Et le compteur suit : neuf, pas douze. Laisser « %u sur 12 » aurait rendu
-  // le catalogue impossible à finir.
-  await expect(page.getByText('0 sur 9 débloqués').first()).toBeVisible();
+  // Et le compteur suit : jamais douze. Laisser « %u sur 12 » aurait rendu le
+  // catalogue impossible à finir. Onze depuis C13, qui a ajouté les deux
+  // badges du karting électrique.
+  await expect(page.getByText('0 sur 11 débloqués').first()).toBeVisible();
   await expect(page.getByRole('button', { name: /Kart d’identité/ })).toHaveCount(1);
 });
 

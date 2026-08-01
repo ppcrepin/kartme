@@ -30,6 +30,15 @@ export function formatJour(iso: string): string {
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+/**
+ * Jour + mois COURTS, sans année : « 14 juil. ». C'est le format d'un repère
+ * d'axe, où la place est comptée en pixels et où l'année se déduit du reste.
+ */
+export function jourCourt(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
+
 /** Pour le médaillon calendrier (jour + mois court). */
 export function dayAndMonth(iso: string): { day: string; month: string } {
   const d = new Date(iso);

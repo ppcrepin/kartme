@@ -46,7 +46,7 @@ test('chercher un pilote se fait depuis le CLASSEMENT, et sa fiche s’y ouvre',
   // La recherche par pseudo est le SEUL chemin vers un pilote qu'on n'a pas
   // encore en amis : la supprimer avec l'onglet aurait fermé la porte d'entrée
   // du réseau.
-  const champ = page.getByLabel('Chercher un pilote…').and(sceneActive(page)).first();
+  const champ = page.getByLabel('Trouver un ami').and(sceneActive(page)).first();
   await expect(champ).toBeVisible({ timeout: 20_000 });
   await champ.fill('zoe');
 
@@ -167,10 +167,13 @@ test('chercher puis effacer ne fait pas perdre sa place dans le classement', asy
   const avant = await lire();
   expect(avant).toBeGreaterThan(100);
 
-  const champ = page.getByLabel('Chercher un pilote…').and(sceneActive(page)).first();
+  const champ = page.getByLabel('Trouver un ami').and(sceneActive(page)).first();
   await champ.fill('zo');
   await expect(page.getByText('Aucun pilote trouvé.').first()).toBeVisible({ timeout: 15_000 });
-  await champ.fill('');
+  // La CROIX, et non `fill('')` : c'est le geste que le PO a demandé, et le
+  // seul qui existe sur un téléphone sans repasser par le clavier.
+  await page.getByRole('button', { name: 'Effacer la recherche' }).first().click();
+  await expect(champ).toHaveValue('');
   await expect(page.getByText('Pilote_0', { exact: true }).first()).toBeVisible();
 
   const apres = await lire();

@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { EloCurve } from '@/components/elo-curve';
 import { Avatar, BadgeIcon, Button, Card, GradeMedal, ListRow, SkeletonCard, Tag } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
-import { colors, fonts, spacing } from '@/constants/theme';
+import { colors, fonts, spacing, couleurRang } from '@/constants/theme';
 import { t } from '@/i18n';
 import { pluriel } from '@/lib/nombre';
 import { useAuth } from '@/lib/auth';
@@ -70,9 +70,21 @@ export default function PilotScreen() {
   const [etat, setEtat] = useState<'chargement' | 'pret' | 'introuvable' | 'panne'>('chargement');
   const [essai, setEssai] = useState(0);
 
+  // MA propre fiche. Le classement y mène désormais comme vers n'importe quel
+  // pilote (décision PO 2026-08-01) : la ligne « moi » n'était pas cliquable du
+  // tout, ce qui se lisait comme une panne — on tape sa ligne, il ne se passe
+  // rien. Elle renvoyait auparavant sur l'onglet Profil, une RACINE d'onglet :
+  // téléportation sans marche arrière. Ici, on reste dans la pile du classement
+  // et le « ← » ramène au classement.
+  const cestMoi = !!id && session?.user.id === id;
+
   const refresh = useCallback(async () => {
     if (!id) return;
-    const [p, f, d] = await Promise.all([getPilot(id), getFriendshipWith(id), faceToFace(id)]);
+    // Amitié et face-à-face avec SOI-MÊME n'ont pas de sens : on ne les
+    // demande pas (deux requêtes en moins, et pas de réponse à interpréter).
+    const [p, f, d] = cestMoi
+      ? [await getPilot(id), { status: 'none' as const, friendshipId: null }, null]
+      : await Promise.all([getPilot(id), getFriendshipWith(id), faceToFace(id)]);
     setEtat(p ? 'pret' : 'introuvable');
     setPilot(p);
     setFriendship(f);
@@ -97,20 +109,15 @@ export default function PilotScreen() {
       setHistory([]);
       setBadges(new Map());
     }
-  }, [id]);
+  }, [id, cestMoi]);
 
   useFocusEffect(
     useCallback(() => {
-      // Règle « si c'est moi → mon profil (R1) ».
-      if (id && session?.user.id === id) {
-        router.replace('/profil');
-        return;
-      }
       // `essai` (incrémenté par « Réessayer ») est dans les dépendances : c'est
       // ce qui relance le chargement sans appeler de setState hors gestionnaire.
       void essai;
       refresh().catch(() => setEtat('panne'));
-    }, [id, session?.user.id, router, refresh, essai]),
+    }, [refresh, essai]),
   );
 
   async function act(fn: () => Promise<void>) {
@@ -223,8 +230,9 @@ export default function PilotScreen() {
               ) : null}
             </Card>
 
-            {/* Relation */}
-            {friendship.status === 'none' ? (
+            {/* Relation — rien de tout cela sur MA fiche : on ne s'ajoute pas
+                soi-même en ami, on ne se signale pas, on ne se bloque pas. */}
+            {!cestMoi && friendship.status === 'none' ? (
               <Button label={t.friends.add} onPress={() => act(() => sendFriendRequest(id!))} disabled={busy} />
             ) : null}
             {friendship.status === 'pending_sent' ? (
@@ -269,7 +277,8 @@ export default function PilotScreen() {
               </View>
             ) : null}
 
-            {/* Face-à-face */}
+            {/* Face-à-face — sans objet contre soi-même. */}
+            {cestMoi ? null : (
             <Card>
               <Label>{t.friends.faceToFace}</Label>
               {duel && duel.races > 0 ? (
@@ -294,6 +303,7 @@ export default function PilotScreen() {
                 </Muted>
               ) : null}
             </Card>
+            )}
 
             {/* Stats, courbe & historique (profil public ou ami) */}
             {pilot.eloExact ? (
@@ -346,7 +356,12 @@ export default function PilotScreen() {
                           left={
                             /* Un abandon a une position en base (l'index l'exige),
                                mais l'afficher laisserait croire qu'il a fini là. */
-                            <Body style={[styles.historyPos, h.dnf && styles.historyPosDnf]}>
+                            <Body
+                    style={[
+                      [styles.historyPos, h.dnf && styles.historyPosDnf],
+                      !h.dnf && couleurRang(h.position) ? { color: couleurRang(h.position)! } : null,
+                    ]}
+                  >
                               {h.dnf ? t.races.dnfShort : h.position}
                             </Body>
                           }
@@ -377,7 +392,7 @@ export default function PilotScreen() {
             ) : null}
 
             {/* Signalement / blocage — bloquer reste possible après un signalement */}
-            {reporting ? (
+            {cestMoi ? null : reporting ? (
               <Card>
                 <Label>{t.friends.reportTitle}</Label>
                 <View style={styles.reportRow}>

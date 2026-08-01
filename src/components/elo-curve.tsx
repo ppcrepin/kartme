@@ -5,6 +5,7 @@ import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 import { Muted } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { t } from '@/i18n';
+import { jourCourt } from '@/lib/datetime';
 import type { EloPoint } from '@/lib/profile';
 
 const PAD = 10;
@@ -22,12 +23,13 @@ export interface SeuilCourbe {
  * glisser le seuil ferait afficher « max 1300 » à un pilote qui n'a jamais
  * dépassé 1250 — la courbe mentirait pour dessiner un repère.
  *
- * `bas`/`haut` cadrent le DESSIN et englobent le seuil, sinon son trait tombe
- * hors du SVG et ne repère rien. Mais seulement s'il reste PROCHE du tracé :
- * juste après une promotion (1300 atteint, prochain palier 1700) il ferait
- * passer l'échelle de 300 à 700 points, et la courbe s'écraserait dans son
- * tiers bas sur 72 px de haut. Au-delà, `repere` est nul — on ne trace rien
- * plutôt que de sacrifier la lecture du passé à un repère du futur.
+ * `bas`/`haut` cadrent le DESSIN et englobent TOUJOURS le seuil (décision PO
+ * 2026-08-01 : « les courbes en pointillés n'apparaissent pas toujours, il faut
+ * bien zoomer au bon niveau »). Une règle antérieure l'abandonnait dès qu'il
+ * s'éloignait de plus d'une fois et demie l'amplitude, pour éviter d'écraser le
+ * tracé — mais un repère qui disparaît sans prévenir est pire qu'un tracé
+ * plat : on ne sait pas s'il n'y a pas de palier, ou s'il est simplement trop
+ * loin. Le prix est assumé : juste après une promotion, la courbe se tasse.
  *
  * Fonction pure et exportée : c'est la seule partie de la courbe qui décide
  * quelque chose, et elle est intestable à travers un SVG dont la géométrie
@@ -39,9 +41,7 @@ export function echelleCourbe(
 ): { min: number; max: number; bas: number; haut: number; repere: SeuilCourbe | null } {
   const min = Math.min(...values);
   const max = Math.max(...values);
-  const amplitude = Math.max(max - min, 20);
-  const debord = seuil ? (seuil.valeur > max ? seuil.valeur - max : min - seuil.valeur) : 0;
-  const repere = seuil && debord <= amplitude * 1.5 ? seuil : null;
+  const repere = seuil ?? null;
   return {
     min,
     max,
@@ -88,6 +88,21 @@ export function EloCurve({
 
   const svgPoints = values.map((v, i) => `${x(i)},${y(v)}`).join(' ');
   const last = values[values.length - 1];
+
+  // ── Les DATES sous la courbe (décision PO 2026-08-01) ──────────────────
+  // L'axe horizontal ne disait rien du temps : deux courbes identiques
+  // pouvaient couvrir un mois ou deux ans. Les repères sont posés SOUS LEURS
+  // POINTS, en absolu, et non répartis par `space-between` : l'indice 0 est
+  // l'Elo de départ, qui n'a pas de date, si bien qu'un libellé collé au bord
+  // gauche aurait désigné le mauvais point — d'un quart de la largeur sur un
+  // historique de trois courses.
+  const LARGEUR_DATE = 68;
+  const indicesDates = [1];
+  // Un repère du milieu seulement s'il a la place de ne pas toucher les deux
+  // autres : trois libellés de 68 px demandent 204 px, plus de l'air.
+  if (points.length >= 4 && width >= 260) indicesDates.push(Math.round(values.length / 2));
+  if (values.length - 1 > 1) indicesDates.push(values.length - 1);
+  const dates = [...new Set(indicesDates)];
 
   return (
     <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
@@ -159,6 +174,30 @@ export function EloCurve({
             ) : null}
             <Muted style={styles.legendTxt}>max {max}</Muted>
           </View>
+          {points.length > 0 ? (
+            <View style={styles.axe}>
+              {dates.map((i) => (
+                <Muted
+                  key={i}
+                  numberOfLines={1}
+                  style={[
+                    styles.axeTxt,
+                    // Bridé aux bords : un repère à moitié hors du cadre ne se
+                    // lit pas, et perdre un pixel de centrage vaut mieux que
+                    // perdre la moitié du mois.
+                    {
+                      left: Math.min(
+                        Math.max(x(i) - LARGEUR_DATE / 2, 0),
+                        Math.max(width - LARGEUR_DATE, 0),
+                      ),
+                    },
+                  ]}
+                >
+                  {jourCourt(points[i - 1].at)}
+                </Muted>
+              ))}
+            </View>
+          ) : null}
         </>
       ) : null}
     </View>
@@ -168,4 +207,6 @@ export function EloCurve({
 const styles = StyleSheet.create({
   legend: { flexDirection: 'row', justifyContent: 'space-between' },
   legendTxt: { fontSize: 11 },
+  axe: { height: 14 },
+  axeTxt: { position: 'absolute', width: 68, fontSize: 10, textAlign: 'center' },
 });

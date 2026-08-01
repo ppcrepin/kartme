@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Screen } from '@/components/screen';
 import { Avatar, Button, Card, Field, GradeMedal, ListRow, Tag } from '@/components/ui';
 import { Body, Label, Muted } from '@/components/ui/text';
-import { colors, fonts, spacing } from '@/constants/theme';
+import { colors, fonts, spacing, couleurRang } from '@/constants/theme';
 import { t } from '@/i18n';
 import { SIGNED_TTL_S, signedAvatarUrls } from '@/lib/avatar';
 import {
@@ -337,6 +337,8 @@ export default function ClassementsScreen() {
         label={t.friends.search}
         value={query}
         onChangeText={setQuery}
+        onClear={() => setQuery('')}
+        clearLabel={t.friends.searchClear}
         autoCapitalize="none"
       />
 
@@ -685,17 +687,25 @@ function RangRow({
   const ligne = (
     <ListRow
       first={first}
-      // MA ligne ne navigue PAS, et ne se présente pas comme si elle le
-      // faisait : `undefined` fait rendre une simple `View` à `ListRow`, là
-      // où un gestionnaire vide laissait un `role="button"` tabulable, avec
-      // retour visuel au tap et rien au bout. Elle envoyait sur l'onglet
-      // Profil — une RACINE d'onglet, donc zéro bouton retour, mesuré au
-      // navigateur : on tapait une ligne de liste et on n'avait plus de marche
-      // arrière. Ce qu'elle promettait est déjà dans « Ma position » au-dessus.
-      onPress={row.isMe ? undefined : onPress}
+      // MA ligne s'ouvre comme les autres, sur MA fiche pilote (décision PO
+      // 2026-08-01 : « on ne peut pas cliquer sur son profil dans le
+      // classement, ça ne fonctionne pas »). Elle était inerte, et une ligne
+      // inerte au milieu de lignes tapables se lit comme une panne.
+      //
+      // Elle envoyait autrefois sur l'onglet Profil — une RACINE d'onglet, donc
+      // zéro bouton retour : on tapait une ligne de liste et on n'avait plus de
+      // marche arrière. La fiche pilote, elle, vit dans la pile du classement :
+      // le « ← » ramène là d'où l'on vient.
+      onPress={row.pilotId ? onPress : undefined}
       left={
         <>
-          <Body style={styles.rank}>{row.rank}</Body>
+          {/* Or, argent, bronze sur les trois premiers (décision PO) : dans
+              une liste de vingt lignes, la couleur est le seul repère qui
+              survit à un coup d'œil. Au-delà du podium, la teinte discrète
+              d'origine — sinon plus rien ne ressort. */}
+          <Body style={[styles.rank, couleurRang(row.rank) ? { color: couleurRang(row.rank)! } : null]}>
+            {row.rank}
+          </Body>
           <Avatar
             name={row.username}
             size={28}
@@ -728,22 +738,22 @@ function RangRow({
         // occupait seule la colonne de droite, et une médaille n'a jamais
         // signifié « ouvre-moi ».
         //
-        // Il n'apparaît QUE si la ligne mène quelque part : ni sur la mienne
-        // (elle ne navigue plus), ni sur une ligne sans identifiant. Promettre
-        // une navigation qui n'arrive pas est pire que ne rien promettre — et
-        // les deux autres listes du dépôt conditionnent déjà leur chevron.
+        // Il n'apparaît QUE si la ligne mène quelque part — donc pas sur une
+        // ligne de fantôme, qui n'a pas de fiche. Promettre une navigation qui
+        // n'arrive pas est pire que ne rien promettre, et les deux autres
+        // listes du dépôt conditionnent déjà leur chevron.
         //
         // `aria-hidden` : sans lui, le glyphe entre dans le nom accessible de
         // la ligne, déjà composé du rang, des initiales, du pseudo, du grade
         // et de l'Elo. Un lecteur d'écran finissait sur « guillemet fermant ».
         <View style={styles.rowRight} aria-hidden>
           {!calibrating ? <GradeMedal grade={grade} size={24} /> : null}
-          {!row.isMe && row.pilotId ? (
+          {row.pilotId ? (
             <Muted style={styles.chevron}>›</Muted>
           ) : (
             // Un espaceur de la largeur du chevron : sans lui, le bord droit
-            // se décalait de 10 px sur MA ligne — précisément celle que l'œil
-            // doit trouver sans lire (audit navigateur).
+            // se décalait de 10 px sur les lignes de fantômes, qui n'en ont
+            // pas (audit navigateur).
             <View style={styles.chevronVide} />
           )}
         </View>

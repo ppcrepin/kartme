@@ -24,19 +24,17 @@ describe('echelleCourbe', () => {
     expect(e.repere).toEqual(OR);
   });
 
-  it('renonce au trait quand le seuil est trop loin du tracé', () => {
-    // Amplitude réelle 20 points, seuil à 90 au-dessus : l'étirer écraserait la
-    // courbe. Mieux vaut pas de repère qu'une forme illisible.
+  it('garde le trait MÊME très loin du tracé', () => {
+    // Amplitude réelle 20 points, seuil 390 au-dessus : la courbe s'aplatit.
+    // C'est assumé (décision PO 2026-08-01). La règle précédente abandonnait le
+    // repère au-delà d'une fois et demie l'amplitude — et il disparaissait sans
+    // rien dire, exactement le symptôme rapporté : « les courbes en pointillés
+    // n'apparaissent pas toujours ».
     const e = echelleCourbe([1290, 1300, 1310], { valeur: 1700, couleur: '#ef7f27' });
-    expect(e.repere).toBeNull();
-    expect(e.haut).toBe(1310);
-  });
-
-  it('accepte un seuil juste sous la limite d’étirement', () => {
-    // Amplitude 100, débord 150 = exactement 1,5 fois : la borne est incluse.
-    const e = echelleCourbe([1000, 1100], { valeur: 1250, couleur: '#ecc63f' });
     expect(e.repere).not.toBeNull();
-    expect(e.haut).toBe(1250);
+    expect(e.haut).toBe(1700);
+    // La LÉGENDE, elle, continue de dire la vérité du tracé.
+    expect(e.max).toBe(1310);
   });
 
   it('sans seuil, l’échelle du dessin est celle de la légende', () => {
@@ -53,12 +51,10 @@ describe('echelleCourbe', () => {
     expect(e.haut).toBe(1350);
   });
 
-  it('une courbe plate garde une amplitude plancher de 20 points', () => {
-    // Sans plancher, `amplitude` vaudrait 0 et AUCUN seuil ne serait jamais
-    // accepté — la division par l'amplitude est ailleurs, mais la comparaison
-    // est ici.
+  it('une courbe PLATE montre quand même son palier', () => {
     const e = echelleCourbe([1000, 1000], { valeur: 1030, couleur: '#ecc63f' });
     expect(e.repere).not.toBeNull();
+    expect(e.bas).toBe(1000);
     expect(e.haut).toBe(1030);
   });
 });

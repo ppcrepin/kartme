@@ -15,7 +15,7 @@
  * `nomCourt` sont des fonctions pures, donc vérifiables sans navigateur — le
  * reste ne peut se juger qu'à l'œil.
  */
-import { colors } from '@/constants/theme';
+import { colors, podiumColors } from '@/constants/theme';
 import { dessinerDamier, dessinerSignature, policeMarque, type Contexte2D } from '@/lib/marque';
 
 /** Une ligne du podium, telle qu'elle sera dessinée. */
@@ -135,8 +135,9 @@ function couleurDelta(delta: number | null, dnf: boolean): string {
   return delta > 0 ? colors.pos : colors.accentTexte;
 }
 
-/** Les trois couleurs de médaille. Au-delà, la teinte neutre des cartes. */
-const MEDAILLES = ['#e2c14d', '#cfd4d8', '#b9793f'];
+/** Les trois couleurs de médaille viennent du thème : elles étaient définies
+ *  ici, et l'écran de résultats en ignorait donc l'existence. */
+const MEDAILLES = podiumColors;
 
 /**
  * Dessine l'image et renvoie une data-URL PNG, ou `null` si le navigateur ne

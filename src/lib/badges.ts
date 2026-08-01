@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 export type { BadgeKey };
 
 /**
- * Les 9 badges, dans l'ordre du catalogue (BADGES.md).
+ * Les 11 badges, dans l'ordre du catalogue (BADGES.md).
  *
  * Ils étaient douze. Trois décrivaient une mauvaise soirée — Kart-astrophe
  * (perdre 45 points), Voiture balai (finir dernier), Tête-à-queue (perdre un
@@ -29,6 +29,11 @@ export const BADGE_KEYS: readonly BadgeKey[] = [
   'drs',
   'safety_car',
   'push',
+  // C13 — promotion du karting électrique (décision PO 2026-08-01). Ils
+  // arrivent en fin de liste : la vitrine se lit dans l'ordre de découverte,
+  // et ces deux-là ne remplacent rien.
+  'sous_tension',
+  'haute_tension',
 ] as const;
 
 export interface UnlockedBadge {

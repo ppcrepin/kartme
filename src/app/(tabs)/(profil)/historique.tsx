@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Screen } from '@/components/screen';
 import { Button, Card, ListRow, SkeletonCard } from '@/components/ui';
 import { Body, Muted } from '@/components/ui/text';
-import { colors, fonts, spacing } from '@/constants/theme';
+import { colors, fonts, spacing, couleurRang } from '@/constants/theme';
 import { t } from '@/i18n';
 import { formatRaceDate } from '@/lib/datetime';
 import { getRaceHistory, type HistoryEntry } from '@/lib/profile';
@@ -62,7 +62,12 @@ export default function HistoriqueScreen() {
                 first={i === 0}
                 onPress={h.raceId ? () => router.push(`/race/${h.raceId}`) : undefined}
                 left={
-                  <Body style={[styles.pos, h.dnf && styles.posDnf]}>
+                  <Body
+                    style={[
+                      [styles.pos, h.dnf && styles.posDnf],
+                      !h.dnf && couleurRang(h.position) ? { color: couleurRang(h.position)! } : null,
+                    ]}
+                  >
                     {h.dnf ? t.races.dnfShort : h.position}
                   </Body>
                 }

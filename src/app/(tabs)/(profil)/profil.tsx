@@ -9,7 +9,7 @@ import { Avatar, Button, Card, Gauge, GradeMedal, ListRow, Sheet, SkeletonCard }
 import { appBaseUrl } from '@/lib/url';
 import { signedAvatarUrls } from '@/lib/avatar';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
-import { colors, fonts, spacing } from '@/constants/theme';
+import { colors, fonts, spacing, couleurRang } from '@/constants/theme';
 import { t } from '@/i18n';
 import { pluriel } from '@/lib/nombre';
 import { BADGE_KEYS, listBadges, type BadgeKey, type UnlockedBadge } from '@/lib/badges';
@@ -222,7 +222,12 @@ export default function ProfilScreen() {
                   first={i === 0}
                   onPress={h.raceId ? () => router.push(`/race/${h.raceId}`) : undefined}
                   left={
-                    <Body style={[styles.historyPos, h.dnf && styles.historyPosDnf]}>
+                    <Body
+                    style={[
+                      [styles.historyPos, h.dnf && styles.historyPosDnf],
+                      !h.dnf && couleurRang(h.position) ? { color: couleurRang(h.position)! } : null,
+                    ]}
+                  >
                       {h.dnf ? t.races.dnfShort : h.position}
                     </Body>
                   }

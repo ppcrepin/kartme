@@ -5,7 +5,7 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } f
 import { Screen } from '@/components/screen';
 import { Button, Card, CheckeredRule, Tag } from '@/components/ui';
 import { Body, Label, Muted } from '@/components/ui/text';
-import { colors, fonts, radius, spacing } from '@/constants/theme';
+import { colors, fonts, radius, spacing, electriqueColor } from '@/constants/theme';
 import { t } from '@/i18n';
 import { nombreFr } from '@/lib/nombre';
 import {
@@ -138,6 +138,14 @@ export default function CircuitPageScreen() {
               label={t.races.circuitPage.homologated.replace('%h', page.homologation)}
               selected
             />
+          ) : null}
+          {/* L'électrique EN HAUT, à côté du nom — pas noyé dans la ligne des
+              caractéristiques plus bas, où il ne se distinguait pas de la
+              longueur de piste. C'est une mise en avant assumée (C13). Le
+              « mixte » n'y a pas droit : rien n'y garantit un kart
+              électrique. */}
+          {page.motorKind === 'electrique' ? (
+            <Tag label={t.races.circuitPage.electriqueTag} teinte={electriqueColor} />
           ) : null}
         </View>
 

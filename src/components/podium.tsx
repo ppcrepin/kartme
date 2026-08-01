@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/ui';
 import { Body, Muted } from '@/components/ui/text';
-import { colors, fonts, gradeColors, spacing } from '@/constants/theme';
+import { colors, fonts, podiumColors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import type { RaceResult } from '@/lib/races';
 
@@ -26,9 +26,14 @@ export function Podium({
 
   return (
     <View style={styles.row}>
-      <Step result={second} height={64} color={gradeColors.rookie} avatars={avatars} />
-      <Step result={first} height={92} color={gradeColors.missile} avatars={avatars} />
-      <Step result={third} height={44} color={gradeColors.roueLibre} avatars={avatars} />
+      {/* Or, argent, bronze — les VRAIES couleurs de podium. Les marches
+          portaient jusqu'ici trois couleurs de GRADE (Rookie, Missile, Roue
+          libre) : le commentaire au-dessus annonçait un podium, l'écran
+          affichait une échelle de niveaux. Deux codes couleur pour deux choses
+          différentes se contredisaient à l'écran. */}
+      <Step result={second} height={64} color={podiumColors[1]} avatars={avatars} />
+      <Step result={first} height={92} color={podiumColors[0]} avatars={avatars} />
+      <Step result={third} height={44} color={podiumColors[2]} avatars={avatars} />
     </View>
   );
 }

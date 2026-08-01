@@ -7,10 +7,18 @@ export function Tag({
   label,
   selected,
   onPress,
+  teinte,
 }: {
   label: string;
   selected?: boolean;
   onPress?: () => void;
+  /**
+   * Une couleur autre que le rouge de marque, pour les rares étiquettes qui
+   * désignent une CATÉGORIE plutôt qu'une sélection (le karting électrique).
+   * Elle ne change que le trait et le texte : un aplat plein attirerait plus
+   * l'œil que le nom du circuit lui-même.
+   */
+  teinte?: string;
 }) {
   return (
     <Pressable
@@ -20,8 +28,19 @@ export function Tag({
       // props `aria-*` atteignent le DOM. Un état non annoncé, c'est une
       // sélection qui n'existe que dans la couleur.
       aria-selected={!!selected}
-      style={[styles.base, selected ? styles.on : styles.off]}>
-      <Text style={[styles.label, selected ? styles.labelOn : styles.labelOff]}>{label}</Text>
+      style={[
+        styles.base,
+        selected ? styles.on : styles.off,
+        teinte ? { borderColor: teinte } : null,
+      ]}>
+      <Text
+        style={[
+          styles.label,
+          selected ? styles.labelOn : styles.labelOff,
+          teinte ? { color: teinte } : null,
+        ]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }

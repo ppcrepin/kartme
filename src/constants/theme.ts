@@ -82,6 +82,40 @@ export const gradeTextColors = {
   legende: accentTexteBrut,
 } as const;
 
+/**
+ * OR, ARGENT, BRONZE — les rangs 1, 2 et 3, partout où un rang s'affiche
+ * (décision PO 2026-08-01 : « le premier en or, deuxième en argent, troisième
+ * en bronze, dès qu'il y a un classement »).
+ *
+ * Un podium se lit à la couleur avant de se lire au chiffre : c'est le seul
+ * repère qui survit à un coup d'œil de trois dixièmes de seconde sur une liste
+ * de vingt lignes. Les trois teintes étaient déjà dans l'image de podium
+ * partagée — elles vivent ici pour que l'écran et l'image ne divergent pas.
+ *
+ * Sur le carbone : 10,4:1, 11,6:1 et 5,6:1. Le bronze est le plus juste et
+ * reste au-dessus du seuil AA.
+ */
+export const podiumColors = ['#e2c14d', '#cfd4d8', '#c1793f'] as const;
+
+/**
+ * Le VERT du karting électrique (C13, décision PO 2026-08-01 : promouvoir ces
+ * circuits). Il ne sert qu'à ça — c'est la seule teinte de l'application qui
+ * désigne une CATÉGORIE de piste, et pas un état ou un niveau.
+ *
+ * Il est toujours accompagné d'un éclair, jamais employé seul : entre ce vert
+ * et le rouge de marque, un daltonien deutéranope ne voit qu'une nuance.
+ */
+export const electriqueColor = '#3ddc84';
+
+/**
+ * La couleur d'un rang, ou `null` au-delà du podium — `null` et non une teinte
+ * neutre : l'appelant garde ainsi SA couleur par défaut, qui n'est pas la même
+ * sur une liste de classement et sur une pastille pleine.
+ */
+export function couleurRang(rang: number): string | null {
+  return podiumColors[rang - 1] ?? null;
+}
+
 export const radius = {
   sharp: 3, // angles nets (cartes, champs, médailles)
   card: 10, // cartes du design system

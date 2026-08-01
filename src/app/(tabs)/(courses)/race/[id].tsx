@@ -18,7 +18,7 @@ import { PartagePodium } from '@/components/partage-podium';
 import { ShareCard } from '@/components/share-card';
 import { Avatar, Banner, Button, Card, Field, GradeMedal, ListRow, Sheet, Tag } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
-import { colors, fonts, spacing } from '@/constants/theme';
+import { colors, fonts, spacing, couleurRang } from '@/constants/theme';
 import { t } from '@/i18n';
 import { track } from '@/lib/analytics';
 import { signedAvatarUrls } from '@/lib/avatar';
@@ -917,7 +917,18 @@ export default function RaceDetailScreen() {
                             left={
                               <>
                                 {/* Un abandon n'a pas de place à l'arrivée. */}
-                                <Body style={[styles.posNum, r.dnf && styles.posNumDnf]}>
+                                {/* Or, argent, bronze — un podium se lit à la
+                                    couleur avant de se lire au chiffre. Pas
+                                    sur un abandon : il n'a pas de rang. */}
+                                <Body
+                                  style={[
+                                    styles.posNum,
+                                    r.dnf && styles.posNumDnf,
+                                    !r.dnf && couleurRang(r.position)
+                                      ? { color: couleurRang(r.position)! }
+                                      : null,
+                                  ]}
+                                >
                                   {r.dnf ? t.races.dnfShort : r.position}
                                 </Body>
                                 <Avatar
@@ -994,7 +1005,15 @@ export default function RaceDetailScreen() {
                                 first={i === 0}
                                 onPress={() => setExpanded(isOpen ? null : r.participationId)}
                                 left={
-                                  <Body style={[styles.posNum, r.dnf && styles.posNumDnf]}>
+                                  <Body
+                                    style={[
+                                      styles.posNum,
+                                      r.dnf && styles.posNumDnf,
+                                      !r.dnf && couleurRang(r.position)
+                                        ? { color: couleurRang(r.position)! }
+                                        : null,
+                                    ]}
+                                  >
                                     {r.dnf ? t.races.dnfShort : r.position}
                                   </Body>
                                 }
@@ -1353,18 +1372,41 @@ export default function RaceDetailScreen() {
             {participants.length < 2 ? (
               <Muted style={styles.barreHint}>{t.races.needTwoPilots}</Muted>
             ) : null}
-            <Button
-              label={t.races.enterRanking}
-              disabled={participants.length < 2}
-              onPress={() => router.push(`/rank/${id}${locked ? '?locked=1' : ''}`)}
-            />
-            <Pressable
-              onPress={locked ? onReopen : onLock}
-              accessibilityRole="button"
-              disabled={busy}
-              style={styles.barreLien}>
-              <Muted>{locked ? t.races.reopen : t.races.lock}</Muted>
-            </Pressable>
+            {/* UNE étape à la fois (décision PO 2026-08-01 : « valider la
+                grille avant de saisir le classement »). « Saisir le
+                classement » s'offrait dès la création de la course, à côté
+                d'un lien discret « Clôturer les invitations » : l'organisateur
+                saisissait une arrivée sur une grille encore ouverte, et
+                découvrait ensuite qu'il manquait un pilote. Les deux gestes
+                sont dans l'ordre où ils doivent se faire.
+
+                Le verrou reste RÉVERSIBLE : « Rouvrir les invitations » est
+                toujours là une fois la grille figée. */}
+            {locked ? (
+              <>
+                <Button
+                  label={t.races.enterRanking}
+                  disabled={participants.length < 2}
+                  onPress={() => router.push(`/rank/${id}?locked=1`)}
+                />
+                <Pressable
+                  onPress={onReopen}
+                  accessibilityRole="button"
+                  disabled={busy}
+                  style={styles.barreLien}>
+                  <Muted>{t.races.reopen}</Muted>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Button
+                  label={t.races.validateGrid}
+                  disabled={busy || participants.length < 2}
+                  onPress={onLock}
+                />
+                <Muted style={styles.barreHint}>{t.races.validateGridHint}</Muted>
+              </>
+            )}
           </View>
         ) : !selfParticipating && !locked ? (
           <View style={styles.barre}>

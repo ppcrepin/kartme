@@ -14,7 +14,10 @@ export const fr = {
     // Singulier : « Classements » déborde du libellé d'onglet sur iPhone
     // (390 px → « Classem… »).
     rankings: 'Classement',
-    tracks: 'Kartings',
+    // « Circuits » et non « Kartings » (décision PO 2026-08-01) : c'est déjà le
+    // mot employé PARTOUT ailleurs — fiche circuit, suggérer un circuit,
+    // signaler un circuit. L'onglet était le seul endroit à en dire un autre.
+    tracks: 'Circuits',
     profile: 'Profil',
   },
   common: {
@@ -91,7 +94,7 @@ export const fr = {
     // pour que la fenêtre du navigateur arrive quand le pilote l'a voulue.
     circuitNear: 'Près de moi',
     // Onglet Kartings (A12b) — carte Leaflet + fond OpenStreetMap.
-    mapTitle: 'Kartings',
+    mapTitle: 'Circuits',
     mapSubtitle: '%n kartings en France',
     mapLoading: 'Chargement de la carte…',
     mapWebOnly: 'La carte n’est disponible que dans le navigateur pour le moment.',
@@ -177,6 +180,10 @@ export const fr = {
         outdoor: 'Extérieur',
         temporaire: 'Piste temporaire',
       } as Record<string, string>,
+      // La pastille mise en avant sur la fiche, réservée à l'électrique : elle
+      // est là pour le PROMOUVOIR (C13), pas pour décrire — d'où l'éclair, qui
+      // double la couleur pour ceux qui ne la distinguent pas.
+      electriqueTag: '⚡ Électrique',
       motorKinds: {
         thermique: 'Karts thermiques',
         electrique: 'Karts électriques',
@@ -312,7 +319,9 @@ export const fr = {
     shareOpenHint: 'Lien, QR code — la course en un tap.',
     vueRanking: 'Classement',
     vueLaps: 'Chronos',
-    vueDuels: 'Duels',
+    // « Duels » disait un affrontement ; l'écran montre en fait D'OÙ VIENNENT
+    // les points, pilote par pilote (décision PO 2026-08-01).
+    vueDuels: 'Évolution Elo',
     duelsHint: 'Touche un pilote pour voir d’où viennent ses points.',
     youResult: 'Toi : %p · %d',
     presentsTitle: 'Qui était présent ?',
@@ -364,6 +373,12 @@ export const fr = {
     needTwoPilots: 'Ajoute au moins 2 pilotes pour saisir le classement.',
     // Cycle de vie (lot 2.6) : verrou + rappel, correction 24 h.
     lock: 'Clôturer les invitations',
+    // Le MÊME geste, promu en bouton principal tant que la grille est ouverte
+    // (décision PO 2026-08-01 : « valider la grille avant de saisir le
+    // classement »). Le mot change avec le rôle : ce n'est plus une option
+    // discrète parmi d'autres, c'est l'étape suivante.
+    validateGrid: 'Valider la grille',
+    validateGridHint: 'Le classement se saisira ensuite — la grille sera figée.',
     reopen: 'Rouvrir les invitations',
     lockedBanner: 'Grille figée — la course est prête. Rouvre les invitations pour ajouter ou retirer un pilote.',
     correctRanking: 'Corriger le classement',
@@ -389,7 +404,11 @@ export const fr = {
     shareResultsHint: 'Envoie le résumé dans le groupe.',
   },
   friends: {
-    search: 'Chercher un pilote…',
+    // « Trouver un ami » (décision PO 2026-08-01). Le champ cherche AUSSI des
+    // inconnus — c'est la porte d'entrée du réseau — mais c'est bien ce qu'on
+    // vient y faire, et « pilote » est un mot d'application, pas un mot d'usage.
+    search: 'Trouver un ami',
+    searchClear: 'Effacer la recherche',
     searchEmpty: 'Aucun pilote trouvé.',
     actionFailed: 'Action impossible pour l’instant. Réessaie.',
     // Un échec réseau laissait l'écran vide, sans un mot : le classement
@@ -547,6 +566,10 @@ export const fr = {
       drs: { name: 'DRS', condition: 'Battre un pilote inscrit parti 300 Elo (ou plus) au-dessus de soi.' },
       safety_car: { name: 'Safety car', condition: 'Finir devant tous les pilotes inscrits mieux classés que toi.' },
       push: { name: 'Push', condition: 'Gagner au moins 45 points d’Elo en une course.' },
+      // Le circuit doit être ÉLECTRIQUE, pas « mixte » : sur un mixte, rien ne
+      // dit qu'on a pris un kart électrique.
+      sous_tension: { name: 'Sous tension', condition: 'Courir sur un circuit de karting électrique.' },
+      haute_tension: { name: 'Haute tension', condition: 'Courir 5 fois sur un circuit de karting électrique.' },
     },
   },
   // Centre de notifications in-app (A5) : la boîte de réception, indépendante
@@ -554,7 +577,10 @@ export const fr = {
   inbox: {
     // Titre distinct de l'écran de RÉGLAGES « Notifications » : les deux
     // écrans existent, ils ne doivent pas porter le même mot en gros.
-    title: 'Ta boîte',
+    // « Quoi de neuf » et non « Ta boîte » (décision PO 2026-08-01) : la
+    // métaphore de la boîte aux lettres promettait du courrier à traiter, là
+    // où l'écran raconte ce qui a bougé autour de toi.
+    title: 'Quoi de neuf',
     now: 'à l’instant',
     emptyTitle: 'Rien de neuf',
     emptyBody:
