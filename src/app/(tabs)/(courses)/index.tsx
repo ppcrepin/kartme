@@ -9,6 +9,7 @@ import { Button, Card, ListRow, Tag } from '@/components/ui';
 import { Body, Heading, Muted } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
+import { useAuth } from '@/lib/auth';
 import { dayAndMonth, formatRaceDate } from '@/lib/datetime';
 import { feedDest, feedLabel, getFeed, type FeedItem } from '@/lib/feed';
 
@@ -19,6 +20,8 @@ const BANDEAU_CAP = 3;
 
 export default function CoursesScreen() {
   const router = useRouter();
+  const { session } = useAuth();
+  const selfId = session?.user.id;
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
   const [races, setRaces] = useState<{ upcoming: Race[]; past: Race[] }>({ upcoming: [], past: [] });
   const [feed, setFeed] = useState<FeedItem[]>([]);
@@ -40,15 +43,24 @@ export default function CoursesScreen() {
             setPremiere(null);
             return;
           }
+          // MES courses, pas celles où l'on m'a inscrit. `listMyRaces` fusionne
+          // les deux volets ; s'en servir tel quel cochait « créer une course »
+          // et « ajouter des pilotes » à un nouveau venu qu'un ami vient
+          // d'ajouter à une grille de six — puis l'envoyait sur une course
+          // dont il n'est pas admin, où ni « + Ajouter » ni « Saisir le
+          // classement » n'existent. La carte lui promettait un pas qui n'était
+          // nulle part.
+          const miennes = r.upcoming.filter((x) => x.admin_id === selfId);
+          if (miennes.length === 0) {
+            setPremiere({ courseCreee: false, pilotesAjoutes: false });
+            return;
+          }
           // Une requête de plus, mais seulement pour qui n'a pas encore fini
           // une course — et jamais plus après. Son échec n'a rien de bloquant :
           // l'étape reste simplement à cocher.
-          const grille = await maxGridSize(r.upcoming.map((x) => x.id)).catch(() => 0);
+          const grille = await maxGridSize(miennes.map((x) => x.id)).catch(() => 0);
           if (!active) return;
-          setPremiere({
-            courseCreee: r.upcoming.length > 0,
-            pilotesAjoutes: grille >= 2,
-          });
+          setPremiere({ courseCreee: true, pilotesAjoutes: grille >= 2 });
         })
         .catch(() => {});
       // Le fil est un BONUS : son échec ne doit jamais gêner la liste des
@@ -59,7 +71,7 @@ export default function CoursesScreen() {
       return () => {
         active = false;
       };
-    }, []),
+    }, [selfId]),
   );
 
   const list = races[tab];
@@ -68,6 +80,16 @@ export default function CoursesScreen() {
 
   return (
     <Screen title={t.tabs.races} headerAction={<NotificationBell />}>
+      {/* ── TOUT défile ensemble, sauf le bouton du bas ────────────────────
+          Le bandeau, les filtres et la liste étaient des enfants FIXES : seule
+          la liste était élastique, si bien qu'elle absorbait tout ce qui
+          restait — jusqu'à ZÉRO. L'audit navigateur l'a mesuré en 390 × 667
+          avec la checklist et « Ça bouge » réunis : 13 px de haut pour 248 px
+          de contenu, trois courses présentes dans le DOM et invisibles à
+          l'écran. Aucun test ne pouvait le voir (`toBeVisible` passe sur un
+          élément simplement écrêté). Une seule zone défilante ferme la famille
+          entière : rien ne peut plus écraser rien. ── */}
+      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
       {/* ── « Ta première course » : la checklist de prise en main, en TÊTE
           d'accueil tant qu'aucune course n'est terminée. Elle passe devant
           « Ça bouge » sans lui nuire — un pilote qui n'a pas encore couru n'a
@@ -77,9 +99,15 @@ export default function CoursesScreen() {
           etat={premiere}
           onEtape={(n) => {
             if (n === 1) return router.push('/race/create');
-            // Étapes 2 et 3 : la course la plus proche — c'est là que se
-            // trouvent « + Ajouter » et « Saisir le classement ».
-            const cible = races.upcoming[0];
+            // Étapes 2 et 3 : MA course la plus proche — c'est là que se
+            // trouvent « + Ajouter » et « Saisir le classement », et ces deux
+            // commandes n'existent que pour l'admin. `listMyRaces` trie du plus
+            // récent au plus ancien (juste pour l'historique, inversé pour les
+            // courses à venir) : on retrie ici, sinon la carte ouvrirait la
+            // course du mois prochain plutôt que celle de demain.
+            const cible = races.upcoming
+              .filter((x) => x.admin_id === selfId)
+              .sort((a, b) => +new Date(a.scheduled_at) - +new Date(b.scheduled_at))[0];
             if (cible) router.push(`/race/${cible.id}`);
           }}
         />
@@ -126,9 +154,12 @@ export default function CoursesScreen() {
         <Tag label={t.races.past} selected={tab === 'past'} onPress={() => setTab('past')} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+      <View style={styles.list}>
         {list.length === 0 ? (
-          <Muted>{t.races.homeEmpty}</Muted>
+          // Sous la checklist, « Crée la première ! » ferait un TROISIÈME appel
+          // à créer une course sur le même écran (la ligne 1 de la checklist,
+          // le bouton du bas, et lui). La checklist dit déjà quoi faire.
+          premiere ? null : <Muted>{t.races.homeEmpty}</Muted>
         ) : (
           list.map((race) => {
             const { day, month } = dayAndMonth(race.scheduled_at);
@@ -150,8 +181,11 @@ export default function CoursesScreen() {
             );
           })
         )}
+      </View>
       </ScrollView>
 
+      {/* Le bouton reste FIXE au bas de l'écran : c'est l'action du jour, elle
+          ne se mérite pas au défilement (décision A17). */}
       <View style={styles.cta}>
         <Button label={t.races.create} onPress={() => router.push('/race/create')} />
       </View>
@@ -163,8 +197,9 @@ const styles = StyleSheet.create({
   feedHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   feedTitle: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
   feedLink: { color: colors.accent, fontSize: 12, fontWeight: '700' },
+  page: { gap: spacing.sm, paddingBottom: spacing.md },
   filters: { flexDirection: 'row', gap: spacing.sm },
-  list: { gap: spacing.sm, paddingBottom: spacing.xl, paddingTop: spacing.xs },
+  list: { gap: spacing.sm, paddingTop: spacing.xs },
   raceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   cal: { width: 46, alignItems: 'center' },
   calDay: { fontFamily: fonts.serifBlack, fontSize: 22, color: colors.ink },

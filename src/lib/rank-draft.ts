@@ -20,6 +20,14 @@ export interface RankDraft {
   tapOrder: string[];
   /** Abandons (A6) — absent des brouillons écrits avant cette version. */
   dnfIds?: string[];
+  /**
+   * Vrai si `orderedIds` est un ordre VOULU (glissé à la main, ou reporté d'une
+   * saisie au toucher) et non le simple ordre d'inscription des pilotes.
+   * Sans lui, un brouillon repris rouvrirait la validation sur un classement
+   * que personne n'a établi. Absent des brouillons antérieurs : traité comme
+   * faux, ce qui redemande un geste — le sens sûr.
+   */
+  ordreEtabli?: boolean;
   savedAt: number;
 }
 

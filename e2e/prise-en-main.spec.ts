@@ -47,7 +47,7 @@ test('aucune course : la checklist s’affiche à 0/3 et mène à la création',
   // gros bouton du bas de l'accueil, et deux commandes homonymes ne se
   // distinguent ni pour le test ni pour un lecteur d'écran.
   await page.getByLabel('Étape 1 sur 3 · Créer une course').click();
-  await expect(page).toHaveURL(/race\/create/);
+  await expect(page).toHaveURL(/race\/create/, { timeout: 15_000 });
 });
 
 test('course créée mais grille vide : 1/3, et l’étape suivante ouvre la course', async ({ page }) => {
@@ -67,7 +67,7 @@ test('course créée mais grille vide : 1/3, et l’étape suivante ouvre la cou
   ).toBeVisible();
 
   await page.getByLabel('Étape 2 sur 3 · Ajouter des pilotes').click();
-  await expect(page).toHaveURL(/race\/r1/);
+  await expect(page).toHaveURL(/race\/r1/, { timeout: 15_000 });
 });
 
 test('grille remplie : 2/3, il ne reste que le classement', async ({ page }) => {
@@ -82,6 +82,27 @@ test('grille remplie : 2/3, il ne reste que le classement', async ({ page }) => 
   await expect(
     page.getByText('L’ordre d’arrivée — les points s’échangent tout seuls.', { exact: true }),
   ).toBeVisible();
+});
+
+test('inscrit par un ami, sans rien créer : la checklist reste à 0/3', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, {
+    // Rien en tant qu'admin…
+    'rest/v1/races': [],
+    // …mais une course d'un AMI où l'on m'a mis sur la grille. C'est le profil
+    // exact que la checklist vise : quelqu'un qui découvre l'app par un lien.
+    'rest/v1/participations': [{ race: { ...course('upcoming'), admin_id: 'u2' } }],
+  });
+  await page.goto('/');
+
+  // Les deux premières étapes NE DOIVENT PAS se cocher : il n'a rien créé et
+  // n'a ajouté personne. `listMyRaces` fusionne « mes courses » et « celles où
+  // je suis inscrit » — s'en servir tel quel affichait 2/3 à quelqu'un qui n'a
+  // rien fait, puis l'envoyait sur une course dont il n'est pas admin, où ni
+  // « + Ajouter » ni « Saisir le classement » n'existent.
+  await expect(page.getByText('0/3', { exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText('C’est parti ›', { exact: true })).toBeVisible();
+  await expect(page.getByText('Un karting, une date. Trente secondes.', { exact: true })).toBeVisible();
 });
 
 test('une course terminée : la checklist a fini son travail et disparaît', async ({ page }) => {

@@ -118,6 +118,12 @@ test('feuille d’ajout : un seul champ qui suggère (amis, filtre, invité)', a
   await page.getByLabel('Qui court ?').fill('kev');
   await expect(page.getByText('+ Kévin_R', { exact: true })).toBeVisible();
 
+  // 2bis. À UN caractère, aucune ligne « invité » : on ne peut pas encore
+  //       chercher, donc la proposer reviendrait à créer un fantôme nommé « a »
+  //       en pleine frappe — pile sous le pouce qui vise les pastilles.
+  await page.getByLabel('Qui court ?').fill('a');
+  await expect(page.getByText(/comme invité/)).toHaveCount(0);
+
   // 3. Aucun inscrit sous ce nom : la dernière ligne propose l'invité, et
   //    annonce sur la ligne même qu'il ne rapporte aucun point.
   await page.getByLabel('Qui court ?').fill('Tonton Robert');

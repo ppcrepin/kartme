@@ -3,6 +3,8 @@
  * filtre de mots interdits. Utilisé à l'inscription et à l'onboarding pseudo.
  */
 
+import { formeCollee, sansAccent } from '@/lib/texte';
+
 export const USERNAME_MIN = 3;
 export const USERNAME_MAX = 20;
 
@@ -22,18 +24,12 @@ export interface UsernameCheck {
 const SUB_BANNED = ['connard', 'salope', 'encule', 'nazi', 'merde'];
 const WORD_BANNED = ['con', 'pute', 'fdp', 'ntm'];
 
-/** Minuscules + sans accents (diacritiques combinants retirés). */
-function fold(input: string): string {
-  return input
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
-}
-
-/** Forme collée (sans séparateurs), utilisée à l'inscription pour l'unicité visuelle. */
-function normalize(input: string): string {
-  return fold(input).replace(/[^a-z0-9]/g, '');
-}
+// Le repli et la forme collée vivent dans `@/lib/texte` : ils servent aussi aux
+// recherches (kartings, pilotes) et doivent rester le miroir EXACT de
+// `public.kart_normalize`. Trois copies légèrement différentes de la même
+// fonction, c'est un filtre qui laisse passer un mot que la base refuse.
+const fold = sansAccent;
+const normalize = formeCollee;
 
 /** Vrai si le texte contient un mot interdit (deux passes, comme le serveur). */
 function containsBanned(input: string): boolean {

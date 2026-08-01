@@ -7,6 +7,10 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
+  // Les specs d'audit visuel (captures + mesures, sans assertion) se nomment
+  // `_*.spec.ts` : elles sont écrites pour une campagne, pas pour la suite, et
+  // une seule oubliée dans le dépôt ralentit tous les lancements suivants.
+  testIgnore: '**/_*.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

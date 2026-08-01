@@ -215,6 +215,12 @@ export const fr = {
     addSearchPlaceholder: 'Un prénom, un pseudo…',
     addSearchHint: 'Tes amis sont déjà là. Tape un pseudo pour trouver n’importe quel inscrit.',
     addSearching: 'Recherche…',
+    // Une recherche qui n'a pas abouti ne dit PAS « personne ne s'appelle
+    // comme ça » : elle dit qu'elle n'a pas pu regarder. La nuance décide si
+    // l'on ajoute un fantôme homonyme du pilote inscrit qu'on cherchait.
+    addSearchDown: 'Recherche indisponible — impossible de vérifier les pilotes inscrits.',
+    addGuestUnverified: 'Hors classement Elo. Attention : on n’a pas pu vérifier s’il a déjà un compte.',
+    addMoreResults: 'Et %n autres — précise le nom.',
     addFriendsEmpty: 'Tes amis sont tous sur la grille. Tape un nom pour ajouter quelqu’un d’autre.',
     addNoFriendsYet: 'Tape le nom de la personne à ajouter.',
     addNoMatch: 'Aucun pilote inscrit sous ce pseudo.',
@@ -302,6 +308,10 @@ export const fr = {
     dnfShort: 'ABD',
     dnf: 'Abandon',
     needOneFinisher: 'Il faut au moins un pilote à l’arrivée.',
+    // La liste s'ouvre dans l'ordre des inscriptions : tant que personne n'a
+    // été déplacé, ce n'est pas un classement. Le dire, plutôt que laisser un
+    // bouton grisé sans explication.
+    dragUntouched: 'Place les pilotes dans l’ordre d’arrivée (appui long, puis glisse) — ou passe en « 👆 Toucher ».',
     needTwoPilots: 'Ajoute au moins 2 pilotes pour saisir le classement.',
     // Cycle de vie (lot 2.6) : verrou + rappel, correction 24 h.
     lock: 'Clôturer les invitations',
@@ -718,7 +728,9 @@ export const fr = {
     // Nom accessible des lignes : « Créer une course » existe aussi en gros
     // bouton au bas de l'accueil. Deux commandes du même nom sur un même écran
     // ne se distinguent pas au lecteur d'écran — la ligne dit donc son rang.
-    stepAria: 'Étape %n sur 3 · %t',
+    stepAria: 'Étape %n sur 3 · %t · %e',
+    stepDone: 'fait',
+    stepTodo: 'à faire',
     step1: 'Créer une course',
     step1Hint: 'Un karting, une date. Trente secondes.',
     step2: 'Ajouter des pilotes',

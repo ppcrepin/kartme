@@ -65,7 +65,11 @@ test('rouvrir la création après un passage donne un formulaire NEUF', async ({
   // C'est le verrou de toute une famille de bugs (busy bloqué, confirmations
   // déployées, choix résiduels) née quand les écrans de détail restaient
   // montés à vie dans le navigateur d'onglets.
-  await page.getByText('Créer une course', { exact: true }).and(sceneActive(page)).first().click();
+  // Par RÔLE, pas par texte : la checklist de prise en main affiche une ligne
+  // « Créer une course » au-dessus du bouton, et un `.first()` sur le texte
+  // attraperait la ligne. Elle route au même endroit aujourd'hui — donc le
+  // test passerait par chance, et casserait le jour où elle est cochée.
+  await page.getByRole('button', { name: 'Créer une course', exact: true }).click();
   await expect(page.getByText('Choisir sur la carte').and(sceneActive(page))).toBeVisible();
   await expect(page.getByText('Modifier', { exact: true }).and(sceneActive(page))).toHaveCount(0);
 });
@@ -81,6 +85,6 @@ test('« ← Courses » fonctionne même sans historique (lien profond, PWA rela
   // `sceneActive` : le formulaire peut rester monté derrière — seule la liste
   // des courses de la SCÈNE ACTIVE prouve que le retour a eu lieu.
   await expect(
-    page.getByText('Créer une course', { exact: true }).and(sceneActive(page)).first(),
+    page.getByRole('button', { name: 'Créer une course', exact: true }).and(sceneActive(page)),
   ).toBeVisible({ timeout: 20_000 });
 });

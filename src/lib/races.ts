@@ -228,7 +228,11 @@ export async function maxGridSize(raceIds: string[]): Promise<number> {
   const { data, error } = await supabase
     .from('participations')
     .select('race_id')
-    .in('race_id', raceIds);
+    // Borne : `in(…)` part dans l'URL. Un compte à deux cents courses à venir
+    // et zéro terminée produirait une adresse de plusieurs kilo-octets, que
+    // certaines passerelles refusent en 414. On ne cherche qu'à savoir si UNE
+    // grille est garnie — cinquante suffisent largement.
+    .in('race_id', raceIds.slice(0, 50));
   if (error) throw new Error(error.message);
   const parCourse = new Map<string, number>();
   for (const r of (data ?? []) as { race_id: string }[]) {

@@ -51,6 +51,11 @@ export default function RankScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [restored, setRestored] = useState(false);
+  // Le glisser part d'une liste PRÉ-REMPLIE dans l'ordre des inscriptions.
+  // Tant que personne n'a bougé un pilote, cet ordre ne veut rien dire — et
+  // valider dessus déplacerait l'Elo de tout le monde. Ce drapeau dit si
+  // `ordered` est un classement voulu ou un simple listing.
+  const [ordreEtabli, setOrdreEtabli] = useState(false);
   const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
 
   useFocusEffect(
@@ -80,6 +85,8 @@ export default function RankScreen() {
             setDnfs(new Set(draft.dnfIds ?? []));
             setMode(draft.mode);
             setStep(draft.step);
+            // Absent des brouillons d'avant : faux, donc on redemande un geste.
+            setOrdreEtabli(draft.ordreEtabli === true);
             setRestored(true);
             return;
           }
@@ -89,7 +96,10 @@ export default function RankScreen() {
             // sinon corriger une place effacerait tous les abandons sans le dire.
             const saved = await resultOrder(id!).catch(() => ({ order: [], dnf: [] }));
             const ord = saved.order.map((pid) => byId.get(pid)).filter(Boolean) as Participant[];
+            // Le classement ENREGISTRÉ est un ordre voulu : corriger une
+            // seule place ne doit pas obliger à tout reglisser.
             setOrdered(ord.length ? ord : parts);
+            setOrdreEtabli(ord.length > 0);
             setDnfs(new Set(saved.dnf));
           } else if (isLocked) {
             // Course clôturée : roster figé → tous présents, ordre à saisir.
@@ -111,7 +121,7 @@ export default function RankScreen() {
   const persist = useCallback(
     (patch: Partial<{
       step: Step; mode: Mode; absentIds: string[]; orderedIds: string[];
-      tapOrder: string[]; dnfIds: string[];
+      tapOrder: string[]; dnfIds: string[]; ordreEtabli: boolean;
     }>) => {
       if (isCorrect || !id) return; // la correction ne se brouillonne pas
       saveDraft(id, {
@@ -121,10 +131,11 @@ export default function RankScreen() {
         orderedIds: ordered.map((p) => p.id),
         tapOrder,
         dnfIds: [...dnfs],
+        ordreEtabli,
         ...patch,
       });
     },
-    [id, isCorrect, step, mode, absents, ordered, tapOrder, dnfs],
+    [id, isCorrect, step, mode, absents, ordered, tapOrder, dnfs, ordreEtabli],
   );
 
   function toggleAbsent(pid: string) {
@@ -142,7 +153,7 @@ export default function RankScreen() {
     setOrdered(present);
     setTapOrder([]);
     setStep('order');
-    persist({ step: 'order', orderedIds: present.map((p) => p.id), tapOrder: [] });
+    persist({ step: 'order', orderedIds: present.map((p) => p.id), tapOrder: [], ordreEtabli: false });
   }
 
   /** Repartir d'une feuille blanche (le brouillon repris n'était pas le bon). */
@@ -153,6 +164,7 @@ export default function RankScreen() {
     setTapOrder([]);
     setDnfs(new Set());
     setOrdered(rosterFinal ? participants : []);
+    setOrdreEtabli(false);
     setStep(rosterFinal ? 'order' : 'presents');
   }
 
@@ -170,10 +182,18 @@ export default function RankScreen() {
 
   function onReorder(next: Participant[]) {
     setOrdered(next);
-    persist({ orderedIds: next.map((p) => p.id) });
+    setOrdreEtabli(true);
+    persist({ orderedIds: next.map((p) => p.id), ordreEtabli: true });
   }
 
   function onSetMode(next: Mode) {
+    // Re-toucher la pastille DÉJÀ choisie ne doit rien faire. Tant que le mode
+    // se changeait par une bascule, ce cas était inatteignable ; deux pastilles
+    // côte à côte le mettent à un tap — et le report ci-dessous, rejoué sur un
+    // `tapOrder` périmé, écrasait SILENCIEUSEMENT un ordre qu'on venait de
+    // glisser (et l'écrivait tel quel dans le brouillon local).
+    if (next === mode) return;
+
     // Passer du tap au glisser-déposer sans reporter l'ordre pointé le perdait
     // en silence. Le bloc « abandons » vit sous la liste dans les deux modes et
     // invite justement à faire l'aller-retour.
@@ -183,9 +203,15 @@ export default function RankScreen() {
       const rest = present.filter((p) => !tapOrder.includes(p.id));
       const merged = [...picked, ...rest];
       setOrdered(merged);
+      // L'ordre vient d'un geste délibéré (les pilotes ont été pointés) : il
+      // vaut classement, la validation peut s'ouvrir.
+      setOrdreEtabli(true);
+      // Le report est CONSOMMÉ : le garder rejouerait des numéros qui
+      // contrediraient l'ordre glissé au prochain aller-retour.
+      setTapOrder([]);
       setMode(next);
       memoriserMode(next);
-      persist({ mode: next, orderedIds: merged.map((p) => p.id) });
+      persist({ mode: next, orderedIds: merged.map((p) => p.id), tapOrder: [], ordreEtabli: true });
       return;
     }
     setMode(next);
@@ -240,7 +266,15 @@ export default function RankScreen() {
   const finishersCount = present.filter((p) => !dnfs.has(p.id)).length;
   const tapComplete = tapOrder.length === finishersCount && finishersCount >= 1;
   const canValidate =
-    finishersCount >= 1 && present.length >= 2 && (mode === 'drag' ? ordered.length >= 2 : tapComplete);
+    finishersCount >= 1 &&
+    present.length >= 2 &&
+    // En glisser, `ordered.length >= 2` suffisait — or la liste arrive
+    // pré-remplie dans l'ORDRE SERVEUR (celui des inscriptions). Deux taps
+    // — « ✥ Glisser » puis « Valider » — enregistraient donc un classement
+    // arbitraire qui déplace l'Elo de tout le monde, sans qu'un seul pilote
+    // ait été bougé. Le mode toucher, lui, exigeait depuis toujours que tous
+    // les arrivants soient pointés : on rétablit la symétrie.
+    (mode === 'drag' ? ordered.length >= 2 && ordreEtabli : tapComplete);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -319,13 +353,18 @@ export default function RankScreen() {
                 écran au moment précis où l'on galère. Un testeur est resté
                 bloqué sur le glisser sans savoir que l'autre mode existait. */}
             {!isCorrect ? (
-              <View style={styles.modeRow}>
+              <View style={styles.modeRow} accessibilityRole="radiogroup">
                 {(['tap', 'drag'] as const).map((m) => (
                   <Pressable
                     key={m}
                     onPress={() => onSetMode(m)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: mode === m }}
+                    // `radio` et non `button` : `aria-selected` / `aria-checked`
+                    // ne sont pas supportés sur `role="button"` et y sont
+                    // ignorés — le mode actif n'aurait été signalé que par la
+                    // couleur, donc invisible au lecteur d'écran ET à qui
+                    // distingue mal le rouge.
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: mode === m }}
                     style={[styles.modeChip, mode === m && styles.modeChipOn]}>
                     <Body style={[styles.modeChipTxt, mode === m && styles.modeChipTxtOn]}>
                       {m === 'tap' ? t.races.modeTap : t.races.modeDrag}
@@ -442,6 +481,9 @@ export default function RankScreen() {
               />
             </View>
             {finishersCount < 1 ? <Muted>{t.races.needOneFinisher}</Muted> : null}
+            {finishersCount >= 1 && mode === 'drag' && !ordreEtabli ? (
+              <Muted>{t.races.dragUntouched}</Muted>
+            ) : null}
           </>
         )}
       </ScrollView>
@@ -456,13 +498,37 @@ const styles = StyleSheet.create({
   dnfBlock: { gap: spacing.xs, marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.line },
   dnfTitle: { color: colors.ink, fontWeight: '700' },
   dnfChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
-  dnfChip: { paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderRadius: 999, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
+  // 44 px : marquer un abandon change le résultat d'un pilote, et à huit
+  // pilotes les pastilles se touchent sur deux rangs. À 31 px on visait la
+  // voisine.
+  dnfChip: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+  },
   dnfChipOn: { borderColor: colors.accent },
   dnfChipTxt: { fontSize: 13, color: colors.inkDim },
   dnfChipTxtOn: { color: colors.accent, fontWeight: '700' },
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl * 2 },
-  back: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
+  // 44 px, et une marge négative pour que la flèche reste optiquement collée
+  // au bord malgré sa zone élargie. `Screen` a la même parade ; ces deux écrans
+  // ont leur propre `back` et l'avaient ratée — 13 × 27 px mesurés en
+  // navigateur, alors que `hitSlop` n'existe pas sur `Pressable` en web. Sur
+  // l'écran de saisie, c'est la SEULE sortie.
+  back: {
+    alignSelf: 'flex-start',
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    marginLeft: -spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
   list: { gap: spacing.sm, marginTop: spacing.sm },
   pilot: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
   pilotRanked: { borderColor: colors.accent },

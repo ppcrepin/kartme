@@ -54,7 +54,7 @@ import {
   type RaceResult,
 } from '@/lib/races';
 import { appBaseUrl } from '@/lib/url';
-import { sansAccent } from '@/lib/texte';
+import { formeCollee } from '@/lib/texte';
 import { validateGhostName } from '@/lib/username';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -123,6 +123,12 @@ export default function RaceDetailScreen() {
   // Saisie à laquelle correspondent les résultats : évite d'afficher une liste
   // périmée (ou « aucun pilote » à tort) pendant l'anti-rebond / le réseau.
   const [pilotResultsFor, setPilotResultsFor] = useState('');
+  // « La recherche n'a rien trouvé » et « la recherche n'a pas abouti » se
+  // confondaient : les deux vidaient la liste. Au bord d'une piste, la seconde
+  // est le cas courant — et elle faisait AFFIRMER « aucun pilote inscrit sous
+  // ce pseudo » avant de proposer d'ajouter un fantôme homonyme du pilote
+  // qu'on n'a pas su chercher. L'erreur ne se voit qu'au classement.
+  const [pilotSearchDown, setPilotSearchDown] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [circuitRecord, setCircuitRecord] = useState<{ ms: number; holder: string | null } | null>(
     null,
@@ -185,6 +191,14 @@ export default function RaceDetailScreen() {
   const canCorrect = !!race && withinCorrectionWindow(race);
   const selfParticipating = participants.some((p) => p.isSelf);
 
+  // Le bouton « + Ajouter » disparaît dès que la grille se fige, mais la
+  // FEUILLE, elle, restait ouverte et cliquable si le verrou arrivait par le
+  // temps réel pendant qu'on ajoutait quelqu'un : le serveur refusait, et
+  // l'admin lisait un message d'erreur sans comprendre ce qui avait changé.
+  // Dérivé plutôt que corrigé dans un effet — un `setState` synchrone dans un
+  // effet est un aller-retour de rendu, et la règle du dépôt l'interdit.
+  const addVisible = addOpen && !locked && !completed;
+
   // Recherche de pilote par pseudo (anti-rebond 300 ms, min 2 caractères).
   // Aucune amitié requise. Ne dépend QUE de la saisie : le filtrage (déjà sur
   // la grille, profil illisible) se fait au rendu — pas de RPC superflue à
@@ -193,22 +207,37 @@ export default function RaceDetailScreen() {
     const q = pilotQuery.trim();
     if (q.length < 2) return; // rien à chercher ; l'affichage masque (voir visiblePilots)
     let active = true;
+    // Filet de sécurité : `supabase-js` n'impose AUCUN délai maximum. Sur un
+    // portail captif ou en 2G, la promesse pend indéfiniment — et comme la
+    // ligne « ajouter comme invité » attend que la recherche retombe, elle ne
+    // serait jamais proposée. Avant le champ unique, l'invité s'ajoutait dans
+    // un champ à part, sans réseau : on ne perd pas ça.
+    let secours: ReturnType<typeof setTimeout> | undefined;
+    const echec = () => {
+      if (!active) return;
+      setPilotResults([]);
+      setPilotResultsFor(q);
+      setPilotSearchDown(true);
+    };
     const timer = setTimeout(() => {
+      secours = setTimeout(echec, 6000);
       searchPilots(q)
         .then((rows) => {
           if (!active) return;
+          clearTimeout(secours);
           setPilotResults(rows);
           setPilotResultsFor(q);
+          setPilotSearchDown(false);
         })
         .catch(() => {
-          if (!active) return;
-          setPilotResults([]);
-          setPilotResultsFor(q);
+          clearTimeout(secours);
+          echec();
         });
     }, 300);
     return () => {
       active = false;
       clearTimeout(timer);
+      clearTimeout(secours);
     };
   }, [pilotQuery]);
 
@@ -505,7 +534,11 @@ export default function RaceDetailScreen() {
   // vaut mieux qu'un invité, un ami se tape en zéro caractère) survit dans
   // l'ORDRE des suggestions.
   const q = pilotQuery.trim();
-  const qNorm = sansAccent(q);
+  // Forme COLLÉE, pas simplement dépouillée des accents : c'est le miroir de
+  // `kart_normalize`, que la recherche serveur applique des deux côtés. Sans
+  // cela, les deux moitiés d'une même liste ne trouveraient pas les mêmes
+  // noms — les amis en ignorant les accents, les autres inscrits non.
+  const qNorm = formeCollee(q);
 
   // Amis pas encore sur la grille. Champ vide ⇒ ils s'affichent tous : c'est
   // le cas des neuf dixièmes des courses, et il se règle sans rien taper.
@@ -513,28 +546,49 @@ export default function RaceDetailScreen() {
     (f) => !participants.some((p) => p.profileId === f.pilotId),
   );
   const amisSuggeres = qNorm
-    ? addableFriends.filter((f) => sansAccent(f.username).includes(qNorm))
+    ? addableFriends.filter((f) => formeCollee(f.username).includes(qNorm))
     : addableFriends;
   // Les autres inscrits trouvés par la recherche serveur, sans redoubler un
   // ami déjà proposé au-dessus.
   const inscritsSuggeres = visiblePilots.filter(
     (p) => !amisSuggeres.some((f) => f.pilotId === p.id),
   );
-  const aucuneSuggestion = amisSuggeres.length + inscritsSuggeres.length === 0;
+  // Plafond d'affichage : `search_pilots` remonte jusqu'à 20 pseudos, et une
+  // requête de deux lettres en ramène facilement autant. Vingt pastilles
+  // repousseraient la ligne « ajouter comme invité » sous la ligne de
+  // flottaison d'une feuille sans indicateur de défilement — très exactement
+  // le défaut qu'on vient de corriger sur l'écran de saisie.
+  const CAP_SUGGESTIONS = 8;
+  const suggestions = [
+    ...amisSuggeres.map((f) => ({ id: f.pilotId, username: f.username, ami: true })),
+    ...inscritsSuggeres.map((p) => ({ id: p.id, username: p.username, ami: false })),
+  ];
+  const suggestionsVues = suggestions.slice(0, CAP_SUGGESTIONS);
+  const suggestionsCachees = suggestions.length - suggestionsVues.length;
+  const aucuneSuggestion = suggestions.length === 0;
   const rechercheEnCours = searchingPilot && !pilotSearchReady;
+  // Une recherche qui n'a PAS abouti : on ne peut plus affirmer qu'aucun
+  // pilote ne porte ce pseudo, seulement qu'on n'a pas pu regarder.
+  const rechercheHS = pilotSearchReady && pilotSearchDown;
 
   // La dernière ligne, « … comme invité ». On ne la propose qu'une fois la
   // recherche RETOMBÉE : la proposer pendant qu'on cherche encore ferait
   // doubler un pilote inscrit par un fantôme homonyme, et le fantôme
-  // n'échange aucun point — l'erreur ne se voit qu'au classement.
+  // n'échange aucun point — l'erreur ne se voit qu'au classement. En revanche
+  // une recherche EN PANNE ne doit pas condamner l'ajout d'un invité : elle le
+  // laisse passer, en disant qu'elle n'a rien pu vérifier.
   const nomInvite = validateGhostName(q);
-  const inviteDecidable = q.length >= 2 ? pilotSearchReady : q.length >= 1;
+  // DEUX caractères minimum, jamais un seul : à un caractère on ne peut pas
+  // chercher, donc la ligne s'affichait AVANT toute vérification — « ➕ Ajouter
+  // « a » comme invité » apparaissait en pleine frappe, pile sous le pouce.
+  // Un prénom d'une lettre n'existe pas ; un fantôme nommé « a » à retirer, si.
+  const inviteDecidable = q.length >= 2 && pilotSearchReady;
   const proposerInvite = inviteDecidable && nomInvite.ok;
-  // Un nom refusé (filtre de mots, trop long) ne se signale que s'il ne reste
-  // rien d'autre à proposer : sinon on crierait au nom interdit sous une liste
-  // de résultats parfaitement valides.
+  // Un nom refusé (filtre de mots, trop long) DOIT se dire, même si d'autres
+  // pastilles s'affichent : taper « Con » pour un invité de ce nom pendant
+  // qu'un ami « Concarneau_Kart » remonte laissait l'écran totalement muet.
   const erreurInvite =
-    inviteDecidable && !nomInvite.ok && aucuneSuggestion
+    inviteDecidable && !nomInvite.ok
       ? t.races.nameErrors[nomInvite.error ?? 'generic']
       : null;
 
@@ -1101,7 +1155,7 @@ export default function RaceDetailScreen() {
             · « comme invité » en dernière ligne, et seulement là — il court,
               mais n'échange aucun point, et on le DIT sur la ligne même. ── */}
       <Sheet
-        open={addOpen}
+        open={addVisible}
         onClose={() => {
           setAddOpen(false);
           // Sans cette purge, rouvrir la feuille afficherait la recherche
@@ -1120,36 +1174,30 @@ export default function RaceDetailScreen() {
           />
           <Muted>{t.races.addSearchHint}</Muted>
 
-          {amisSuggeres.length + inscritsSuggeres.length > 0 ? (
+          {suggestionsVues.length > 0 ? (
             <View style={styles.friendChips}>
-              {amisSuggeres.map((f) => (
+              {suggestionsVues.map((s) => (
                 <Pressable
-                  key={f.pilotId}
-                  onPress={() => onAddFriend(f.pilotId)}
+                  key={s.id}
+                  onPress={() => (s.ami ? onAddFriend(s.id) : onAddPilotById(s.id))}
                   accessibilityRole="button"
                   disabled={busy}
                   style={styles.friendChip}>
-                  <Avatar name={f.username} size={24} />
-                  <Body style={styles.friendChipTxt}>+ {f.username}</Body>
-                </Pressable>
-              ))}
-              {inscritsSuggeres.map((p) => (
-                <Pressable
-                  key={p.id}
-                  onPress={() => onAddPilotById(p.id)}
-                  accessibilityRole="button"
-                  disabled={busy}
-                  style={styles.friendChip}>
-                  <Avatar name={p.username} size={24} />
-                  <Body style={styles.friendChipTxt}>+ {p.username}</Body>
+                  <Avatar name={s.username} size={24} />
+                  <Body style={styles.friendChipTxt}>+ {s.username}</Body>
                 </Pressable>
               ))}
             </View>
           ) : null}
+          {suggestionsCachees > 0 ? (
+            <Muted>{t.races.addMoreResults.replace('%n', String(suggestionsCachees))}</Muted>
+          ) : null}
 
           {rechercheEnCours ? <Muted>{t.races.addSearching}</Muted> : null}
 
-          {aucuneSuggestion && !rechercheEnCours ? (
+          {rechercheHS ? <Muted style={styles.rematchErr}>{t.races.addSearchDown}</Muted> : null}
+
+          {aucuneSuggestion && !rechercheEnCours && !rechercheHS ? (
             <Muted>
               {q
                 ? alreadyOnGrid
@@ -1176,7 +1224,9 @@ export default function RaceDetailScreen() {
               <Body style={styles.guestRowTxt}>
                 {t.races.addGuestRow.replace('%n', nomInvite.value)}
               </Body>
-              <Muted style={styles.guestRowHint}>{t.races.addGuestRowHint}</Muted>
+              <Muted style={styles.guestRowHint}>
+                {rechercheHS ? t.races.addGuestUnverified : t.races.addGuestRowHint}
+              </Muted>
             </Pressable>
           ) : null}
           {proposerInvite ? (
@@ -1268,7 +1318,19 @@ export default function RaceDetailScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xl },
-  back: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
+  // 44 px, et une marge négative pour que la flèche reste optiquement collée
+  // au bord malgré sa zone élargie. `Screen` a la même parade ; ces deux écrans
+  // ont leur propre `back` et l'avaient ratée — 13 × 27 px mesurés en
+  // navigateur, alors que `hitSlop` n'existe pas sur `Pressable` en web. Sur
+  // l'écran de saisie, c'est la SEULE sortie.
+  back: {
+    alignSelf: 'flex-start',
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    marginLeft: -spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   menuDots: { fontSize: 22, fontWeight: '800', color: colors.inkDim, paddingHorizontal: spacing.sm },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
@@ -1282,6 +1344,11 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: spacing.md,
     paddingVertical: 4,
+    // La porte d'entrée de la feuille refaite plafonnait à ~30 px, avec un
+    // `hitSlop` inopérant sur web. Rater le bouton qui ouvre l'écran qu'on
+    // vient de simplifier serait une correction à moitié faite.
+    minHeight: 44,
+    justifyContent: 'center',
   },
   addBtnTxt: { color: colors.accent, fontWeight: '700', fontSize: 13 },
   rowName: { fontSize: 14, lineHeight: 18, fontWeight: '600' },
@@ -1298,7 +1365,16 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   barreHint: { textAlign: 'center' },
-  barreLien: { alignItems: 'center', paddingVertical: spacing.xs },
+  // « Clôturer les invitations » se tenait à 4 px sous « Saisir le classement »
+  // et ne faisait que 27 px de haut : un pouce qui vise bas sur le gros bouton
+  // rouge tombait dessus et figeait la grille SANS un mot (c'est réversible,
+  // mais l'admin ne sait pas ce qui vient d'arriver). 44 px, et de l'air.
+  barreLien: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    marginTop: spacing.sm,
+  },
   flex: { flex: 1 },
   section: { gap: spacing.sm },
   remove: { color: colors.inkDim2 },

@@ -65,11 +65,17 @@ export function PremiereCourse({
               key={e.n}
               onPress={active ? () => onEtape(e.n) : undefined}
               disabled={!active}
-              accessibilityRole={active ? 'button' : undefined}
+              // Le rôle est TOUJOURS `button`, y compris sur les lignes
+              // inactives : un `aria-label` posé sur un élément sans rôle est
+              // ignoré par la plupart des lecteurs d'écran, et l'état
+              // (`aria-checked`) n'est pas supporté sur `role="button"` — il
+              // n'y a donc que le nom pour porter « fait » ou « à faire ».
+              // `disabled` reste ce qui empêche l'activation.
+              accessibilityRole="button"
               accessibilityLabel={t.onboarding.stepAria
                 .replace('%n', String(e.n))
-                .replace('%t', e.titre)}
-              accessibilityState={{ checked: e.faite }}
+                .replace('%t', e.titre)
+                .replace('%e', e.faite ? t.onboarding.stepDone : t.onboarding.stepTodo)}
               style={[styles.etape, active && styles.etapeActive]}>
               <Body style={[styles.puce, e.faite && styles.puceFaite, active && styles.puceActive]}>
                 {e.faite ? '✓' : '○'}
