@@ -9,15 +9,21 @@ import { supabase } from '@/lib/supabase';
 
 export type { BadgeKey };
 
-/** Les 12 badges MVP, dans l'ordre du catalogue (BADGES.md). */
+/**
+ * Les 9 badges, dans l'ordre du catalogue (BADGES.md).
+ *
+ * Ils étaient douze. Trois décrivaient une mauvaise soirée — Kart-astrophe
+ * (perdre 45 points), Voiture balai (finir dernier), Tête-à-queue (perdre un
+ * palier de grade) — et l'application les rangeait dans la MÊME vitrine que
+ * les trophées à décrocher. Une vitrine où l'on collectionne ses défaites
+ * n'invite personne à revenir (décision PO 2026-08-01, après test utilisateur).
+ * Le moteur et l'historique partent avec, côté serveur.
+ */
 export const BADGE_KEYS: readonly BadgeKey[] = [
   'kart_didentite',
   'habitue_stands',
   'champagne',
   'chapeaux_de_roues',
-  'kart_astrophe',
-  'voiture_balai',
-  'tete_a_queue',
   'midi_moins_le_kart',
   'chef_ecurie',
   'drs',

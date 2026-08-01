@@ -66,19 +66,20 @@ begin
   perform tests.eq(tests.has_badge(C, 'kart_didentite'), 1, 'C : Kart d''identité');
   perform tests.eq(tests.has_badge(A, 'champagne'), 1, 'A (vainqueur) : Champagne !');
   perform tests.eq(tests.has_badge(B, 'champagne'), 0, 'B (2e) : pas de Champagne');
-  perform tests.eq(tests.has_badge(C, 'voiture_balai'), 1, 'C (dernier de 3) : Voiture balai');
+  perform tests.eq(tests.has_badge(C, 'voiture_balai'), 0, 'C (dernier de 3) : plus de Voiture balai (badge retiré)');
   perform tests.eq(tests.has_badge(A, 'drs'), 1, 'A a battu B (+350) : DRS');
   perform tests.eq(tests.has_badge(C, 'drs'), 0, 'C (derrière B) : pas de DRS');
-  perform tests.eq(tests.has_badge(C, 'tete_a_queue'), 1, 'C (1000 → ~975) : Tête-à-queue');
+  perform tests.eq(tests.has_badge(C, 'tete_a_queue'), 0, 'C (1000 → ~975) : plus de Tête-à-queue (badge retiré)');
   perform tests.eq(tests.has_badge(A, 'safety_car'), 1, 'A (devant B, mieux classé) : Safety car');
   perform tests.eq(tests.has_badge(B, 'safety_car'), 0, 'B (personne au-dessus) : pas de Safety car');
   perform tests.eq(tests.has_badge(A, 'push'), 0, 'A (+~39 < 45) : pas de Push');
-  -- 3×identité + champagne + voiture_balai + drs + tête-à-queue + safety_car = 8.
-  perform tests.eq((select count(*) from user_badges where race_id = r), 8, '8 badges sur cette course');
-  raise notice 'Scénario 1 (1ère course : Champagne, Voiture balai, DRS, Safety car) ✔';
+  -- 3×identité + champagne + drs + safety_car = 6. C'était 8 avant le retrait
+  -- des badges négatifs (voiture_balai et tete_a_queue tombaient ici).
+  perform tests.eq((select count(*) from user_badges where race_id = r), 6, '6 badges sur cette course');
+  raise notice 'Scénario 1 (1ère course : Champagne, DRS, Safety car) ✔';
 end $$;
 
--- ═══ Scénario 2 : un duel à 2 ne donne PAS Voiture balai ; unicité ═══
+-- ═══ Scénario 2 : unicité d'un badge après une 2e victoire ═══
 do $$
 declare
   A uuid := 'b0000000-0000-0000-0000-000000000001';
@@ -92,13 +93,13 @@ begin
   perform tests.call_submit(A, r, array[pa, pc]);
 
   perform tests.eq((select count(*) from user_badges where profile_id = C and badge_key = 'voiture_balai' and race_id = r), 0,
-                   'perdre un duel à 2 ne donne pas la Voiture balai');
+                   'la Voiture balai ne tombe plus, à 2 pilotes comme à 3');
   perform tests.eq((select count(*) from user_badges where profile_id = A and badge_key = 'champagne'), 1,
                    'Champagne reste unique après une 2e victoire');
   raise notice 'Scénario 2 (duel sans voiture balai, unicité) ✔';
 end $$;
 
--- ═══ Scénario 3 : Kart-astrophe (≤ −45) + Push (≥ +45) + Tête-à-queue + Safety car ═══
+-- ═══ Scénario 3 : Push (≥ +45) + Safety car ; AUCUN badge négatif ═══
 do $$
 declare
   W uuid := 'b0000000-0000-0000-0000-000000000010'; -- 610, gagne (+~49 → Push, Safety car)
@@ -112,15 +113,15 @@ begin
   insert into participations (id, race_id, profile_id) values (pw, r, W), (pl, r, L);
   perform tests.call_submit(W, r, array[pw, pl]);
 
-  perform tests.eq(tests.has_badge(L, 'kart_astrophe'), 1, 'L (Δ ≈ −49) : Kart-astrophe (≥ 45 perdus)');
-  perform tests.eq(tests.has_badge(L, 'tete_a_queue'), 1, 'L (1010 → sous 1000) : Tête-à-queue');
+  perform tests.eq(tests.has_badge(L, 'kart_astrophe'), 0, 'L (Δ ≈ −49) : plus de Kart-astrophe (badge retiré)');
+  perform tests.eq(tests.has_badge(L, 'tete_a_queue'), 0, 'L (1010 → sous 1000) : plus de Tête-à-queue (badge retiré)');
   perform tests.eq(tests.has_badge(W, 'push'), 1, 'W (Δ ≈ +49) : Push (≥ 45 gagnés)');
   perform tests.eq(tests.has_badge(W, 'kart_astrophe'), 0, 'W (gagnant) : pas de Kart-astrophe');
   perform tests.eq(tests.has_badge(L, 'push'), 0, 'L (perd) : pas de Push');
   perform tests.eq(tests.has_badge(W, 'drs'), 1, 'W a battu L (+400) : DRS');
   perform tests.eq(tests.has_badge(W, 'safety_car'), 1, 'W (610, devant L mieux classé) : Safety car');
   perform tests.eq(tests.has_badge(L, 'safety_car'), 0, 'L (personne au-dessus) : pas de Safety car');
-  raise notice 'Scénario 3 (Kart-astrophe, Push, Tête-à-queue, Safety car) ✔';
+  raise notice 'Scénario 3 (Push, Safety car ; les négatifs ne tombent plus) ✔';
 end $$;
 
 -- ═══ Scénario 4 : Midi moins le kart — course du MATIN (heure prévue) ═══

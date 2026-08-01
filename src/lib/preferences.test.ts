@@ -27,24 +27,41 @@ function poser(stockage: Storage | null) {
 }
 
 describe('mode de saisie', () => {
-  it('ouvre sur « toucher » par défaut', () => {
+  // Le défaut a CHANGÉ de sens le 2026-08-01 (« glisser-déposer en premier,
+  // toucher en secours »). Une lecture qui échoue doit retomber du bon côté :
+  // c'est là que l'inversion se rate le plus facilement.
+  it('ouvre sur « glisser » par défaut', () => {
     poser(faireStockage());
+    expect(modePrefere()).toBe('drag');
+  });
+
+  it('se souvient du toucher une fois choisi', () => {
+    poser(faireStockage());
+    memoriserMode('tap');
     expect(modePrefere()).toBe('tap');
   });
 
-  it('se souvient du glisser une fois choisi', () => {
+  it('revient au glisser quand on le rechoisit', () => {
     poser(faireStockage());
+    memoriserMode('tap');
     memoriserMode('drag');
     expect(modePrefere()).toBe('drag');
   });
 
-  it('retombe sur « toucher » si la lecture lève', () => {
+  it('retombe sur « glisser » si la lecture lève', () => {
     poser({
       getItem: () => {
         throw new Error('cookies tiers bloqués');
       },
     } as unknown as Storage);
-    expect(modePrefere()).toBe('tap');
+    expect(modePrefere()).toBe('drag');
+  });
+
+  it('retombe sur « glisser » sur une valeur corrompue', () => {
+    const s = faireStockage();
+    poser(s);
+    s.setItem('ks_mode_saisie', 'toucher');
+    expect(modePrefere()).toBe('drag');
   });
 });
 

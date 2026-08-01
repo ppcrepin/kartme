@@ -127,6 +127,15 @@ export const fr = {
     reportCity: 'Ville (ou la plus proche)',
     reportCityPh: 'Ex. : Vire',
     reportTarget: 'Fiche concernée',
+    // Champ libre (arbitrage PO 2026-08-01, contre la décision d'origine) :
+    // le nom et la ville ne disent pas CE QUI cloche, et le modérateur reçoit
+    // un signalement qu'il ne peut pas traiter. L'objection d'origine — « une
+    // porte d'entrée pour les insultes » — est levée par le fait que ce texte
+    // n'est JAMAIS public : il ne sort pas de la file de modération.
+    reportComment: 'Précisions (facultatif)',
+    reportCommentPh: 'Ex. : fermé depuis mars, le portail est condamné.',
+    reportCommentHint: 'Lu par la modération uniquement — jamais affiché aux autres pilotes.',
+    reportCommentLeft: '%n caractères restants',
     reportSend: 'Envoyer le signalement',
     reportDone: 'Merci ! Un modérateur va regarder. Le référentiel profite à tous les pilotes.',
     reportNeedName: 'Indique au moins le nom du karting.',
@@ -292,11 +301,23 @@ export const fr = {
     rankingTitle: 'Ordre d’arrivée',
     dragHint: 'Glisse les pilotes pour les mettre dans l’ordre d’arrivée (1er en haut).',
     tapHint: 'Touche les pilotes dans l’ordre d’arrivée (1er d’abord).',
-    // Sélecteur de geste, en HAUT de l'écran de saisie. Il était un lien gris
-    // sous la liste : hors écran à six pilotes, donc invisible au moment où
-    // l'on galère (retour de test 2026-07-30).
-    modeTap: '👆 Toucher',
-    modeDrag: '✥ Glisser',
+    // Le geste de SECOURS, en un lien discret sous le mode d'emploi.
+    //
+    // C'étaient deux grandes pastilles côte à côte, mises en avant dès
+    // l'ouverture. Le PO les a retirées le 2026-08-01 : « glisser-déposer en
+    // premier, toucher en secours », « plus les 2 grandes icônes en avant au
+    // début ». Poser une question à quelqu'un qui n'a pas encore vu la liste,
+    // c'est lui demander de choisir entre deux gestes qu'il ne connaît pas.
+    //
+    // Le lien reste HAUT dans l'écran — au-dessus de la liste, pas sous elle :
+    // sous six pilotes il retombait hors écran, ce qui avait bloqué un testeur
+    // le 2026-07-30. Discret ne veut pas dire caché.
+    modeVersTap: '👆 Plutôt toucher les pilotes dans l’ordre',
+    modeVersDrag: '✥ Revenir au glisser-déposer',
+    // Lus à voix haute : le pictogramme ne s'énonce pas, et « bouton » seul ne
+    // dit pas qu'on change de mode de saisie.
+    modeVersTapAria: 'Passer au mode toucher : pointer les pilotes dans l’ordre d’arrivée',
+    modeVersDragAria: 'Revenir au mode glisser-déposer',
     reset: 'Recommencer',
     validateRanking: 'Valider le classement',
     // Brouillon local de saisie (A10) : le réseau au circuit est mauvais, une
@@ -314,7 +335,7 @@ export const fr = {
     // La liste s'ouvre dans l'ordre des inscriptions : tant que personne n'a
     // été déplacé, ce n'est pas un classement. Le dire, plutôt que laisser un
     // bouton grisé sans explication.
-    dragUntouched: 'Place les pilotes dans l’ordre d’arrivée (appui long, puis glisse) — ou passe en « 👆 Toucher ».',
+    dragUntouched: 'Place les pilotes dans l’ordre d’arrivée : appui long, puis glisse.',
     needTwoPilots: 'Ajoute au moins 2 pilotes pour saisir le classement.',
     // Cycle de vie (lot 2.6) : verrou + rappel, correction 24 h.
     lock: 'Clôturer les invitations',
@@ -476,7 +497,7 @@ export const fr = {
   },
   badges: {
     title: 'Badges',
-    subtitle: 'Douze trophées à décrocher sur la piste.',
+    subtitle: 'Neuf trophées à décrocher sur la piste.',
     progress: '%u sur %t débloqués',
     locked: 'À débloquer',
     unlockedBanner: 'Badge gagné sur cette course : %s 🏆',
@@ -488,9 +509,6 @@ export const fr = {
       habitue_stands: { name: 'Habitué des stands', condition: 'Jouer 10 courses.' },
       champagne: { name: 'Champagne !', condition: 'Remporter sa première victoire.' },
       chapeaux_de_roues: { name: 'Sur les chapeaux de roues', condition: 'Gagner 3 courses d’affilée.' },
-      kart_astrophe: { name: 'Kart-astrophe', condition: 'Perdre au moins 45 points d’Elo en une course.' },
-      voiture_balai: { name: 'Voiture balai', condition: 'Finir dernier d’une course (3 pilotes ou plus).' },
-      tete_a_queue: { name: 'Tête-à-queue', condition: 'Perdre un palier de grade entier.' },
       midi_moins_le_kart: { name: 'Midi moins le kart', condition: 'Participer à une course en matinée (6 h – midi).' },
       chef_ecurie: { name: 'Chef d’écurie', condition: 'Organiser 10 courses classées (2 inscrits ou plus).' },
       drs: { name: 'DRS', condition: 'Battre un pilote inscrit parti 300 Elo (ou plus) au-dessus de soi.' },

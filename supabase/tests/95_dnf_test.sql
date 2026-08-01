@@ -324,10 +324,12 @@ begin
                    'un abandon ne décroche pas DRS en « battant » un autre abandon');
   perform tests.eq((select count(*) from user_badges where profile_id in (V, W) and badge_key = 'safety_car'), 0,
                    'un abandon ne « finit devant » personne');
-  perform tests.eq((select count(*) from user_badges where profile_id in (V, W) and badge_key = 'voiture_balai'), 0,
-                   'la voiture balai ne va pas à un abandon');
-  perform tests.eq((select count(*) from user_badges where profile_id = X and badge_key = 'voiture_balai'), 1,
-                   'elle va au dernier À L''ARRIVÉE');
+  -- La Voiture balai a été RETIRÉE (décision PO 2026-08-01) : plus personne
+  -- ne la décroche, ni un abandon ni le dernier à l'arrivée. On garde
+  -- l'assertion des deux côtés — c'est elle qui attraperait un moteur revenu
+  -- en arrière.
+  perform tests.eq((select count(*) from user_badges where badge_key = 'voiture_balai'), 0,
+                   'la Voiture balai ne tombe plus du tout');
   perform tests.eq((select count(*) from user_badges where profile_id in (V, W) and badge_key = 'champagne'), 0,
                    'pas de Champagne pour un abandon');
   raise notice 'Scénario 4quater (badges et abandons) ✔';

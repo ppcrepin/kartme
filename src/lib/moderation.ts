@@ -73,6 +73,9 @@ export interface CircuitSuggestion {
   kind: 'manquant' | 'ferme' | 'erreur';
   name: string;
   city: string | null;
+  /** Le champ libre du pilote. JAMAIS public : seuls son auteur et la
+   *  modération le lisent (policies `suggestions_select_own` / `_mod`). */
+  comment: string | null;
   status: 'open' | 'done' | 'rejected';
   createdAt: string;
   authorName: string | null;
@@ -82,6 +85,7 @@ export interface CircuitSuggestion {
 
 type RawSuggestion = {
   id: string; kind: CircuitSuggestion['kind']; name: string; city: string | null;
+  comment: string | null;
   status: CircuitSuggestion['status']; created_at: string;
   author_id: string; author_name: string | null;
   circuit_id: string | null; circuit_name: string | null;
@@ -95,6 +99,7 @@ export async function listCircuitSuggestions(onlyOpen = true): Promise<CircuitSu
     kind: r.kind,
     name: r.name,
     city: r.city,
+    comment: r.comment ?? null,
     status: r.status,
     createdAt: r.created_at,
     authorName: r.author_name,

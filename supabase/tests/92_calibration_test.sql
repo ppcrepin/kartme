@@ -89,8 +89,10 @@ begin
                     where rr.race_id = r and pp.profile_id = A)::int::bigint, 1, 'prépa : le delta dépasse bien ±45');
   perform tests.eq((select count(*) from user_badges where profile_id = A and badge_key = 'push'), 0,
                    'pas de badge Push en calibration');
-  perform tests.eq((select count(*) from user_badges where profile_id = B and badge_key = 'kart_astrophe'), 0,
-                   'pas de Kart-astrophe en calibration');
+  -- Kart-astrophe a été RETIRÉ : l'assertion garde son sens (personne ne doit
+  -- l'avoir), elle ne prouve simplement plus la règle de calibration.
+  perform tests.eq((select count(*) from user_badges where badge_key = 'kart_astrophe'), 0,
+                   'Kart-astrophe ne tombe plus du tout');
   perform tests.eq((select count(*) from user_badges where profile_id = A and badge_key = 'champagne'), 1,
                    'Champagne (non filtré) toujours attribué');
   raise notice 'Scénario 3 (badges de variation muets en calibration) ✔';

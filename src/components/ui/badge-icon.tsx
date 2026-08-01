@@ -1,7 +1,8 @@
 import type { ReactElement } from 'react';
 import Svg, { Circle, Line, Path, Polyline, Rect } from 'react-native-svg';
 
-// Icônes des 12 badges (refonte 2026-07-13). Style hérité du <Svg> parent :
+// Icônes des 9 badges (12 à l'origine ; les trois qui punissaient une mauvaise
+// soirée ont été retirés le 2026-08-01). Style hérité du <Svg> parent :
 // trait 1.7, extrémités/jointures rondes, aucun remplissage. Les 7 badges
 // d'origine reprennent la maquette docs/badges-icones.html ; « Voiture balai »,
 // « Midi moins le kart », « DRS », « Safety car » et « Push » sont neufs.
@@ -11,9 +12,6 @@ export type BadgeKey =
   | 'habitue_stands'
   | 'champagne'
   | 'chapeaux_de_roues'
-  | 'kart_astrophe'
-  | 'voiture_balai'
-  | 'tete_a_queue'
   | 'midi_moins_le_kart'
   | 'chef_ecurie'
   | 'drs'
@@ -65,33 +63,9 @@ const ICONS: Record<BadgeKey, ReactElement> = {
       <Line x1={4} y1={30} x2={11} y2={30} />
     </>
   ),
-  // 5. Kart-astrophe — courbe qui dévisse, flèche vers le bas.
-  kart_astrophe: (
-    <>
-      <Polyline points="7,12 17,21 13,27 25,36" />
-      <Path d="M25 36l-6.5-1M25 36l-1-6.5" />
-      <Path d="M33 14v8M29 18h8M31 15l4 6M35 15l-4 6" />
-    </>
-  ),
-  // 6. Voiture balai — balai (manche + tête en éventail).
-  voiture_balai: (
-    <>
-      <Line x1={34} y1={12} x2={23} y2={23} />
-      <Path d="M23 23L14 37h18z" />
-      <Line x1={18.5} y1={30} x2={16} y2={37} />
-      <Line x1={23} y1={30} x2={23} y2={37} />
-      <Line x1={27.5} y1={30} x2={30} y2={37} />
-    </>
-  ),
-  // 7. Tête-à-queue — flèche en rotation, traces de gomme.
-  tete_a_queue: (
-    <>
-      <Path d="M35 24a11 11 0 1 1-4.5-8.9" />
-      <Path d="M35 14v6h-6" />
-      <Circle cx={24} cy={24} r={2} />
-      <Path d="M18 34c-1 2-1 3 0 4M28 34c1 1.5 1 3 0 4" />
-    </>
-  ),
+  // 5, 6 et 7 — Kart-astrophe, Voiture balai, Tête-à-queue — ont été retirés :
+  // ils récompensaient une mauvaise soirée (décision PO 2026-08-01). La
+  // numérotation d'origine est conservée pour les six qui restent.
   // 8. Midi moins le kart — horloge à ~11h45 et soleil (course du matin).
   midi_moins_le_kart: (
     <>

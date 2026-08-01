@@ -9,6 +9,9 @@ import { colors, radius, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { suggestCircuit, type CircuitReportKind } from '@/lib/races';
 
+/** Plafond du champ libre — le même que la contrainte de la table. */
+const COMMENT_MAX = 200;
+
 /**
  * Signaler un karting manquant, fermé, ou dont la fiche est fausse.
  *
@@ -16,8 +19,16 @@ import { suggestCircuit, type CircuitReportKind } from '@/lib/races';
  * peut signaler QU'un manquant), et la fiche d'un circuit (une cible → fermé
  * ou erreur ; « il manque » n'aurait aucun sens depuis une fiche qui existe).
  *
- * Nom + ville seulement, pas de commentaire libre — décision PO : un champ de
- * texte ouvert est une porte d'entrée pour les insultes.
+ * Nom, ville, et un champ libre facultatif (arbitrage PO 2026-08-01). Le lot
+ * d'origine l'avait refusé — « un texte ouvert est une porte d'entrée pour les
+ * insultes » — et le test utilisateur a montré l'autre bout du problème : un
+ * nom et une ville ne disent pas CE QUI cloche, et le modérateur reçoit un
+ * signalement qu'il ne peut pas traiter.
+ *
+ * L'objection est levée, pas ignorée : ce texte n'est JAMAIS public, il passe
+ * le même filtre de mots que les pseudos, et il compte dans le plafond de cinq
+ * signalements par heure. On le DIT sous le champ — quelqu'un qui écrit dans
+ * une application doit savoir qui va le lire.
  */
 export default function CircuitReportScreen() {
   const router = useRouter();
@@ -30,6 +41,7 @@ export default function CircuitReportScreen() {
   const [kind, setKind] = useState<CircuitReportKind>(correction ? 'ferme' : 'manquant');
   const [name, setName] = useState(correction ? (circuitName ?? '') : '');
   const [city, setCity] = useState('');
+  const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -42,7 +54,7 @@ export default function CircuitReportScreen() {
     setBusy(true);
     setError(null);
     try {
-      await suggestCircuit(kind, name, city || null, correction ? circuitId! : null);
+      await suggestCircuit(kind, name, city || null, correction ? circuitId! : null, comment || null);
       setSent(true);
     } catch (e) {
       // Les messages du serveur (plafond, doublon, mot interdit) sont écrits
@@ -112,6 +124,28 @@ export default function CircuitReportScreen() {
               autoCapitalize="words"
             />
 
+            <View>
+              <Field
+                label={t.races.reportComment}
+                placeholder={t.races.reportCommentPh}
+                value={comment}
+                onChangeText={setComment}
+                multiline
+                numberOfLines={3}
+                // Plafonné À LA SAISIE : le serveur coupe à 200 sans rien dire,
+                // et se faire tronquer après l'envoi, sans l'avoir vu venir,
+                // est le genre de silence qui fait douter de l'envoi entier.
+                maxLength={COMMENT_MAX}
+                style={styles.commentaire}
+              />
+              <Muted style={styles.hint}>{t.races.reportCommentHint}</Muted>
+              {comment.length > 0 ? (
+                <Muted style={styles.hint}>
+                  {t.races.reportCommentLeft.replace('%n', String(COMMENT_MAX - comment.length))}
+                </Muted>
+              ) : null}
+            </View>
+
             {error ? <Banner kind="err" title={error} /> : null}
             <Button label={t.races.reportSend} onPress={onSend} disabled={busy} />
             <Muted style={styles.hint}>{t.races.mapAttribution}</Muted>
@@ -132,4 +166,7 @@ const styles = StyleSheet.create({
   kindTxt: { color: colors.inkDim },
   kindTxtOn: { color: '#fff', fontWeight: '700' },
   hint: { fontSize: 11 },
+  // `textAlignVertical` n'existe pas sur web : la hauteur fixe suffit à faire
+  // lire le champ comme une zone de texte et non comme une ligne.
+  commentaire: { minHeight: 84, paddingTop: spacing.sm },
 });

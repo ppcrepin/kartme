@@ -116,18 +116,25 @@ export type CircuitReportKind = 'manquant' | 'ferme' | 'erreur';
  * Signale un karting au référentiel. Le serveur pose l'auteur, filtre les
  * mots, plafonne à 5/heure et refuse le doublon encore ouvert — les messages
  * d'erreur qui remontent sont écrits pour être montrés tels quels.
+ *
+ * `comment` est le champ libre : le MÊME filtre de mots s'y applique, et il
+ * n'est jamais lisible que par son auteur et la modération.
  */
 export async function suggestCircuit(
   kind: CircuitReportKind,
   name: string,
   city: string | null,
   circuitId: string | null,
+  comment: string | null = null,
 ): Promise<void> {
   const { error } = await supabase.rpc('suggest_circuit', {
     p_kind: kind,
     p_name: name.trim(),
     p_city: city?.trim() || null,
     p_circuit_id: circuitId,
+    // Le commentaire est relu, filtré et coupé à 200 par le serveur : ce
+    // `trim` n'est là que pour n'envoyer jamais une chaîne d'espaces.
+    p_comment: comment?.trim() || null,
   });
   if (error) throw new Error(error.message);
 }

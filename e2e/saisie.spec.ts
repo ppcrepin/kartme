@@ -3,15 +3,19 @@ import { expect, test } from '@playwright/test';
 import { reseauSimule, sceneActive, sessionSimulee, UID } from './harness';
 
 /**
- * L'écran de saisie du classement — le plus critique de l'app, et jusqu'ici le
- * seul sans un test navigateur.
+ * L'écran de saisie du classement — le plus critique de l'app.
  *
- * Deux corrections d'affilée y ont touché sans garde-fou : le geste de saisie
- * est devenu un choix explicite (retour de test réel : le glisser-déposer
- * n'était pas intuitif, et le mode « toucher » qui existait déjà se cachait
- * sous la liste), puis les pastilles ont dû remonter au-dessus du mode d'emploi
- * parce qu'elles fuyaient sous le doigt. Les deux se mesurent à l'écran ; sans
- * ce fichier, rien ne les empêche de régresser.
+ * Trois corrections d'affilée y ont touché. Le geste est d'abord devenu un
+ * choix explicite (le glisser-déposer n'était pas intuitif, et le mode
+ * « toucher » qui existait déjà se cachait sous la liste) ; puis les deux
+ * pastilles ont dû remonter au-dessus du mode d'emploi parce qu'elles fuyaient
+ * sous le doigt ; puis le PO a tranché l'inverse du défaut d'origine —
+ * « glisser-déposer en premier, toucher en secours », et plus de grandes
+ * pastilles à l'ouverture (2026-08-01).
+ *
+ * Ce qui a survécu aux trois : le secours reste ATTEIGNABLE sans défiler, et
+ * rien ne bouge sous le doigt quand on change de geste. C'est ce que ce fichier
+ * garde.
  */
 const CIRCUIT = { id: 'c1', name: 'Sologne Karting', city: 'Salbris', is_official: true };
 
@@ -32,6 +36,9 @@ const PILOTES = [
   { id: 'p3', profile_id: 'u3', ghost_id: null, profile: { username: 'Kévin_R', elo: 1120, races: 3, avatar_path: null }, ghost: null },
 ];
 
+const VERS_TAP = '👆 Plutôt toucher les pilotes dans l’ordre';
+const VERS_DRAG = '✥ Revenir au glisser-déposer';
+
 test.use({ viewport: { width: 390, height: 844 } });
 
 /** Ouvre l'écran et franchit l'étape « présents » pour atteindre l'ordre. */
@@ -44,38 +51,65 @@ async function ouvrirEtapeOrdre(page: import('@playwright/test').Page) {
   });
   await page.goto('/rank/r1');
   await page.getByText('Continuer', { exact: false }).first().click({ timeout: 20_000 });
-  await expect(page.getByText('👆 Toucher', { exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(VERS_TAP, { exact: true })).toBeVisible({ timeout: 20_000 });
 }
 
-test('le choix du geste est visible sans défiler, et « Toucher » est le défaut', async ({ page }) => {
+test('on ouvre sur le GLISSER, et le toucher est un secours discret', async ({ page }) => {
   await ouvrirEtapeOrdre(page);
 
-  // Le mode « toucher » existait déjà, mais on y accédait par un lien gris SOUS
-  // la liste des pilotes — hors écran à six ou huit noms, au moment précis où
-  // l'on galère. Il doit maintenant s'offrir d'emblée.
-  // Par RÔLE : le texte n'est qu'un nœud à l'intérieur de la pastille, c'est
-  // la pastille qui porte la zone tapable.
-  const toucher = page.getByRole('radio', { name: '👆 Toucher' });
-  const boite = await toucher.boundingBox();
-  expect(boite && boite.y + boite.height <= 844).toBeTruthy();
-  // 44 px : sous ce plancher on rate la pastille (`hitSlop` est inerte en web).
-  expect(boite && boite.height >= 44).toBeTruthy();
+  // Le défaut a changé de sens : « glisser-déposer en premier, toucher en
+  // secours ». Le mode d'emploi affiché est celui du glisser — ici sa variante
+  // « rien n'a encore été bougé », qui occupe le même emplacement.
+  await expect(page.getByText(/Place les pilotes dans l’ordre d’arrivée/).first()).toBeVisible();
 
-  // Défaut « toucher » : un appui long que rien n'annonce ne s'invente pas.
-  await expect(toucher).toHaveAttribute('aria-checked', 'true');
-  await expect(page.getByRole('radio', { name: '✥ Glisser' })).toHaveAttribute('aria-checked', 'false');
+  // Et les deux grandes pastilles ont disparu : elles demandaient de choisir
+  // entre deux gestes avant même d'avoir vu la liste.
+  await expect(page.getByRole('radio')).toHaveCount(0);
+
+  // Le secours reste ATTEIGNABLE sans défiler — c'est le point qui avait
+  // bloqué un testeur quand le lien vivait sous les pilotes.
+  const lien = page.getByRole('button', { name: /Passer au mode toucher/ });
+  const boite = await lien.boundingBox();
+  expect(boite && boite.y + boite.height <= 844).toBeTruthy();
+  // 44 px : sous ce plancher on rate le lien (`hitSlop` est inerte en web).
+  expect(boite && boite.height >= 44).toBeTruthy();
 });
 
-test('changer de mode ne DÉPLACE pas les pastilles', async ({ page }) => {
+test('le lien de secours bascule dans les deux sens, et se souvient', async ({ page }) => {
+  await ouvrirEtapeOrdre(page);
+
+  await page.getByText(VERS_TAP, { exact: true }).click();
+  await expect(page.getByText(/Touche les pilotes dans l’ordre/).first()).toBeVisible();
+  await expect(page.getByText(VERS_DRAG, { exact: true })).toBeVisible();
+
+  await page.getByText(VERS_DRAG, { exact: true }).click();
+  await expect(page.getByText(/Place les pilotes dans l’ordre d’arrivée/).first()).toBeVisible();
+
+  // Le choix est mémorisé : on ne repose pas la question à quelqu'un qui a
+  // tranché. On repasse au toucher, puis on recharge.
+  await page.getByText(VERS_TAP, { exact: true }).click();
+  await page.reload();
+  // Le brouillon local peut reprendre l'écran DIRECTEMENT à l'étape de l'ordre
+  // (il mémorise aussi le pas franchi) : on ne franchit l'étape « présents »
+  // que si elle est encore là, sinon le clic expire pour une raison qui n'a
+  // rien à voir avec ce qu'on teste.
+  const continuer = page.getByText('Continuer', { exact: false }).first();
+  if (await continuer.isVisible({ timeout: 20_000 }).catch(() => false)) await continuer.click();
+  await expect(page.getByText(VERS_DRAG, { exact: true })).toBeVisible({ timeout: 20_000 });
+});
+
+test('changer de geste ne DÉPLACE pas le lien qu’on vient de toucher', async ({ page }) => {
   await ouvrirEtapeOrdre(page);
 
   // Le mode d'emploi du glisser tient sur deux lignes, celui du toucher sur
-  // une : tant qu'il vivait au-dessus des pastilles, choisir un mode faisait
-  // descendre le bouton qu'on venait de toucher.
-  const y = async () => (await page.getByText('👆 Toucher', { exact: true }).boundingBox())?.y ?? -1;
+  // une. Le PO l'avait relevé sur les anciennes pastilles — « ça décale vers le
+  // bas » — et remettre le sélecteur SOUS le mode d'emploi ramenait le défaut
+  // tel quel. Un plancher de hauteur sur le mode d'emploi le neutralise.
+  const y = async () =>
+    (await page.getByRole('button', { name: /mode toucher|mode glisser/ }).boundingBox())?.y ?? -1;
   const depart = await y();
-  for (const mode of ['✥ Glisser', '👆 Toucher', '✥ Glisser']) {
-    await page.getByText(mode, { exact: true }).click();
+  for (const lien of [VERS_TAP, VERS_DRAG, VERS_TAP]) {
+    await page.getByText(lien, { exact: true }).click();
     await page.waitForTimeout(200);
     expect(await y()).toBe(depart);
   }
@@ -83,12 +117,11 @@ test('changer de mode ne DÉPLACE pas les pastilles', async ({ page }) => {
 
 test('en glisser, valider reste IMPOSSIBLE tant qu’aucun pilote n’a bougé', async ({ page }) => {
   await ouvrirEtapeOrdre(page);
-  await page.getByText('✥ Glisser', { exact: true }).click();
 
-  // La liste s'ouvre pré-remplie dans l'ordre des INSCRIPTIONS. Sans garde,
-  // deux taps — « Glisser » puis « Valider » — enregistraient un classement
-  // arbitraire qui déplace l'Elo de tout le monde. Le mode toucher, lui,
-  // exigeait depuis toujours que tous les arrivants soient pointés.
+  // La liste s'ouvre pré-remplie dans l'ordre des INSCRIPTIONS. Sans garde, un
+  // seul tap sur « Valider » enregistrait un classement arbitraire qui déplace
+  // l'Elo de tout le monde — et c'est désormais le mode par DÉFAUT, donc le
+  // chemin que tout le monde emprunte.
   const valider = page.getByText('Valider le classement', { exact: true }).and(sceneActive(page));
   await expect(valider).toBeVisible();
   const bouton = page.getByRole('button', { name: 'Valider le classement' }).first();
@@ -99,6 +132,7 @@ test('en glisser, valider reste IMPOSSIBLE tant qu’aucun pilote n’a bougé',
 
 test('en toucher, valider s’ouvre quand tous les pilotes sont pointés', async ({ page }) => {
   await ouvrirEtapeOrdre(page);
+  await page.getByText(VERS_TAP, { exact: true }).click();
 
   const bouton = page.getByRole('button', { name: 'Valider le classement' }).first();
   await expect(bouton).toBeDisabled();

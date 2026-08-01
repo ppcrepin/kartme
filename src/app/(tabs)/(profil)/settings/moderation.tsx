@@ -296,6 +296,10 @@ export default function ModerationScreen() {
                 {sg.name}
                 {sg.city ? ` (${sg.city})` : ''}
               </Body>
+              {/* Le champ libre du pilote : c'est ce qui rend le signalement
+                  TRAITABLE (« fermé depuis mars, le portail est condamné »).
+                  Il ne sort pas d'ici. */}
+              {sg.comment ? <Muted style={styles.commentaire}>« {sg.comment} »</Muted> : null}
               {/* Pour une correction, la fiche visée — si elle existe encore. */}
               {sg.kind !== 'manquant' ? (
                 <Muted style={styles.meta}>
@@ -341,6 +345,7 @@ const styles = StyleSheet.create({
   pilotRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   flex: { flex: 1 },
   meta: { marginTop: spacing.xs },
+  commentaire: { marginTop: spacing.xs, fontStyle: 'italic' },
   msg: { marginTop: spacing.xs, fontStyle: 'italic' },
   renameBox: { marginTop: spacing.sm, gap: spacing.sm },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm, alignItems: 'center' },

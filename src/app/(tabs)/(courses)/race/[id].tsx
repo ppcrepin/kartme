@@ -1246,19 +1246,29 @@ export default function RaceDetailScreen() {
                 ) : null}
 
                 {/* Inviter la bande : UNE ligne — QR, lien et copie vivent
-                    dans la feuille, plus en permanence dans la page. */}
-                <Pressable
-                  onPress={() => setShareOpen(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel={t.races.shareOpen}>
-                  <Card style={styles.inviteRow}>
-                    <View style={styles.flex}>
-                      <Body style={styles.rowName}>{t.races.shareOpen}</Body>
-                      <Muted style={styles.rowSub}>{t.races.shareOpenHint}</Muted>
-                    </View>
-                    <Body style={styles.chevron}>›</Body>
-                  </Card>
-                </Pressable>
+                    dans la feuille, plus en permanence dans la page.
+                    RÉSERVÉE À L'ADMIN (décision PO 2026-08-01 : « seul l'admin
+                    invite »). Le serveur refusait déjà à un non-admin d'ajouter
+                    qui que ce soit — la policy `participations_write_admin`
+                    l'exige — mais ce lien contournait la règle par la bande :
+                    n'importe quel inscrit pouvait diffuser l'URL, et le
+                    destinataire se joignait tout seul. Une grille qui grossit
+                    sans que son organisateur le sache, c'est la grille de
+                    quelqu'un d'autre. */}
+                {isAdmin ? (
+                  <Pressable
+                    onPress={() => setShareOpen(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t.races.shareOpen}>
+                    <Card style={styles.inviteRow}>
+                      <View style={styles.flex}>
+                        <Body style={styles.rowName}>{t.races.shareOpen}</Body>
+                        <Muted style={styles.rowSub}>{t.races.shareOpenHint}</Muted>
+                      </View>
+                      <Body style={styles.chevron}>›</Body>
+                    </Card>
+                  </Pressable>
+                ) : null}
               </>
             )}
           </>

@@ -23,18 +23,24 @@ function stockage(): Storage | null {
 }
 
 /**
- * Le mode à ouvrir. Défaut : `tap`.
+ * Le mode à ouvrir. Défaut : `drag`.
  *
- * Le glisser sur une liste tactile suppose un appui long que rien n'annonce ;
- * « touche les pilotes dans l'ordre d'arrivée » se comprend sans explication,
- * avec un numéro qui apparaît à chaque tap. On garde le glisser à un tap pour
- * ceux qui le préfèrent — ils ne le rechoisissent qu'une fois.
+ * Le défaut était `tap`, sur l'argument qu'un appui long ne s'annonce pas. Le
+ * PO a tranché l'inverse le 2026-08-01, après avoir vu le glisser-déposer à
+ * l'usage : « j'aime beaucoup le glisser-déposer », « glisser-déposer en
+ * premier, toucher en secours ». C'est le geste qui raconte un classement —
+ * on déplace un pilote parce qu'il est arrivé devant un autre — là où le
+ * pointage compte sans montrer.
+ *
+ * L'objection d'origine tient toujours, et c'est le mode d'emploi affiché
+ * au-dessus de la liste qui y répond, pas le choix du défaut. Le toucher reste
+ * à un tap, en retrait.
  */
 export function modePrefere(): ModeSaisie {
   try {
-    return stockage()?.getItem(CLE_MODE) === 'drag' ? 'drag' : 'tap';
+    return stockage()?.getItem(CLE_MODE) === 'tap' ? 'tap' : 'drag';
   } catch {
-    return 'tap';
+    return 'drag';
   }
 }
 

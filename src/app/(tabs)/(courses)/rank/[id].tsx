@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DragList } from '@/components/drag-list';
 import { Avatar, Banner, Button, Card } from '@/components/ui';
 import { Body, Muted, Title } from '@/components/ui/text';
-import { colors, fonts, radius, spacing } from '@/constants/theme';
+import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
 import { signedAvatarUrls } from '@/lib/avatar';
@@ -33,12 +33,13 @@ export default function RankScreen() {
   const { session } = useAuth();
 
   const [step, setStep] = useState<Step>(rosterFinal ? 'order' : 'presents');
-  // ⚠️ « toucher » par DÉFAUT depuis le retour de test du 2026-07-30 : le
-  // glisser-déposer sur une liste tactile est un piège connu — il faut un appui
-  // long, et rien ne le dit. « Touche les pilotes dans l'ordre d'arrivée » est
-  // auto-explicatif, avec un numéro qui apparaît à chaque tap. Le glisser reste
-  // à un tap pour ceux qui le préfèrent, et le choix est MÉMORISÉ : on ne
-  // repose pas la question à quelqu'un qui a déjà tranché.
+  // ⚠️ « glisser » par DÉFAUT depuis l'arbitrage PO du 2026-08-01 : c'est le
+  // geste qui RACONTE un classement — on déplace un pilote parce qu'il est
+  // arrivé devant un autre. Le toucher reste à un tap, en retrait, et le choix
+  // est MÉMORISÉ : on ne repose pas la question à quelqu'un qui a tranché.
+  // (Le défaut inverse valait jusque-là, sur l'argument qu'un appui long ne
+  //  s'annonce pas — c'est le mode d'emploi affiché au-dessus de la liste qui
+  //  y répond désormais.)
   const [mode, setMode] = useState<Mode>(() => modePrefere());
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [absents, setAbsents] = useState<Set<string>>(new Set());
@@ -219,6 +220,13 @@ export default function RankScreen() {
     persist({ mode: next });
   }
 
+  /**
+   * Le glisser est ouvert, mais personne n'a encore bougé un pilote : la liste
+   * n'est qu'un listing dans l'ordre des inscriptions. Le mode d'emploi porte
+   * alors le rappel, à la place de la consigne générale.
+   */
+  const enAttenteDeGeste = mode === 'drag' && !ordreEtabli && !isCorrect;
+
   function toggleTap(pid: string) {
     const next = tapOrder.includes(pid) ? tapOrder.filter((x) => x !== pid) : [...tapOrder, pid];
     setTapOrder(next);
@@ -344,51 +352,54 @@ export default function RankScreen() {
           <>
             <Title>{isCorrect ? t.races.correctTitle : t.races.rankingTitle}</Title>
 
-            {/* Le choix du geste vit AU-DESSUS de la liste. Il était un lien
-                gris SOUS les pilotes : avec six ou huit noms, il tombait hors
-                écran au moment précis où l'on galère. Un testeur est resté
-                bloqué sur le glisser sans savoir que l'autre mode existait.
+            {/* Le mode d'emploi du geste EN COURS, juste au-dessus de la liste
+                qu'il décrit. UN seul bloc, et c'est voulu : tant que rien n'a
+                été glissé, il porte le rappel qui explique le « Valider »
+                grisé — les deux disaient la même chose l'un sous l'autre, et
+                le second n'apparaissait qu'en glisser, ce qui faisait remonter
+                de 50 px tout ce qui suivait au moment du changement de geste.
 
-                Et il vient AVANT le mode d'emploi, pas après : le texte du
-                glisser fait deux lignes là où celui du toucher n'en fait
-                qu'une, si bien que choisir un mode faisait DESCENDRE les deux
-                pastilles — le bouton fuyait sous le doigt qui venait de le
-                toucher. Ancrées sous le titre, elles ne bougent plus, et le
-                mode d'emploi peut respirer autant qu'il veut. */}
-            {!isCorrect ? (
-              <View style={styles.modeRow} accessibilityRole="radiogroup">
-                {(['tap', 'drag'] as const).map((m) => (
-                  <Pressable
-                    key={m}
-                    onPress={() => onSetMode(m)}
-                    // `radio` et non `button` : `aria-selected` / `aria-checked`
-                    // ne sont pas supportés sur `role="button"` et y sont
-                    // ignorés — le mode actif n'aurait été signalé que par la
-                    // couleur, donc invisible au lecteur d'écran ET à qui
-                    // distingue mal le rouge.
-                    accessibilityRole="radio"
-                    aria-checked={mode === m}
-                    style={[styles.modeChip, mode === m && styles.modeChipOn]}>
-                    <Body style={[styles.modeChipTxt, mode === m && styles.modeChipTxtOn]}>
-                      {m === 'tap' ? t.races.modeTap : t.races.modeDrag}
-                    </Body>
-                  </Pressable>
-                ))}
-              </View>
-            ) : null}
-
-            {/* Le mode d'emploi du geste choisi, juste au-dessus de la liste
-                qu'il décrit. C'est LUI qui change de hauteur d'un mode à
-                l'autre : il est donc placé sous ce qui ne doit pas bouger. */}
-            <Muted>
-              {isCorrect ? t.races.correctHint : mode === 'drag' ? t.races.dragHint : t.races.tapHint}
-            </Muted>
+                Sa hauteur est PLANCHÉE à deux lignes : le texte du glisser en
+                fait deux là où celui du toucher n'en fait qu'une, et sans ce
+                plancher, changer de geste faisait remonter tout ce qui suit —
+                y compris le lien qu'on venait de toucher. C'est le défaut que
+                le PO avait relevé sur les anciennes pastilles (« ça décale vers
+                le bas »), et le déplacer sous le mode d'emploi le ramenait tel
+                quel. */}
+            <View style={styles.modeEmploi}>
+              <Muted style={enAttenteDeGeste ? styles.dragAttente : undefined}>
+                {isCorrect
+                  ? t.races.correctHint
+                  : enAttenteDeGeste
+                    ? t.races.dragUntouched
+                    : mode === 'drag'
+                      ? t.races.dragHint
+                      : t.races.tapHint}
+              </Muted>
+            </View>
             {isLocked && !isCorrect ? <Muted>{t.races.lockedRankHint}</Muted> : null}
-            {/* Le rappel vit ICI, pas sous le bouton : sous le bouton il
-                tombait hors écran, et l'on ne voyait qu'un « Valider » grisé
-                sans savoir ce qu'il attendait. */}
-            {mode === 'drag' && !ordreEtabli && !isCorrect ? (
-              <Muted style={styles.dragAttente}>{t.races.dragUntouched}</Muted>
+
+            {/* Le geste de SECOURS. Un lien discret, en retrait, et un seul —
+                plus deux grandes pastilles qui demandaient de choisir entre
+                deux gestes avant même d'avoir vu la liste (décision PO
+                2026-08-01). Il reste au-dessus des pilotes : sous eux, il
+                tombait hors écran à six noms.
+
+                `aria-label` explicite : « 👆 Plutôt toucher… » se lit mal à
+                voix haute, et le rôle « bouton » ne dit pas qu'on change de
+                mode de saisie. */}
+            {!isCorrect ? (
+              <Pressable
+                onPress={() => onSetMode(mode === 'drag' ? 'tap' : 'drag')}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  mode === 'drag' ? t.races.modeVersTapAria : t.races.modeVersDragAria
+                }
+                style={styles.modeLien}>
+                <Muted style={styles.modeLienTxt}>
+                  {mode === 'drag' ? t.races.modeVersTap : t.races.modeVersDrag}
+                </Muted>
+              </Pressable>
             ) : null}
 
             {mode === 'drag' ? (
@@ -583,23 +594,13 @@ const styles = StyleSheet.create({
   posTxt: { fontFamily: fonts.serifBlack, color: colors.inkDim2 },
   posTxtOn: { fontFamily: fonts.serifBlack, color: '#fff' },
   flex: { flex: 1 },
-  modeRow: { flexDirection: 'row', gap: spacing.sm },
-  modeChip: {
-    flex: 1,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    borderColor: colors.line2,
-  },
-  modeChipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  modeChipTxt: { color: colors.inkDim, fontWeight: '700' },
-  // BLANC PUR, pas `ink` (#f2ede9). Le blanc cassé est le jeton du texte sur
-  // fond SOMBRE ; posé sur l'aplat de marque il donnait 4,27:1, seul
-  // texte-sur-rouge de l'app à rater le seuil AA — tous les autres boutons
-  // pleins sont en blanc pur, à 4,97:1.
-  modeChipTxtOn: { color: '#ffffff' },
+  // Deux lignes de `Muted` (13 px, interligne 19) : le plancher qui empêche
+  // tout ce qui suit de remonter quand on passe du glisser au toucher.
+  modeEmploi: { minHeight: 38, justifyContent: 'center' },
+  // 44 px de haut réels : `hitSlop` est inerte sur `Pressable` en
+  // react-native-web, et un lien de 17 px se rate au pouce.
+  modeLien: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', paddingRight: spacing.sm },
+  modeLienTxt: { textDecorationLine: 'underline' },
   error: { color: colors.accentTexte },
   actions: { gap: spacing.sm, marginTop: spacing.sm },
 });

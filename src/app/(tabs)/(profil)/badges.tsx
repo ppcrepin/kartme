@@ -11,7 +11,7 @@ import { BADGE_KEYS, listBadges, type BadgeKey, type UnlockedBadge } from '@/lib
 import { useExplications } from '@/lib/explications';
 
 /**
- * R3 + R4 — catalogue des 12 badges ; taper un badge ouvre son détail.
+ * R3 + R4 — catalogue des badges ; taper un badge ouvre son détail.
  *
  * Le détail s'ouvre en FEUILLE et non plus dans une carte sous la grille :
  * celle-ci se dessinait au bas d'une grille de douze cellules, donc hors écran
