@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { reseauSimule, sceneActive, sessionSimulee, UID } from './harness';
 
 /**
- * L'écran de course refondu (A17) : barre d'action fixe, feuille d'ajout,
+ * L'écran de course refondu (A17) : barre d'action fixe, bloc d'ajout,
  * vues segmentées. C'était le plus gros trou de couverture du dépôt — la
  * revue adversariale l'a exigé, et l'audit y a trouvé un écran qui plantait
  * entièrement sur web (useAnimatedValue absent de react-native-web) parce
@@ -36,7 +36,7 @@ const RESULTATS = [
 
 test.use({ viewport: { width: 390, height: 844 } });
 
-test('course à venir (admin) : barre fixe visible d’entrée, feuille d’ajout, menu ⋯', async ({ page }) => {
+test('course à venir (admin) : barre fixe visible d’entrée, ajout en clair, menu ⋯', async ({ page }) => {
   await sessionSimulee(page);
   await reseauSimule(page, {
     'rest/v1/races': raceAVenir(UID),
@@ -58,11 +58,11 @@ test('course à venir (admin) : barre fixe visible d’entrée, feuille d’ajou
   // L'invité est marqué, jamais assimilé à un inscrit.
   await expect(page.getByText('Invité · hors classement', { exact: true })).toBeVisible();
 
-  // La feuille d'ajout : UN champ, ouverte du « + Ajouter », fermée au voile.
-  await page.getByText('+ Ajouter', { exact: true }).click();
+  // Le bloc d'ajout est EN CLAIR sous la grille : aucun tap pour y accéder
+  // (décision PO 2026-08-01 — remplir la grille est le geste qui suit la
+  // création d'une course, pas une section rare qu'on descend en feuille).
   await expect(page.getByText('Qui court ?', { exact: true })).toBeVisible();
-  await page.getByLabel('Fermer').first().click();
-  await expect(page.getByText('Qui court ?', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('+ Ajouter', { exact: true })).toHaveCount(0);
 
   // Le menu ⋯ : Modifier + suppression EN DEUX TEMPS, et la confirmation ne
   // survit pas à une fermeture au voile (revue adversariale).
@@ -84,7 +84,7 @@ test('course à venir (admin) : barre fixe visible d’entrée, feuille d’ajou
  * l'ordre où on les rencontre : champ vide = mes amis ; je tape = ça filtre ;
  * rien ne correspond = on propose l'invité, en disant ce qu'il coûte.
  */
-test('feuille d’ajout : un seul champ qui suggère (amis, filtre, invité)', async ({ page }) => {
+test('bloc d’ajout : un seul champ qui suggère (amis, filtre, invité)', async ({ page }) => {
   await sessionSimulee(page);
   await reseauSimule(page, {
     'rest/v1/races': raceAVenir(UID),
@@ -104,8 +104,6 @@ test('feuille d’ajout : un seul champ qui suggère (amis, filtre, invité)', a
   await expect(page.getByText('Sologne Karting', { exact: true }).and(sceneActive(page))).toBeVisible({
     timeout: 20_000,
   });
-
-  await page.getByText('+ Ajouter', { exact: true }).click();
 
   // 1. Champ VIDE : les amis absents de la grille sont déjà proposés — le cas
   //    des neuf dixièmes des courses se règle sans taper un caractère. Sophie,
@@ -147,7 +145,9 @@ test('course à venir (non-admin, non inscrit) : « Rejoindre » en barre fixe, 
   await expect(page.getByText('Rejoindre la course', { exact: true })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByText('+ Ajouter', { exact: true })).toHaveCount(0);
+  // Le bloc d'ajout n'existe QUE pour l'admin : la RLS le refuserait de toute
+  // façon, mais l'offrir puis le refuser serait une promesse en l'air.
+  await expect(page.getByText('Qui court ?', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Options')).toHaveCount(0);
 });
 

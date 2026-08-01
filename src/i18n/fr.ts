@@ -273,7 +273,6 @@ export const fr = {
     // feuille glissante, vues segmentées, menu ⋯ pour les actions d'admin.
     menu: 'Options',
     addPilots: 'Ajouter des pilotes',
-    addOpen: '+ Ajouter',
     shareOpen: 'Inviter la bande',
     shareOpenHint: 'Lien, QR code — la course en un tap.',
     vueRanking: 'Classement',

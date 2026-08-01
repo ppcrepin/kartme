@@ -149,7 +149,6 @@ export default function RaceDetailScreen() {
   // sert une fois » vivent dans des feuilles glissantes, la course terminée
   // se lit en trois vues au lieu de trois listes empilées.
   const [vue, setVue] = useState<'classement' | 'chronos' | 'duels'>('classement');
-  const [addOpen, setAddOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -190,14 +189,6 @@ export default function RaceDetailScreen() {
   const locked = race?.status === 'locked';
   const canCorrect = !!race && withinCorrectionWindow(race);
   const selfParticipating = participants.some((p) => p.isSelf);
-
-  // Le bouton « + Ajouter » disparaît dès que la grille se fige, mais la
-  // FEUILLE, elle, restait ouverte et cliquable si le verrou arrivait par le
-  // temps réel pendant qu'on ajoutait quelqu'un : le serveur refusait, et
-  // l'admin lisait un message d'erreur sans comprendre ce qui avait changé.
-  // Dérivé plutôt que corrigé dans un effet — un `setState` synchrone dans un
-  // effet est un aller-retour de rendu, et la règle du dépôt l'interdit.
-  const addVisible = addOpen && !locked && !completed;
 
   // Recherche de pilote par pseudo (anti-rebond 300 ms, min 2 caractères).
   // Aucune amitié requise. Ne dépend QUE de la saisie : le filtrage (déjà sur
@@ -591,6 +582,94 @@ export default function RaceDetailScreen() {
     inviteDecidable && !nomInvite.ok
       ? t.races.nameErrors[nomInvite.error ?? 'generic']
       : null;
+
+  /**
+   * Le contenu du bloc « ajouter des pilotes », monté EN CLAIR sous la grille.
+   *
+   * Extrait en variable parce qu'il vit au milieu d'un rendu déjà profond :
+   * l'inliner ajouterait six niveaux d'indentation à trente lignes de JSX,
+   * pour un bloc qui se lit très bien seul.
+   */
+  const blocAjout = (
+    <>
+      <Field
+        label={t.races.addSearchLabel}
+        value={pilotQuery}
+        onChangeText={setPilotQuery}
+        autoCapitalize="words"
+        placeholder={t.races.addSearchPlaceholder}
+      />
+      {/* « Tes amis sont déjà là » ne se dit que si c'est VRAI : sous une
+          grille complète, la ligne d'état juste en dessous annonce déjà
+          « tes amis sont tous inscrits », et les deux se contredisaient. */}
+      {!q && suggestionsVues.length > 0 ? <Muted>{t.races.addSearchHint}</Muted> : null}
+
+      {suggestionsVues.length > 0 ? (
+        <View style={styles.friendChips}>
+          {suggestionsVues.map((s) => (
+            <Pressable
+              key={s.id}
+              onPress={() => (s.ami ? onAddFriend(s.id) : onAddPilotById(s.id))}
+              accessibilityRole="button"
+              disabled={busy}
+              style={styles.friendChip}>
+              <Avatar name={s.username} size={24} />
+              <Body style={styles.friendChipTxt}>+ {s.username}</Body>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+      {suggestionsCachees > 0 ? (
+        <Muted>{t.races.addMoreResults.replace('%n', String(suggestionsCachees))}</Muted>
+      ) : null}
+
+      {rechercheEnCours ? <Muted>{t.races.addSearching}</Muted> : null}
+
+      {rechercheHS ? <Muted style={styles.rematchErr}>{t.races.addSearchDown}</Muted> : null}
+
+      {aucuneSuggestion && !rechercheEnCours && !rechercheHS ? (
+        <Muted>
+          {q
+            ? alreadyOnGrid
+              ? t.races.invitePilotAlready
+              : t.races.addNoMatch
+            : friends.length
+              ? t.races.addFriendsEmpty
+              : t.races.addNoFriendsYet}
+        </Muted>
+      ) : null}
+
+      {/* La dernière ligne : ajouter le nom tapé comme invité. Elle porte
+          elle-même sa contrepartie (« hors classement Elo ») — un avis posé
+          ailleurs sur l'écran ne serait pas lu au moment du tap. */}
+      {proposerInvite ? (
+        <Pressable
+          onPress={onAddGuest}
+          accessibilityRole="button"
+          // Deux textes dans la même zone : sans nom explicite, un lecteur
+          // d'écran les recolle en une phrase illisible.
+          accessibilityLabel={t.races.addGuestRow.replace('%n', nomInvite.value)}
+          disabled={busy}
+          style={styles.guestRow}>
+          <Body style={styles.guestRowTxt}>
+            {t.races.addGuestRow.replace('%n', nomInvite.value)}
+          </Body>
+          <Muted style={styles.guestRowHint}>
+            {rechercheHS ? t.races.addGuestUnverified : t.races.addGuestRowHint}
+          </Muted>
+        </Pressable>
+      ) : null}
+      {proposerInvite ? (
+        <Muted style={styles.guestNudge}>{t.races.guestNudge}</Muted>
+      ) : null}
+      {erreurInvite ? <Muted style={styles.rematchErr}>{erreurInvite}</Muted> : null}
+
+      {!selfParticipating ? (
+        <Button label={t.races.rejoin} variant="ghost" onPress={onToggleSelf} />
+      ) : null}
+      {actionError ? <Muted style={styles.rematchErr}>{actionError}</Muted> : null}
+    </>
+  );
 
   const shareUrl = `${appBaseUrl()}race/${id}`;
 
@@ -986,15 +1065,6 @@ export default function RaceDetailScreen() {
                     <Label>
                       {t.races.participants} · {participants.length}
                     </Label>
-                    {isAdmin && !locked ? (
-                      <Pressable
-                        onPress={() => setAddOpen(true)}
-                        accessibilityRole="button"
-                        hitSlop={8}
-                        style={styles.addBtn}>
-                        <Body style={styles.addBtnTxt}>{t.races.addOpen}</Body>
-                      </Pressable>
-                    ) : null}
                   </View>
                   <Card>
                     {participants.map((p, i) => {
@@ -1062,6 +1132,31 @@ export default function RaceDetailScreen() {
 
                   {locked ? <Banner kind="info" title={t.races.lockedBanner} /> : null}
 
+                  {/* ── Remplir la grille, EN CLAIR sous les pilotes ────────
+                      Le bloc vivait dans une feuille glissante qu'il fallait
+                      ouvrir (décision A17 : les sections rares y descendent).
+                      Sauf que remplir la grille n'est pas une section rare —
+                      c'est le geste qui suit immédiatement la création d'une
+                      course. Un tap pour ouvrir ce qu'on vient forcément
+                      chercher, c'est un tap de trop (décision PO 2026-08-01).
+
+                      UN champ, UNE liste. Trois blocs empilés obligeaient à
+                      savoir dans quelle catégorie tombait un nom avant de
+                      pouvoir le taper — c'est là que la personne testée s'est
+                      arrêtée. La hiérarchie qui les justifiait survit dans
+                      l'ORDRE des suggestions : les amis d'abord (zéro
+                      caractère à taper, Elo réel), les autres inscrits
+                      ensuite, « comme invité » en dernière ligne — il court,
+                      mais n'échange aucun point, et on le DIT sur la ligne
+                      même. ── */}
+                  {isAdmin && !locked ? (
+                    <>
+                      <Label>{t.races.addPilots}</Label>
+                      <Card>
+                        <View style={styles.addBox}>{blocAjout}</View>
+                      </Card>
+                    </>
+                  ) : null}
 
                   {/* Échec d'une action sur la grille : toujours visible. */}
                   {actionError ? <Muted style={styles.rematchErr}>{actionError}</Muted> : null}
@@ -1141,105 +1236,6 @@ export default function RaceDetailScreen() {
         ) : null
       ) : null}
 
-      {/* ── Feuille : remplir la grille ─────────────────────────────────────
-          UN champ, UNE liste. La personne qui a testé l'app le 2026-08-01 s'est
-          arrêtée devant trois champs empilés : avant de taper un nom, il fallait
-          savoir dans quelle catégorie ce nom tombait — ce qu'on ne sait
-          justement pas avant d'avoir cherché.
-
-          La hiérarchie des trois marches n'est pas perdue pour autant, elle est
-          passée dans l'ordre des suggestions :
-            · les amis d'abord (zéro caractère à taper, Elo réel) ;
-            · les autres inscrits ensuite (l'amitié n'est pas requise, la RLS
-              autorise déjà l'admin à ajouter tout pilote non bloqué) ;
-            · « comme invité » en dernière ligne, et seulement là — il court,
-              mais n'échange aucun point, et on le DIT sur la ligne même. ── */}
-      <Sheet
-        open={addVisible}
-        onClose={() => {
-          setAddOpen(false);
-          // Sans cette purge, rouvrir la feuille afficherait la recherche
-          // abandonnée la fois d'avant plutôt que ses amis — et il faudrait
-          // effacer un nom pour retrouver l'état d'ouverture normal.
-          resetRecherche();
-        }}
-        title={t.races.addPilots}>
-        <View style={styles.addBox}>
-          <Field
-            label={t.races.addSearchLabel}
-            value={pilotQuery}
-            onChangeText={setPilotQuery}
-            autoCapitalize="words"
-            placeholder={t.races.addSearchPlaceholder}
-          />
-          <Muted>{t.races.addSearchHint}</Muted>
-
-          {suggestionsVues.length > 0 ? (
-            <View style={styles.friendChips}>
-              {suggestionsVues.map((s) => (
-                <Pressable
-                  key={s.id}
-                  onPress={() => (s.ami ? onAddFriend(s.id) : onAddPilotById(s.id))}
-                  accessibilityRole="button"
-                  disabled={busy}
-                  style={styles.friendChip}>
-                  <Avatar name={s.username} size={24} />
-                  <Body style={styles.friendChipTxt}>+ {s.username}</Body>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-          {suggestionsCachees > 0 ? (
-            <Muted>{t.races.addMoreResults.replace('%n', String(suggestionsCachees))}</Muted>
-          ) : null}
-
-          {rechercheEnCours ? <Muted>{t.races.addSearching}</Muted> : null}
-
-          {rechercheHS ? <Muted style={styles.rematchErr}>{t.races.addSearchDown}</Muted> : null}
-
-          {aucuneSuggestion && !rechercheEnCours && !rechercheHS ? (
-            <Muted>
-              {q
-                ? alreadyOnGrid
-                  ? t.races.invitePilotAlready
-                  : t.races.addNoMatch
-                : friends.length
-                  ? t.races.addFriendsEmpty
-                  : t.races.addNoFriendsYet}
-            </Muted>
-          ) : null}
-
-          {/* La dernière ligne : ajouter le nom tapé comme invité. Elle porte
-              elle-même sa contrepartie (« hors classement Elo ») — un avis posé
-              ailleurs sur l'écran ne serait pas lu au moment du tap. */}
-          {proposerInvite ? (
-            <Pressable
-              onPress={onAddGuest}
-              accessibilityRole="button"
-              // Deux textes dans la même zone : sans nom explicite, un lecteur
-              // d'écran les recolle en une phrase illisible.
-              accessibilityLabel={t.races.addGuestRow.replace('%n', nomInvite.value)}
-              disabled={busy}
-              style={styles.guestRow}>
-              <Body style={styles.guestRowTxt}>
-                {t.races.addGuestRow.replace('%n', nomInvite.value)}
-              </Body>
-              <Muted style={styles.guestRowHint}>
-                {rechercheHS ? t.races.addGuestUnverified : t.races.addGuestRowHint}
-              </Muted>
-            </Pressable>
-          ) : null}
-          {proposerInvite ? (
-            <Muted style={styles.guestNudge}>{t.races.guestNudge}</Muted>
-          ) : null}
-          {erreurInvite ? <Muted style={styles.rematchErr}>{erreurInvite}</Muted> : null}
-
-          {!selfParticipating ? (
-            <Button label={t.races.rejoin} variant="ghost" onPress={onToggleSelf} />
-          ) : null}
-          {actionError ? <Muted style={styles.rematchErr}>{actionError}</Muted> : null}
-        </View>
-      </Sheet>
 
       {/* ── Feuille : inviter / partager ── */}
       <Sheet open={shareOpen} onClose={() => setShareOpen(false)}>
@@ -1332,25 +1328,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  menuDots: { fontSize: 22, fontWeight: '800', color: colors.inkDim, paddingHorizontal: spacing.sm },
+  // 44 px : le menu ⋯ tenait sur 38 × 21, et c'est la porte de « Modifier »,
+  // « Clôturer » et « Supprimer la course ».
+  menuDots: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.inkDim,
+    minWidth: 44,
+    minHeight: 44,
+    lineHeight: 44,
+    textAlign: 'center',
+  },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   titleCompact: { fontSize: 23, lineHeight: 27 },
   youLine: { fontWeight: '800', marginTop: 2 },
   filters: { flexDirection: 'row', gap: spacing.sm },
   gridHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  addBtn: {
-    borderColor: colors.accent,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 4,
-    // La porte d'entrée de la feuille refaite plafonnait à ~30 px, avec un
-    // `hitSlop` inopérant sur web. Rater le bouton qui ouvre l'écran qu'on
-    // vient de simplifier serait une correction à moitié faite.
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  addBtnTxt: { color: colors.accent, fontWeight: '700', fontSize: 13 },
   rowName: { fontSize: 14, lineHeight: 18, fontWeight: '600' },
   rowSub: { fontSize: 11, lineHeight: 14 },
   inviteRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
