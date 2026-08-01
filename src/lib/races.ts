@@ -213,6 +213,30 @@ export async function listMyRaces(): Promise<{ upcoming: Race[]; past: Race[] }>
   };
 }
 
+/**
+ * La grille la mieux garnie parmi ces courses (0 si la liste est vide).
+ *
+ * Sert UNIQUEMENT à cocher « ajouter des pilotes » dans la checklist de prise
+ * en main. C'est une requête de plus sur l'accueil, alors elle ne part que
+ * pour qui n'a pas encore terminé une course — soit une poignée d'ouvertures
+ * dans la vie d'un compte, puis plus jamais. Un compteur en base pour ça
+ * coûterait plus cher (un déclencheur sur chaque participation) qu'il ne
+ * rapporte.
+ */
+export async function maxGridSize(raceIds: string[]): Promise<number> {
+  if (raceIds.length === 0) return 0;
+  const { data, error } = await supabase
+    .from('participations')
+    .select('race_id')
+    .in('race_id', raceIds);
+  if (error) throw new Error(error.message);
+  const parCourse = new Map<string, number>();
+  for (const r of (data ?? []) as { race_id: string }[]) {
+    parCourse.set(r.race_id, (parCourse.get(r.race_id) ?? 0) + 1);
+  }
+  return Math.max(0, ...parCourse.values());
+}
+
 export async function getRace(id: string): Promise<Race | null> {
   const { data, error } = await supabase.from('races').select(RACE_SELECT).eq('id', id).maybeSingle();
   if (error) throw new Error(error.message);

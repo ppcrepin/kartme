@@ -58,11 +58,11 @@ test('course à venir (admin) : barre fixe visible d’entrée, feuille d’ajou
   // L'invité est marqué, jamais assimilé à un inscrit.
   await expect(page.getByText('Invité · hors classement', { exact: true })).toBeVisible();
 
-  // La feuille d'ajout : 3 marches, ouverte du « + Ajouter », fermée au voile.
+  // La feuille d'ajout : UN champ, ouverte du « + Ajouter », fermée au voile.
   await page.getByText('+ Ajouter', { exact: true }).click();
-  await expect(page.getByText('Quelqu’un sans compte', { exact: false })).toBeVisible();
+  await expect(page.getByText('Qui court ?', { exact: true })).toBeVisible();
   await page.getByLabel('Fermer').first().click();
-  await expect(page.getByText('Quelqu’un sans compte', { exact: false })).toHaveCount(0);
+  await expect(page.getByText('Qui court ?', { exact: true })).toHaveCount(0);
 
   // Le menu ⋯ : Modifier + suppression EN DEUX TEMPS, et la confirmation ne
   // survit pas à une fermeture au voile (revue adversariale).
@@ -73,6 +73,61 @@ test('course à venir (admin) : barre fixe visible d’entrée, feuille d’ajou
   await page.getByLabel('Fermer').first().click();
   await page.getByLabel('Options').click();
   await expect(page.getByText(/C.est définitif/)).toHaveCount(0);
+});
+
+/**
+ * Le champ unique d'ajout (retour de test réel du 2026-08-01).
+ *
+ * L'écran d'avant empilait trois champs — amis, pseudo, invité — et la personne
+ * testée s'est arrêtée là : il fallait deviner la catégorie d'un nom avant de
+ * pouvoir le taper. Ce test tient les trois promesses de la refonte, dans
+ * l'ordre où on les rencontre : champ vide = mes amis ; je tape = ça filtre ;
+ * rien ne correspond = on propose l'invité, en disant ce qu'il coûte.
+ */
+test('feuille d’ajout : un seul champ qui suggère (amis, filtre, invité)', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, {
+    'rest/v1/races': raceAVenir(UID),
+    'rest/v1/participations': PARTICIPANTS,
+    'rest/v1/results': [],
+    // Deux amis : Sophie est DÉJÀ sur la grille, Kévin non.
+    'rest/v1/friendships': [
+      { id: 'f1', requester_id: UID, addressee_id: 'u2', status: 'accepted',
+        requester: { username: 'Moi', elo: 1210, avatar_path: null },
+        addressee: { username: 'Sophie_K', elo: 1330, avatar_path: null } },
+      { id: 'f2', requester_id: 'u3', addressee_id: UID, status: 'accepted',
+        requester: { username: 'Kévin_R', elo: 1120, avatar_path: null },
+        addressee: { username: 'Moi', elo: 1210, avatar_path: null } },
+    ],
+  });
+  await page.goto('/race/r1');
+  await expect(page.getByText('Sologne Karting', { exact: true }).and(sceneActive(page))).toBeVisible({
+    timeout: 20_000,
+  });
+
+  await page.getByText('+ Ajouter', { exact: true }).click();
+
+  // 1. Champ VIDE : les amis absents de la grille sont déjà proposés — le cas
+  //    des neuf dixièmes des courses se règle sans taper un caractère. Sophie,
+  //    elle, n'est pas reproposée : elle court déjà.
+  await expect(page.getByText('+ Kévin_R', { exact: true })).toBeVisible();
+  await expect(page.getByText('+ Sophie_K', { exact: true })).toHaveCount(0);
+
+  // 2. La saisie filtre les amis SANS accent ni casse : personne ne tape
+  //    « Kévin » avec l'accent dans un champ de recherche.
+  await page.getByLabel('Qui court ?').fill('kev');
+  await expect(page.getByText('+ Kévin_R', { exact: true })).toBeVisible();
+
+  // 3. Aucun inscrit sous ce nom : la dernière ligne propose l'invité, et
+  //    annonce sur la ligne même qu'il ne rapporte aucun point.
+  await page.getByLabel('Qui court ?').fill('Tonton Robert');
+  const invite = page.getByLabel('➕ Ajouter « Tonton Robert » comme invité');
+  await expect(invite).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/Hors classement Elo/)).toBeVisible();
+  // Et la zone tapable tient le plancher de 44 px : une ligne de 32 px se rate
+  // au pouce, et la rater ici veut dire ajouter le mauvais pilote.
+  const boite = await invite.boundingBox();
+  expect(boite && boite.height >= 44).toBeTruthy();
 });
 
 test('course à venir (non-admin, non inscrit) : « Rejoindre » en barre fixe, pas de commandes d’admin', async ({ page }) => {

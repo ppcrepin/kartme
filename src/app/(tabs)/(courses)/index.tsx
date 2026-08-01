@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { NotificationBell } from '@/components/notification-bell';
+import { PremiereCourse, type EtatPremiereCourse } from '@/components/premiere-course';
 import { Screen } from '@/components/screen';
 import { Button, Card, ListRow, Tag } from '@/components/ui';
 import { Body, Heading, Muted } from '@/components/ui/text';
@@ -11,7 +12,7 @@ import { t } from '@/i18n';
 import { dayAndMonth, formatRaceDate } from '@/lib/datetime';
 import { feedDest, feedLabel, getFeed, type FeedItem } from '@/lib/feed';
 
-import { listMyRaces, type Race } from '@/lib/races';
+import { listMyRaces, maxGridSize, type Race } from '@/lib/races';
 
 /** Le bandeau montre 3 items au plus : c'est un teaser, pas le fil. */
 const BANDEAU_CAP = 3;
@@ -21,12 +22,34 @@ export default function CoursesScreen() {
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
   const [races, setRaces] = useState<{ upcoming: Race[]; past: Race[] }>({ upcoming: [], past: [] });
   const [feed, setFeed] = useState<FeedItem[]>([]);
+  // Non-null EXACTEMENT tant que la checklist de prise en main a du travail :
+  // aucune course terminée. `null` couvre donc deux cas qu'il n'y a pas lieu de
+  // distinguer à l'écran — « pilote aguerri » et « on ne sait pas encore ».
+  // C'est ce qui évite de faire clignoter la carte à chaque ouverture, le temps
+  // que les courses arrivent.
+  const [premiere, setPremiere] = useState<EtatPremiereCourse | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       listMyRaces()
-        .then((r) => active && setRaces(r))
+        .then(async (r) => {
+          if (!active) return;
+          setRaces(r);
+          if (r.past.length > 0) {
+            setPremiere(null);
+            return;
+          }
+          // Une requête de plus, mais seulement pour qui n'a pas encore fini
+          // une course — et jamais plus après. Son échec n'a rien de bloquant :
+          // l'étape reste simplement à cocher.
+          const grille = await maxGridSize(r.upcoming.map((x) => x.id)).catch(() => 0);
+          if (!active) return;
+          setPremiere({
+            courseCreee: r.upcoming.length > 0,
+            pilotesAjoutes: grille >= 2,
+          });
+        })
         .catch(() => {});
       // Le fil est un BONUS : son échec ne doit jamais gêner la liste des
       // courses (le bandeau disparaît simplement).
@@ -45,6 +68,23 @@ export default function CoursesScreen() {
 
   return (
     <Screen title={t.tabs.races} headerAction={<NotificationBell />}>
+      {/* ── « Ta première course » : la checklist de prise en main, en TÊTE
+          d'accueil tant qu'aucune course n'est terminée. Elle passe devant
+          « Ça bouge » sans lui nuire — un pilote qui n'a pas encore couru n'a
+          de toute façon quasiment rien dans son fil. ── */}
+      {premiere ? (
+        <PremiereCourse
+          etat={premiere}
+          onEtape={(n) => {
+            if (n === 1) return router.push('/race/create');
+            // Étapes 2 et 3 : la course la plus proche — c'est là que se
+            // trouvent « + Ajouter » et « Saisir le classement ».
+            const cible = races.upcoming[0];
+            if (cible) router.push(`/race/${cible.id}`);
+          }}
+        />
+      ) : null}
+
       {/* ── « Ça bouge » (A15, décision PO : bandeau en tête de l'accueil).
           3 items au plus, « Tout voir » ouvre le fil complet. S'il n'y a
           rien : pas de section vide — le bandeau disparaît, la liste des

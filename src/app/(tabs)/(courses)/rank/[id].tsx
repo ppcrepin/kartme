@@ -6,10 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DragList } from '@/components/drag-list';
 import { Avatar, Banner, Button, Card } from '@/components/ui';
 import { Body, Muted, Title } from '@/components/ui/text';
-import { colors, fonts, spacing } from '@/constants/theme';
+import { colors, fonts, radius, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
 import { signedAvatarUrls } from '@/lib/avatar';
+import { memoriserMode, modePrefere } from '@/lib/preferences';
 import {
   correctRaceResults,
   listParticipants,
@@ -32,7 +33,13 @@ export default function RankScreen() {
   const { session } = useAuth();
 
   const [step, setStep] = useState<Step>(rosterFinal ? 'order' : 'presents');
-  const [mode, setMode] = useState<Mode>('drag');
+  // ⚠️ « toucher » par DÉFAUT depuis le retour de test du 2026-07-30 : le
+  // glisser-déposer sur une liste tactile est un piège connu — il faut un appui
+  // long, et rien ne le dit. « Touche les pilotes dans l'ordre d'arrivée » est
+  // auto-explicatif, avec un numéro qui apparaît à chaque tap. Le glisser reste
+  // à un tap pour ceux qui le préfèrent, et le choix est MÉMORISÉ : on ne
+  // repose pas la question à quelqu'un qui a déjà tranché.
+  const [mode, setMode] = useState<Mode>(() => modePrefere());
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [absents, setAbsents] = useState<Set<string>>(new Set());
   const [ordered, setOrdered] = useState<Participant[]>([]);
@@ -177,10 +184,12 @@ export default function RankScreen() {
       const merged = [...picked, ...rest];
       setOrdered(merged);
       setMode(next);
+      memoriserMode(next);
       persist({ mode: next, orderedIds: merged.map((p) => p.id) });
       return;
     }
     setMode(next);
+    memoriserMode(next);
     persist({ mode: next });
   }
 
@@ -305,6 +314,27 @@ export default function RankScreen() {
             </Muted>
             {isLocked && !isCorrect ? <Muted>{t.races.lockedRankHint}</Muted> : null}
 
+            {/* Le choix du geste vit AU-DESSUS de la liste. Il était un lien
+                gris SOUS les pilotes : avec six ou huit noms, il tombait hors
+                écran au moment précis où l'on galère. Un testeur est resté
+                bloqué sur le glisser sans savoir que l'autre mode existait. */}
+            {!isCorrect ? (
+              <View style={styles.modeRow}>
+                {(['tap', 'drag'] as const).map((m) => (
+                  <Pressable
+                    key={m}
+                    onPress={() => onSetMode(m)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: mode === m }}
+                    style={[styles.modeChip, mode === m && styles.modeChipOn]}>
+                    <Body style={[styles.modeChipTxt, mode === m && styles.modeChipTxtOn]}>
+                      {m === 'tap' ? t.races.modeTap : t.races.modeDrag}
+                    </Body>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+
             {mode === 'drag' ? (
               <DragList
                 items={ordered}
@@ -394,15 +424,6 @@ export default function RankScreen() {
               </View>
             </View>
 
-            <Pressable
-              onPress={() => onSetMode(mode === 'drag' ? 'tap' : 'drag')}
-              accessibilityRole="button"
-              style={styles.modeSwitch}>
-              <Muted style={styles.modeSwitchTxt}>
-                {mode === 'drag' ? t.races.switchToTap : t.races.switchToDrag}
-              </Muted>
-            </Pressable>
-
             {error ? <Body style={styles.error}>{error}</Body> : null}
 
             <View style={styles.actions}>
@@ -473,8 +494,19 @@ const styles = StyleSheet.create({
   posTxt: { fontFamily: fonts.serifBlack, color: colors.inkDim2 },
   posTxtOn: { fontFamily: fonts.serifBlack, color: '#fff' },
   flex: { flex: 1 },
-  modeSwitch: { alignSelf: 'center', paddingVertical: spacing.sm },
-  modeSwitchTxt: { textDecorationLine: 'underline' },
+  modeRow: { flexDirection: 'row', gap: spacing.sm },
+  modeChip: {
+    flex: 1,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: colors.line2,
+  },
+  modeChipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  modeChipTxt: { color: colors.inkDim, fontWeight: '700' },
+  modeChipTxtOn: { color: colors.ink },
   error: { color: colors.accent },
   actions: { gap: spacing.sm, marginTop: spacing.sm },
 });

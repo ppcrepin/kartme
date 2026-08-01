@@ -19,6 +19,11 @@ export function Field({
     <View style={styles.wrap}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
+        // L'étiquette n'était qu'un `Text` posé au-dessus : rien ne la reliait
+        // au champ, donc un lecteur d'écran annonçait « champ de saisie » sans
+        // dire lequel. Elle devient le NOM accessible du champ (placée avant
+        // `...rest` : un `accessibilityLabel` explicite reste prioritaire).
+        accessibilityLabel={label}
         placeholderTextColor={colors.inkDim2}
         selectionColor={colors.accent}
         style={[

@@ -203,27 +203,27 @@ export const fr = {
     guestShort: 'Invité',
     privatePilot: 'Pilote privé',
     privateProfileHint: 'Profil privé',
-    // ── Grille : les trois façons d'ajouter quelqu'un, de la plus utile à la
-    // moins souhaitable. L'ordre est délibéré (décision PO) : on pousse d'abord
-    // vers des pilotes INSCRITS (qui font vivre l'Elo), l'invité sans compte
-    // n'arrive qu'en dernier recours et s'annonce comme tel.
-    addStep1: 'Tes amis',
-    addStep1Hint: 'Un tap : ils sont ajoutés à la grille.',
-    addStep1Empty: 'Aucun ami disponible — ils sont déjà tous sur la grille.',
-    addStep2: 'Un autre pilote inscrit',
-    addStep3: 'Quelqu’un sans compte',
-    // Invitation d'un pilote inscrit par pseudo (sans exiger l'amitié).
-    invitePilotLabel: 'Chercher par pseudo',
-    invitePilotPlaceholder: 'Pseudo du pilote…',
-    invitePilotNone: 'Aucun pilote trouvé avec ce pseudo.',
+    // ── Grille : UN SEUL champ qui suggère (retour de test réel 2026-08-01).
+    // Il y avait trois blocs empilés — « Tes amis », « Un autre pilote
+    // inscrit », « Quelqu'un sans compte » — et la personne testée s'est
+    // perdue : elle ne savait pas dans lequel taper. L'ordre des blocs disait
+    // pourtant quelque chose d'utile (l'invité sans compte n'échange aucun
+    // point Elo, on le veut en dernier recours) — cet ordre survit, non plus
+    // en marches numérotées mais dans le RANG des suggestions : amis d'abord,
+    // autres inscrits ensuite, « comme invité » en dernière ligne.
+    addSearchLabel: 'Qui court ?',
+    addSearchPlaceholder: 'Un prénom, un pseudo…',
+    addSearchHint: 'Tes amis sont déjà là. Tape un pseudo pour trouver n’importe quel inscrit.',
+    addSearching: 'Recherche…',
+    addFriendsEmpty: 'Tes amis sont tous sur la grille. Tape un nom pour ajouter quelqu’un d’autre.',
+    addNoFriendsYet: 'Tape le nom de la personne à ajouter.',
+    addNoMatch: 'Aucun pilote inscrit sous ce pseudo.',
     invitePilotAlready: 'Ce pilote est déjà sur la grille.',
-    invitePilotHint: 'Pas besoin d’être amis : tape son pseudo exact.',
-    // Invité (fantôme) : on dit franchement ce qu'il ne fait PAS, sinon
+    // L'invité (fantôme) : on dit franchement ce qu'il ne fait PAS, sinon
     // l'admin croit inscrire un vrai pilote et s'étonne que l'Elo ne bouge pas.
-    guestName: 'Prénom ou surnom',
-    guestHint: 'Il court et figure au classement, mais aucun point Elo n’est échangé avec lui.',
+    addGuestRow: '➕ Ajouter « %n » comme invité',
+    addGuestRowHint: 'Hors classement Elo : il court et figure au résultat, mais n’échange aucun point.',
     guestNudge: 'Invite-le à s’inscrire : ses prochaines courses compteront vraiment.',
-    addGuest: 'Ajouter cet invité',
     leaveRace: 'Quitter la course',
     actionError: 'Action impossible pour le moment.',
     remove: 'Retirer',
@@ -283,8 +283,11 @@ export const fr = {
     rankingTitle: 'Ordre d’arrivée',
     dragHint: 'Glisse les pilotes pour les mettre dans l’ordre d’arrivée (1er en haut).',
     tapHint: 'Touche les pilotes dans l’ordre d’arrivée (1er d’abord).',
-    switchToTap: 'Je préfère toucher dans l’ordre',
-    switchToDrag: 'Je préfère glisser-déposer',
+    // Sélecteur de geste, en HAUT de l'écran de saisie. Il était un lien gris
+    // sous la liste : hors écran à six pilotes, donc invisible au moment où
+    // l'on galère (retour de test 2026-07-30).
+    modeTap: '👆 Toucher',
+    modeDrag: '✥ Glisser',
     reset: 'Recommencer',
     validateRanking: 'Valider le classement',
     // Brouillon local de saisie (A10) : le réseau au circuit est mauvais, une
@@ -702,6 +705,28 @@ export const fr = {
     loadError: 'Impossible de charger l’invitation. Vérifie ta connexion.',
     error: 'Impossible d’ajouter ce pilote pour le moment.',
     toFriends: 'Voir mes amis',
+  },
+  // ── Prise en main (retour de test réel 2026-08-01) ────────────────────────
+  // « La plateforme pour un nouvel utilisateur n'est pas si simple. » Le geste
+  // qui fait tout — créer, remplir la grille, saisir l'arrivée — n'est écrit
+  // NULLE PART : chaque écran est clair pris isolément, mais rien ne dit dans
+  // quel ordre les enchaîner. Trois lignes qui se cochent le disent, une fois.
+  onboarding: {
+    firstRaceTitle: 'Ta première course',
+    firstRaceLead: 'Trois étapes, et tes premiers points Elo sont en jeu.',
+    firstRaceProgress: '%n/3',
+    // Nom accessible des lignes : « Créer une course » existe aussi en gros
+    // bouton au bas de l'accueil. Deux commandes du même nom sur un même écran
+    // ne se distinguent pas au lecteur d'écran — la ligne dit donc son rang.
+    stepAria: 'Étape %n sur 3 · %t',
+    step1: 'Créer une course',
+    step1Hint: 'Un karting, une date. Trente secondes.',
+    step2: 'Ajouter des pilotes',
+    step2Hint: 'Tes amis en un tap ; les autres, au pseudo ou en invité.',
+    step3: 'Saisir le classement',
+    step3Hint: 'L’ordre d’arrivée — les points s’échangent tout seuls.',
+    go: 'C’est parti',
+    resume: 'Continuer',
   },
   notFound: {
     title: 'Page introuvable',

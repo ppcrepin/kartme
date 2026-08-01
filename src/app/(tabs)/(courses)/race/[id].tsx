@@ -16,7 +16,7 @@ import { DateTimeField } from '@/components/date-time-field';
 import { Podium } from '@/components/podium';
 import { ShareCard } from '@/components/share-card';
 import { Avatar, Banner, Button, Card, Field, GradeMedal, ListRow, Sheet, Tag } from '@/components/ui';
-import { Body, Heading, Label, Muted, Title } from '@/components/ui/text';
+import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { track } from '@/lib/analytics';
@@ -54,6 +54,7 @@ import {
   type RaceResult,
 } from '@/lib/races';
 import { appBaseUrl } from '@/lib/url';
+import { sansAccent } from '@/lib/texte';
 import { validateGhostName } from '@/lib/username';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -112,8 +113,6 @@ export default function RaceDetailScreen() {
   const [results, setResults] = useState<RaceResult[]>([]);
   const [friends, setFriends] = useState<FriendEntry[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [name, setName] = useState('');
-  const [nameError, setNameError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [rematchError, setRematchError] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -237,18 +236,23 @@ export default function RaceDetailScreen() {
     };
   }, [completed, id]);
 
-  async function onAddPilot() {
-    const check = validateGhostName(name);
-    if (!check.ok) {
-      setNameError(t.races.nameErrors[check.error ?? 'generic']);
-      return;
-    }
-    setNameError(null);
+  /** Vide le champ unique après un ajout : la liste des amis revient d'elle-même
+   *  et l'ajout suivant se fait sans avoir à effacer le nom précédent. */
+  function resetRecherche() {
+    setPilotQuery('');
+    setPilotResults([]);
+    setPilotResultsFor('');
+  }
+
+  /** Ajoute le nom tapé comme invité (fantôme, hors Elo) — la dernière ligne. */
+  async function onAddGuest() {
+    const check = validateGhostName(pilotQuery);
+    if (!check.ok) return; // la ligne n'est proposée que si le nom passe
     setActionError(null);
     setBusy(true);
     try {
       await addGhostParticipant(id!, check.value);
-      setName('');
+      resetRecherche();
       await refresh();
     } catch (e) {
       // Sans ce catch, un refus serveur (grille figée entre-temps, RLS, réseau)
@@ -274,6 +278,7 @@ export default function RaceDetailScreen() {
     setActionError(null);
     try {
       await addProfileParticipant(id!, profileId);
+      resetRecherche();
       await refresh();
     } catch (e) {
       setActionError(messageErreur(e));
@@ -288,9 +293,7 @@ export default function RaceDetailScreen() {
     setActionError(null);
     try {
       await addProfileParticipant(id!, profileId);
-      setPilotQuery('');
-      setPilotResults([]);
-      setPilotResultsFor('');
+      resetRecherche();
       await refresh();
     } catch (e) {
       // Cas réels : blocage apparu entre-temps, compte suspendu, grille figée
@@ -495,17 +498,45 @@ export default function RaceDetailScreen() {
     visiblePilots.length === 0 &&
     pilotResults.some((r) => participants.some((p) => p.profileId === r.id));
 
-  // Amis pas encore sur la grille — la 1re marche du bloc « ajouter ».
+  // ── Le champ unique qui suggère (retour de test réel du 2026-08-01) ──────
+  // Trois blocs empilés obligeaient à choisir SON bloc avant de taper un nom —
+  // c'est exactement là que la personne testée s'est arrêtée. Il n'y a plus
+  // qu'un champ ; la hiérarchie qui justifiait les trois marches (un inscrit
+  // vaut mieux qu'un invité, un ami se tape en zéro caractère) survit dans
+  // l'ORDRE des suggestions.
+  const q = pilotQuery.trim();
+  const qNorm = sansAccent(q);
+
+  // Amis pas encore sur la grille. Champ vide ⇒ ils s'affichent tous : c'est
+  // le cas des neuf dixièmes des courses, et il se règle sans rien taper.
   const addableFriends = friends.filter(
     (f) => !participants.some((p) => p.profileId === f.pilotId),
   );
-  // Un admin qui n'a aucun ami n'a pas besoin d'une marche « Tes amis » vide :
-  // elle ne lui dirait que d'aller chercher un pseudo — ce que fait la marche
-  // suivante. On la retire, et on renumérote au rendu.
-  const addSteps: ('friends' | 'search' | 'guest')[] = friends.length
-    ? ['friends', 'search', 'guest']
-    : ['search', 'guest'];
-  const stepNo = (k: 'friends' | 'search' | 'guest') => addSteps.indexOf(k) + 1;
+  const amisSuggeres = qNorm
+    ? addableFriends.filter((f) => sansAccent(f.username).includes(qNorm))
+    : addableFriends;
+  // Les autres inscrits trouvés par la recherche serveur, sans redoubler un
+  // ami déjà proposé au-dessus.
+  const inscritsSuggeres = visiblePilots.filter(
+    (p) => !amisSuggeres.some((f) => f.pilotId === p.id),
+  );
+  const aucuneSuggestion = amisSuggeres.length + inscritsSuggeres.length === 0;
+  const rechercheEnCours = searchingPilot && !pilotSearchReady;
+
+  // La dernière ligne, « … comme invité ». On ne la propose qu'une fois la
+  // recherche RETOMBÉE : la proposer pendant qu'on cherche encore ferait
+  // doubler un pilote inscrit par un fantôme homonyme, et le fantôme
+  // n'échange aucun point — l'erreur ne se voit qu'au classement.
+  const nomInvite = validateGhostName(q);
+  const inviteDecidable = q.length >= 2 ? pilotSearchReady : q.length >= 1;
+  const proposerInvite = inviteDecidable && nomInvite.ok;
+  // Un nom refusé (filtre de mots, trop long) ne se signale que s'il ne reste
+  // rien d'autre à proposer : sinon on crierait au nom interdit sous une liste
+  // de résultats parfaitement valides.
+  const erreurInvite =
+    inviteDecidable && !nomInvite.ok && aucuneSuggestion
+      ? t.races.nameErrors[nomInvite.error ?? 'generic']
+      : null;
 
   const shareUrl = `${appBaseUrl()}race/${id}`;
 
@@ -1056,105 +1087,108 @@ export default function RaceDetailScreen() {
         ) : null
       ) : null}
 
-      {/* ── Feuille : remplir la grille (les trois marches d'origine,
-          déplacées telles quelles — l'ordre par coût reste le même). ── */}
-      <Sheet open={addOpen} onClose={() => setAddOpen(false)} title={t.races.addPilots}>
-                      {/* ── Remplir la grille, en trois marches ──────────────
-                          L'ordre n'est pas cosmétique : chaque marche est plus
-                          coûteuse et moins « bonne » que la précédente.
-                          1. Mes amis, en un tap — zéro friction, Elo réel.
-                          2. Un inscrit par pseudo — l'amitié n'est pas requise
-                             (la RLS autorise déjà l'admin à ajouter tout pilote
-                             non bloqué), mais il faut connaître le pseudo.
-                          3. Un invité sans compte — dernier recours : il court,
-                             mais n'échange aucun point. On le DIT, sinon
-                             l'admin croit avoir inscrit un vrai pilote. */}
+      {/* ── Feuille : remplir la grille ─────────────────────────────────────
+          UN champ, UNE liste. La personne qui a testé l'app le 2026-08-01 s'est
+          arrêtée devant trois champs empilés : avant de taper un nom, il fallait
+          savoir dans quelle catégorie ce nom tombait — ce qu'on ne sait
+          justement pas avant d'avoir cherché.
 
-                      {/* 1 · Mes amis (masquée si le pilote n'a aucun ami) */}
-                      {addSteps.includes('friends') ? (
-                      <View style={styles.addStep}>
-                        <Heading>{`${stepNo('friends')} · ${t.races.addStep1}`}</Heading>
-                        {addableFriends.length > 0 ? (
-                          <>
-                            <Muted>{t.races.addStep1Hint}</Muted>
-                            <View style={styles.friendChips}>
-                              {addableFriends.map((f) => (
-                                <Pressable
-                                  key={f.pilotId}
-                                  onPress={() => onAddFriend(f.pilotId)}
-                                  accessibilityRole="button"
-                                  disabled={busy}
-                                  style={styles.friendChip}>
-                                  <Avatar name={f.username} size={24} />
-                                  <Body style={styles.friendChipTxt}>+ {f.username}</Body>
-                                </Pressable>
-                              ))}
-                            </View>
-                          </>
-                        ) : (
-                          <Muted>{t.races.addStep1Empty}</Muted>
-                        )}
-                      </View>
-                      ) : null}
+          La hiérarchie des trois marches n'est pas perdue pour autant, elle est
+          passée dans l'ordre des suggestions :
+            · les amis d'abord (zéro caractère à taper, Elo réel) ;
+            · les autres inscrits ensuite (l'amitié n'est pas requise, la RLS
+              autorise déjà l'admin à ajouter tout pilote non bloqué) ;
+            · « comme invité » en dernière ligne, et seulement là — il court,
+              mais n'échange aucun point, et on le DIT sur la ligne même. ── */}
+      <Sheet
+        open={addOpen}
+        onClose={() => {
+          setAddOpen(false);
+          // Sans cette purge, rouvrir la feuille afficherait la recherche
+          // abandonnée la fois d'avant plutôt que ses amis — et il faudrait
+          // effacer un nom pour retrouver l'état d'ouverture normal.
+          resetRecherche();
+        }}
+        title={t.races.addPilots}>
+        <View style={styles.addBox}>
+          <Field
+            label={t.races.addSearchLabel}
+            value={pilotQuery}
+            onChangeText={setPilotQuery}
+            autoCapitalize="words"
+            placeholder={t.races.addSearchPlaceholder}
+          />
+          <Muted>{t.races.addSearchHint}</Muted>
 
-                      {/* 2 · Un autre pilote inscrit, par pseudo */}
-                      <View style={styles.addStep}>
-                        <Heading>{`${stepNo('search')} · ${t.races.addStep2}`}</Heading>
-                        <Muted>{t.races.invitePilotHint}</Muted>
-                        <Field
-                          label={t.races.invitePilotLabel}
-                          value={pilotQuery}
-                          onChangeText={setPilotQuery}
-                          autoCapitalize="none"
-                          placeholder={t.races.invitePilotPlaceholder}
-                        />
-                        {searchingPilot && !pilotSearchReady ? <Muted>…</Muted> : null}
-                        {pilotSearchReady && visiblePilots.length === 0 ? (
-                          <Muted>
-                            {alreadyOnGrid ? t.races.invitePilotAlready : t.races.invitePilotNone}
-                          </Muted>
-                        ) : null}
-                        {visiblePilots.length > 0 ? (
-                          <View style={styles.friendChips}>
-                            {visiblePilots.map((p) => (
-                              <Pressable
-                                key={p.id}
-                                onPress={() => onAddPilotById(p.id)}
-                                accessibilityRole="button"
-                                disabled={busy}
-                                style={styles.friendChip}>
-                                <Avatar name={p.username} size={24} />
-                                <Body style={styles.friendChipTxt}>+ {p.username}</Body>
-                              </Pressable>
-                            ))}
-                          </View>
-                        ) : null}
-                      </View>
+          {amisSuggeres.length + inscritsSuggeres.length > 0 ? (
+            <View style={styles.friendChips}>
+              {amisSuggeres.map((f) => (
+                <Pressable
+                  key={f.pilotId}
+                  onPress={() => onAddFriend(f.pilotId)}
+                  accessibilityRole="button"
+                  disabled={busy}
+                  style={styles.friendChip}>
+                  <Avatar name={f.username} size={24} />
+                  <Body style={styles.friendChipTxt}>+ {f.username}</Body>
+                </Pressable>
+              ))}
+              {inscritsSuggeres.map((p) => (
+                <Pressable
+                  key={p.id}
+                  onPress={() => onAddPilotById(p.id)}
+                  accessibilityRole="button"
+                  disabled={busy}
+                  style={styles.friendChip}>
+                  <Avatar name={p.username} size={24} />
+                  <Body style={styles.friendChipTxt}>+ {p.username}</Body>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
 
-                      {/* 3 · Un invité sans compte (hors Elo) */}
-                      <View style={styles.addStep}>
-                        <Heading>{`${stepNo('guest')} · ${t.races.addStep3}`}</Heading>
-                        <Muted>{t.races.guestHint}</Muted>
-                        <Field
-                          label={t.races.guestName}
-                          value={name}
-                          onChangeText={setName}
-                          error={nameError}
-                          autoCapitalize="words"
-                        />
-                        <Button
-                          label={t.races.addGuest}
-                          variant="ghost"
-                          onPress={onAddPilot}
-                          disabled={busy}
-                        />
-                        <Muted style={styles.guestNudge}>{t.races.guestNudge}</Muted>
-                      </View>
+          {rechercheEnCours ? <Muted>{t.races.addSearching}</Muted> : null}
 
-                      {!selfParticipating ? (
-                        <Button label={t.races.rejoin} variant="ghost" onPress={onToggleSelf} />
-                      ) : null}
-        {actionError ? <Muted style={styles.rematchErr}>{actionError}</Muted> : null}
+          {aucuneSuggestion && !rechercheEnCours ? (
+            <Muted>
+              {q
+                ? alreadyOnGrid
+                  ? t.races.invitePilotAlready
+                  : t.races.addNoMatch
+                : friends.length
+                  ? t.races.addFriendsEmpty
+                  : t.races.addNoFriendsYet}
+            </Muted>
+          ) : null}
+
+          {/* La dernière ligne : ajouter le nom tapé comme invité. Elle porte
+              elle-même sa contrepartie (« hors classement Elo ») — un avis posé
+              ailleurs sur l'écran ne serait pas lu au moment du tap. */}
+          {proposerInvite ? (
+            <Pressable
+              onPress={onAddGuest}
+              accessibilityRole="button"
+              // Deux textes dans la même zone : sans nom explicite, un lecteur
+              // d'écran les recolle en une phrase illisible.
+              accessibilityLabel={t.races.addGuestRow.replace('%n', nomInvite.value)}
+              disabled={busy}
+              style={styles.guestRow}>
+              <Body style={styles.guestRowTxt}>
+                {t.races.addGuestRow.replace('%n', nomInvite.value)}
+              </Body>
+              <Muted style={styles.guestRowHint}>{t.races.addGuestRowHint}</Muted>
+            </Pressable>
+          ) : null}
+          {proposerInvite ? (
+            <Muted style={styles.guestNudge}>{t.races.guestNudge}</Muted>
+          ) : null}
+          {erreurInvite ? <Muted style={styles.rematchErr}>{erreurInvite}</Muted> : null}
+
+          {!selfParticipating ? (
+            <Button label={t.races.rejoin} variant="ghost" onPress={onToggleSelf} />
+          ) : null}
+          {actionError ? <Muted style={styles.rematchErr}>{actionError}</Muted> : null}
+        </View>
       </Sheet>
 
       {/* ── Feuille : inviter / partager ── */}
@@ -1275,18 +1309,30 @@ const styles = StyleSheet.create({
   removeZone: { minWidth: 40, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
   // Une « marche » du bloc d'ajout : léger encart pour que les trois options
   // se lisent comme une descente d'escalier, pas comme trois champs en vrac.
-  addStep: {
-    gap: spacing.xs,
-    marginTop: spacing.md,
+  addBox: { gap: spacing.sm },
+  guestNudge: { fontStyle: 'italic' },
+  // La ligne « ajouter comme invité » : pleine largeur et détachée des pastilles
+  // au-dessus, pour qu'un tap approximatif ne transforme pas un pilote inscrit
+  // en fantôme hors classement.
+  guestRow: {
+    minHeight: 44,
+    justifyContent: 'center',
+    gap: 2,
+    marginTop: spacing.xs,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.line,
   },
-  guestNudge: { fontStyle: 'italic' },
+  guestRowTxt: { fontWeight: '800' },
+  guestRowHint: { fontSize: 12 },
   friendChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   friendChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    // 44 px : le minimum tapable. Les pastilles plafonnaient à 32 px, et
+    // `hitSlop` n'est pas implémenté sur `Pressable` en react-native-web —
+    // la zone de tap ne s'agrandit donc que par la hauteur réelle.
+    minHeight: 44,
     gap: spacing.xs,
     backgroundColor: colors.surface,
     borderColor: colors.line2,

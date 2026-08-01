@@ -15,6 +15,7 @@ import {
   type Position,
 } from '@/lib/geo';
 import { allCircuitsOnMap, listRecentCircuits, type Circuit } from '@/lib/races';
+import { sansAccent } from '@/lib/texte';
 
 /** Vue par défaut tant qu'on ignore où est le pilote : la France entière. */
 const FRANCE: Position = { lat: 46.6, lon: 2.4 };
@@ -159,8 +160,6 @@ export function CircuitsExplorer({
   // autrement qu'en pointant sur la carte — rien pour qui navigue au clavier
   // ou au lecteur d'écran. Les ALIAS comptent : « BRK » doit trouver Trappes.
   const filtre = useMemo(() => {
-    const sansAccent = (x: string) =>
-      x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     const q = query.trim().toLowerCase();
     if (!q) {
       // Hors recherche : les récents sont déjà affichés au-dessus, ne pas les
