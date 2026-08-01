@@ -68,7 +68,7 @@ const lapSort = (a: RaceResult, b: RaceResult) => {
 const fmtDelta = (d: number) => (d > 0 ? `▲ +${d}` : d < 0 ? `▼ ${d}` : '—');
 // Nom affichable d'un résultat : jamais « — » cryptique pour un profil masqué.
 const displayName = (r: RaceResult) => (r.hiddenProfile ? t.races.privatePilot : r.name);
-const deltaColor = (d: number) => (d > 0 ? colors.pos : d < 0 ? colors.accent : colors.inkDim);
+const deltaColor = (d: number) => (d > 0 ? colors.pos : d < 0 ? colors.accentTexte : colors.inkDim);
 
 /** Drapeau d'attente, pulsation douce (statique si « réduire les animations »). */
 function WaitingFlag() {
@@ -1503,12 +1503,12 @@ const styles = StyleSheet.create({
   deleteBtn: { alignItems: 'center', paddingVertical: spacing.md },
   deleteTxt: { color: colors.inkDim2 },
   deleteConfirm: { gap: spacing.sm, alignItems: 'center', marginTop: spacing.sm },
-  rematchErr: { color: colors.accent, textAlign: 'center' },
+  rematchErr: { color: colors.accentTexte, textAlign: 'center' },
   actions: { gap: spacing.sm },
   correctBox: { gap: spacing.xs, marginTop: spacing.sm },
   correctHint: { textAlign: 'center' },
-  lapRecord: { color: colors.accent, marginBottom: spacing.xs },
+  lapRecord: { color: colors.accentTexte, marginBottom: spacing.xs },
   lapTime: { fontVariant: ['tabular-nums'], fontWeight: '800' },
-  lapEdit: { color: colors.accent, fontWeight: '700' },
+  lapEdit: { color: colors.accentTexte, fontWeight: '700' },
   lapEditBox: { marginTop: spacing.sm, gap: spacing.sm },
 });

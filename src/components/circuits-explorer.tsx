@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   pageContent: { gap: spacing.md, paddingBottom: spacing.xxl },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   locate: { marginLeft: 'auto', paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderRadius: radius.sharp, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
-  locateTxt: { color: colors.accent, fontWeight: '700' },
+  locateTxt: { color: colors.accentTexte, fontWeight: '700' },
   geoErr: { marginTop: spacing.xs },
   segment: { flexDirection: 'row', gap: 1, borderRadius: radius.sharp, overflow: 'hidden', alignSelf: 'flex-start' },
   segItem: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md, backgroundColor: colors.surface },

@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.xxl, gap: spacing.xl },
   header: { gap: spacing.sm },
   rule: { width: 64 },
-  brand: { letterSpacing: 3, fontWeight: '800', color: colors.accent },
+  brand: { letterSpacing: 3, fontWeight: '800', color: colors.accentTexte },
   subtitle: { fontSize: 15, lineHeight: 20 },
   form: { gap: spacing.md },
 });

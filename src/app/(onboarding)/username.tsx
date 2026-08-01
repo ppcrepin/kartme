@@ -55,5 +55,5 @@ export default function UsernameScreen() {
 }
 
 const styles = StyleSheet.create({
-  error: { color: colors.accent },
+  error: { color: colors.accentTexte },
 });

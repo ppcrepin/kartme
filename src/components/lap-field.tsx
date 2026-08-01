@@ -93,5 +93,5 @@ const styles = StyleSheet.create({
     fontSize: 20,
     paddingHorizontal: spacing.md,
   },
-  error: { color: colors.accent, fontFamily: fonts.sans, fontSize: 12 },
+  error: { color: colors.accentTexte, fontFamily: fonts.sans, fontSize: 12 },
 });

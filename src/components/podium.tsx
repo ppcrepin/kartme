@@ -62,7 +62,7 @@ function Step({
         /* Invité : Elo gelé — « — » laisserait croire à un score de 0. */
         <Muted style={{ fontWeight: '800' }}>{t.races.guestShort}</Muted>
       ) : (
-        <Muted style={{ color: flat ? colors.inkDim : up ? colors.pos : colors.accent, fontWeight: '800' }}>
+        <Muted style={{ color: flat ? colors.inkDim : up ? colors.pos : colors.accentTexte, fontWeight: '800' }}>
           {flat ? '—' : `${up ? '▲ +' : '▼ '}${result.eloDelta}`}
         </Muted>
       )}

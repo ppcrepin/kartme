@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   panel: { gap: spacing.sm, marginTop: spacing.xs },
   monthHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   chev: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  chevTxt: { fontSize: 22, color: colors.accent, fontWeight: '800' },
+  chevTxt: { fontSize: 22, color: colors.accentTexte, fontWeight: '800' },
   monthLabel: { fontFamily: fonts.serif, fontSize: 16 },
   weekRow: { flexDirection: 'row' },
   weekday: { fontSize: 11 },
@@ -167,6 +167,6 @@ const styles = StyleSheet.create({
   colon: { fontFamily: fonts.serifBlack, fontSize: 20 },
   stepBox: { alignItems: 'center', gap: 2 },
   stepBtn: { width: 40, height: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface2, borderRadius: radius.sharp, borderWidth: 1, borderColor: colors.line2 },
-  stepSign: { fontSize: 16, color: colors.accent, fontWeight: '800' },
+  stepSign: { fontSize: 16, color: colors.accentTexte, fontWeight: '800' },
   stepValue: { fontFamily: fonts.serifBlack, fontSize: 20, minWidth: 34, textAlign: 'center' },
 });

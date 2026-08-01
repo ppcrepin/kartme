@@ -88,5 +88,5 @@ const styles = StyleSheet.create({
   linkRight: { alignSelf: 'flex-end' },
   linkCenter: { alignItems: 'center', paddingVertical: spacing.sm },
   linkTxt: { color: colors.inkDim },
-  error: { color: colors.accent },
+  error: { color: colors.accentTexte },
 });

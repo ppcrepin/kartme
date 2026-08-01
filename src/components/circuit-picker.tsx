@@ -293,11 +293,11 @@ const styles = StyleSheet.create({
   km: { fontVariant: ['tabular-nums'] },
   quickRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   nearBtn: { alignSelf: 'flex-start', paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderRadius: radius.sharp, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface },
-  nearBtnTxt: { color: colors.accent, fontWeight: '700' },
+  nearBtnTxt: { color: colors.accentTexte, fontWeight: '700' },
   geoErr: { marginTop: -spacing.xs },
   empty: { paddingVertical: spacing.sm, paddingHorizontal: spacing.sm },
   selected: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderColor: colors.line, borderWidth: 1, borderRadius: radius.card, padding: spacing.md },
   selectedName: { fontWeight: '700' },
   flex: { flex: 1, gap: 2 },
-  change: { color: colors.accent, fontWeight: '700' },
+  change: { color: colors.accentTexte, fontWeight: '700' },
 });

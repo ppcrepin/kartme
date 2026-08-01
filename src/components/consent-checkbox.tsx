@@ -57,5 +57,5 @@ const styles = StyleSheet.create({
   check: { color: colors.bg, fontWeight: '800', fontSize: 14 },
   flex: { flex: 1 },
   text: { lineHeight: 20 },
-  link: { color: colors.accent, fontWeight: '700', textDecorationLine: 'underline' },
+  link: { color: colors.accentTexte, fontWeight: '700', textDecorationLine: 'underline' },
 });

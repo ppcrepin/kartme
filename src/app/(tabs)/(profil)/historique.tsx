@@ -11,7 +11,7 @@ import { formatRaceDate } from '@/lib/datetime';
 import { getRaceHistory, type HistoryEntry } from '@/lib/profile';
 
 const fmtDelta = (d: number) => (d > 0 ? `▲ +${d}` : d < 0 ? `▼ ${d}` : '—');
-const deltaColor = (d: number) => (d > 0 ? colors.pos : d < 0 ? colors.accent : colors.inkDim);
+const deltaColor = (d: number) => (d > 0 ? colors.pos : d < 0 ? colors.accentTexte : colors.inkDim);
 
 /**
  * Historique complet des courses — écran dédié (décision PO 2026-07-30) :

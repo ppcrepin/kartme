@@ -208,5 +208,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   flex: { flex: 1, gap: 2 },
   ok: { color: colors.pos, fontWeight: '700', textAlign: 'center' },
-  err: { color: colors.accent, textAlign: 'center' },
+  err: { color: colors.accentTexte, textAlign: 'center' },
 });

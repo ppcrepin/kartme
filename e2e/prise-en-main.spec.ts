@@ -105,6 +105,62 @@ test('inscrit par un ami, sans rien créer : la checklist reste à 0/3', async (
   await expect(page.getByText('Un karting, une date. Trente secondes.', { exact: true })).toBeVisible();
 });
 
+test('le « ✕ » chasse la checklist, et elle revient au palier suivant', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, { 'rest/v1/races': [], 'rest/v1/participations': [] });
+  await page.goto('/');
+  await expect(page.getByText('0/3', { exact: true })).toBeVisible({ timeout: 20_000 });
+
+  await page.getByLabel('Masquer cette aide').click();
+  await expect(page.getByText('Ta première course', { exact: true })).toHaveCount(0);
+
+  // Rechargement : elle reste chassée. Un simple booléen suffirait ici — c'est
+  // la suite qui exige de mémoriser le PALIER.
+  await page.reload();
+  await expect(page.getByText('Courses', { exact: true }).and(sceneActive(page)).first()).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByText('Ta première course', { exact: true })).toHaveCount(0);
+
+  // Le pilote s'y met vraiment : une course existe. La carte revient, à 1/3.
+  // (Sans le palier mémorisé, la rechasser ici la ferait revenir aussitôt —
+  //  une croix qui ne ferme rien.)
+  await reseauSimule(page, {
+    'rest/v1/races': [course('upcoming')],
+    'rest/v1/participations': [{ race_id: 'r1' }],
+  });
+  await page.reload();
+  await expect(page.getByText('1/3', { exact: true })).toBeVisible({ timeout: 20_000 });
+});
+
+test('« À venir » : la course la plus PROCHE en tête', async ({ page }) => {
+  await sessionSimulee(page);
+  const dans = (j: number) => ({
+    ...course('upcoming'),
+    id: `r${j}`,
+    scheduled_at: new Date(Date.now() + j * 864e5).toISOString(),
+  });
+  await reseauSimule(page, {
+    // Servies dans le désordre : c'est au client de trancher.
+    'rest/v1/races': [dans(30), dans(2), dans(12)],
+    'rest/v1/participations': [],
+  });
+  await page.goto('/');
+  await expect(page.getByText('Sologne Karting', { exact: true }).first()).toBeVisible({
+    timeout: 20_000,
+  });
+
+  // Le tri était décroissant — juste pour l'historique, inversé pour ce qui
+  // vient : la course du mois prochain passait avant celle d'après-demain,
+  // c'est-à-dire enterrait la seule qu'il faut préparer.
+  const dates = await page
+    .locator('xpath=//*[not(ancestor-or-self::*[@aria-hidden="true"])]')
+    .getByText(/^\d{1,2}$/)
+    .allTextContents();
+  const jour = (j: number) => String(new Date(Date.now() + j * 864e5).getDate());
+  expect(dates.slice(0, 3)).toEqual([jour(2), jour(12), jour(30)]);
+});
+
 test('une course terminée : la checklist a fini son travail et disparaît', async ({ page }) => {
   await sessionSimulee(page);
   await reseauSimule(page, {

@@ -110,5 +110,5 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.lg },
   back: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
   warn: { color: colors.gold },
-  error: { color: colors.accent },
+  error: { color: colors.accentTexte },
 });

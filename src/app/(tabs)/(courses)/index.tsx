@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { NotificationBell } from '@/components/notification-bell';
 import { PremiereCourse, type EtatPremiereCourse } from '@/components/premiere-course';
+
 import { Screen } from '@/components/screen';
 import { Button, Card, ListRow, Tag } from '@/components/ui';
 import { Body, Heading, Muted } from '@/components/ui/text';
@@ -13,6 +14,7 @@ import { useAuth } from '@/lib/auth';
 import { dayAndMonth, formatRaceDate } from '@/lib/datetime';
 import { feedDest, feedLabel, getFeed, type FeedItem } from '@/lib/feed';
 
+import { checklistMasqueeA, masquerChecklist } from '@/lib/preferences';
 import { listMyRaces, maxGridSize, type Race } from '@/lib/races';
 
 /** Le bandeau montre 3 items au plus : c'est un teaser, pas le fil. */
@@ -31,6 +33,9 @@ export default function CoursesScreen() {
   // C'est ce qui évite de faire clignoter la carte à chaque ouverture, le temps
   // que les courses arrivent.
   const [premiere, setPremiere] = useState<EtatPremiereCourse | null>(null);
+  // Avancement au moment où la carte a été chassée (`null` = jamais chassée).
+  // Elle revient au palier SUIVANT : chassée à 0/3, elle réapparaît à 1/3.
+  const [masqueeA, setMasqueeA] = useState<number | null>(() => checklistMasqueeA());
 
   useFocusEffect(
     useCallback(() => {
@@ -75,6 +80,10 @@ export default function CoursesScreen() {
   );
 
   const list = races[tab];
+  // Le même comptage que dans la carte : elle ne revient qu'une fois un
+  // palier franchi, pas au premier rechargement venu.
+  const avancement = (premiere?.courseCreee ? 1 : 0) + (premiere?.pilotesAjoutes ? 1 : 0);
+  const checklistVisible = !!premiere && (masqueeA === null || avancement > masqueeA);
 
 
 
@@ -94,20 +103,21 @@ export default function CoursesScreen() {
           d'accueil tant qu'aucune course n'est terminée. Elle passe devant
           « Ça bouge » sans lui nuire — un pilote qui n'a pas encore couru n'a
           de toute façon quasiment rien dans son fil. ── */}
-      {premiere ? (
+      {checklistVisible ? (
         <PremiereCourse
           etat={premiere}
+          onMasquer={(n) => {
+            masquerChecklist(n);
+            setMasqueeA(n);
+          }}
           onEtape={(n) => {
             if (n === 1) return router.push('/race/create');
             // Étapes 2 et 3 : MA course la plus proche — c'est là que se
             // trouvent « + Ajouter » et « Saisir le classement », et ces deux
-            // commandes n'existent que pour l'admin. `listMyRaces` trie du plus
-            // récent au plus ancien (juste pour l'historique, inversé pour les
-            // courses à venir) : on retrie ici, sinon la carte ouvrirait la
-            // course du mois prochain plutôt que celle de demain.
-            const cible = races.upcoming
-              .filter((x) => x.admin_id === selfId)
-              .sort((a, b) => +new Date(a.scheduled_at) - +new Date(b.scheduled_at))[0];
+            // commandes n'existent que pour l'admin. `listMyRaces` trie
+            // désormais « à venir » du plus proche au plus lointain : le
+            // premier de la liste EST le bon.
+            const cible = races.upcoming.find((x) => x.admin_id === selfId);
             if (cible) router.push(`/race/${cible.id}`);
           }}
         />
@@ -159,7 +169,7 @@ export default function CoursesScreen() {
           // Sous la checklist, « Crée la première ! » ferait un TROISIÈME appel
           // à créer une course sur le même écran (la ligne 1 de la checklist,
           // le bouton du bas, et lui). La checklist dit déjà quoi faire.
-          premiere ? null : <Muted>{t.races.homeEmpty}</Muted>
+          checklistVisible ? null : <Muted>{t.races.homeEmpty}</Muted>
         ) : (
           list.map((race) => {
             const { day, month } = dayAndMonth(race.scheduled_at);
@@ -196,14 +206,14 @@ export default function CoursesScreen() {
 const styles = StyleSheet.create({
   feedHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   feedTitle: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
-  feedLink: { color: colors.accent, fontSize: 12, fontWeight: '700' },
+  feedLink: { color: colors.accentTexte, fontSize: 12, fontWeight: '700' },
   page: { gap: spacing.sm, paddingBottom: spacing.md },
   filters: { flexDirection: 'row', gap: spacing.sm },
   list: { gap: spacing.sm, paddingTop: spacing.xs },
   raceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   cal: { width: 46, alignItems: 'center' },
   calDay: { fontFamily: fonts.serifBlack, fontSize: 22, color: colors.ink },
-  calMonth: { fontSize: 11, color: colors.accent, textTransform: 'uppercase', fontWeight: '800' },
+  calMonth: { fontSize: 11, color: colors.accentTexte, textTransform: 'uppercase', fontWeight: '800' },
   flex: { flex: 1 },
   cta: { paddingVertical: spacing.md },
 });

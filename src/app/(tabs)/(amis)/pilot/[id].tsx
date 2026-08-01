@@ -345,7 +345,7 @@ export default function PilotScreen() {
                             <Body
                               style={[
                                 styles.historyDelta,
-                                { color: h.eloDelta > 0 ? colors.pos : h.eloDelta < 0 ? colors.accent : colors.inkDim },
+                                { color: h.eloDelta > 0 ? colors.pos : h.eloDelta < 0 ? colors.accentTexte : colors.inkDim },
                               ]}>
                               {h.eloDelta > 0 ? `▲ +${h.eloDelta}` : h.eloDelta < 0 ? `▼ ${h.eloDelta}` : '—'}
                             </Body>

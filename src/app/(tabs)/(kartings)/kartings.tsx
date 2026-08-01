@@ -86,8 +86,8 @@ export default function KartingsScreen() {
 const styles = StyleSheet.create({
   sel: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   selName: { fontWeight: '700' },
-  reportLink: { marginTop: spacing.sm, color: colors.accent, fontWeight: '700' },
+  reportLink: { marginTop: spacing.sm, color: colors.accentTexte, fontWeight: '700' },
   chevron: { fontSize: 22, color: colors.inkDim },
-  reportBtn: { marginTop: spacing.lg, color: colors.accent, fontWeight: '700' },
+  reportBtn: { marginTop: spacing.lg, color: colors.accentTexte, fontWeight: '700' },
   flex: { flex: 1, gap: 2 },
 });

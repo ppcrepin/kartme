@@ -14,7 +14,21 @@ export const colors = {
   ink: '#f2ede9', // texte principal (blanc cassé chaud)
   inkDim: '#a08d87', // texte secondaire
   inkDim2: '#8a746d', // texte discret
-  accent: '#e10600', // Rosso Corsa (marque)
+  accent: '#e10600', // Rosso Corsa (marque) — APLATS : fonds, bordures, pastilles
+  /**
+   * Le même rouge, éclairci, réservé au TEXTE posé sur fond sombre.
+   *
+   * `#e10600` plafonne à 3,6:1 sur nos cartes, là où la norme AA en demande
+   * 4,5 sous 18,7 px. Ce n'est pas un détail de conformité : le rouge saturé
+   * sur carbone est ce qui se lit le plus mal en plein soleil — au bord d'une
+   * piste, précisément. Et pour qui distingue mal le rouge, un lien de 13 px
+   * dans cette teinte disparaît purement et simplement.
+   *
+   * Arbitrage PO 2026-08-01 : la marque ne bouge PAS là où on la voit
+   * (boutons pleins, pastilles sélectionnées, épingles, courbe Elo) — seule
+   * la teinte du texte rouge change. 5,8 à 6,6:1 selon le fond.
+   */
+  accentTexte: '#ff5c45',
   pos: '#6fae82', // gain d'Elo (toujours doublé d'un signe ▲/+)
   gold: '#e2c14d', // liseré premium / focus
 } as const;

@@ -21,7 +21,10 @@ export default function TabsLayout() {
       backBehavior="history"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accent,
+        // Le libellé d'onglet actif fait 10 px : c'est le plus petit texte
+        // rouge de l'app, donc celui qui a le plus besoin du jeton éclairci.
+        // La teinte colore aussi le pictogramme — il reste franchement rouge.
+        tabBarActiveTintColor: colors.accentTexte,
         tabBarInactiveTintColor: colors.inkDim2,
         tabBarStyle: {
           backgroundColor: colors.bg,

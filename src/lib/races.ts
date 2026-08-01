@@ -203,13 +203,17 @@ export async function listMyRaces(): Promise<{ upcoming: Race[]; past: Race[] }>
   for (const ligne of (inscrit.data ?? []) as unknown as { race: Race | null }[]) {
     if (ligne.race) parId.set(ligne.race.id, ligne.race);
   }
-  const races = [...parId.values()].sort(
-    (a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime(),
-  );
+  const races = [...parId.values()];
+  const quand = (r: Race) => new Date(r.scheduled_at).getTime();
   return {
     // Les courses clôturées (« prêtes ») restent dans « à venir ».
-    upcoming: races.filter((r) => r.status !== 'completed'),
-    past: races.filter((r) => r.status === 'completed'),
+    // Tri CROISSANT : « à venir » se lit de demain vers plus tard. Un tri
+    // décroissant — correct pour l'historique — mettait la course du mois
+    // prochain avant celle de demain, c'est-à-dire enterrait la seule qu'il
+    // faut préparer (décision PO 2026-08-01).
+    upcoming: races.filter((r) => r.status !== 'completed').sort((a, b) => quand(a) - quand(b)),
+    // Décroissant : la dernière course courue en tête, comme tout historique.
+    past: races.filter((r) => r.status === 'completed').sort((a, b) => quand(b) - quand(a)),
   };
 }
 

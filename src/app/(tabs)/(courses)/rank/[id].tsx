@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
   // dans la liste, pas un classement. Le rouge plein est réservé à ce qui a
   // été VOULU, comme les numéros du mode toucher.
   posEnAttente: { backgroundColor: 'transparent', borderColor: colors.line2, borderWidth: 1 },
-  dragAttente: { color: colors.accent },
+  dragAttente: { color: colors.accentTexte },
   posTxtOut: { color: colors.inkDim2, fontSize: 10, fontWeight: '800' },
   dnfBlock: { gap: spacing.xs, marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.line },
   dnfTitle: { color: colors.ink, fontWeight: '700' },
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
   },
   dnfChipOn: { borderColor: colors.accent },
   dnfChipTxt: { fontSize: 13, color: colors.inkDim },
-  dnfChipTxtOn: { color: colors.accent, fontWeight: '700' },
+  dnfChipTxtOn: { color: colors.accentTexte, fontWeight: '700' },
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl * 2 },
   // 44 px, et une marge négative pour que la flèche reste optiquement collée
@@ -596,6 +596,6 @@ const styles = StyleSheet.create({
   modeChipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   modeChipTxt: { color: colors.inkDim, fontWeight: '700' },
   modeChipTxtOn: { color: colors.ink },
-  error: { color: colors.accent },
+  error: { color: colors.accentTexte },
   actions: { gap: spacing.sm, marginTop: spacing.sm },
 });

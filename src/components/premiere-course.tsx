@@ -31,10 +31,13 @@ export interface EtatPremiereCourse {
 export function PremiereCourse({
   etat,
   onEtape,
+  onMasquer,
 }: {
   etat: EtatPremiereCourse;
   /** Ouvre l'écran de l'étape (1, 2 ou 3) — seule l'étape COURANTE est tapable. */
   onEtape: (numero: 1 | 2 | 3) => void;
+  /** Chasse la carte. Reçoit l'avancement, pour savoir quand la ramener. */
+  onMasquer: (avancement: number) => void;
 }) {
   const etapes = [
     { n: 1 as const, faite: etat.courseCreee, titre: t.onboarding.step1, aide: t.onboarding.step1Hint },
@@ -54,6 +57,16 @@ export function PremiereCourse({
         <Muted style={styles.compteur}>
           {t.onboarding.firstRaceProgress.replace('%n', String(faites))}
         </Muted>
+        {/* Qui s'inscrit pour regarder courir ses amis n'a que faire d'un
+            mode d'emploi permanent (décision PO). Discret, mais réel — et
+            réversible : la carte revient au palier suivant. */}
+        <Pressable
+          onPress={() => onMasquer(faites)}
+          accessibilityRole="button"
+          accessibilityLabel={t.onboarding.hide}
+          style={styles.fermer}>
+          <Muted style={styles.fermerTxt}>✕</Muted>
+        </Pressable>
       </View>
       <Muted>{t.onboarding.firstRaceLead}</Muted>
 
@@ -103,8 +116,19 @@ export function PremiereCourse({
 }
 
 const styles = StyleSheet.create({
-  tete: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  compteur: { fontVariant: ['tabular-nums'], fontWeight: '800' },
+  tete: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  compteur: { flex: 1, textAlign: 'right', fontVariant: ['tabular-nums'], fontWeight: '800' },
+  // 44 px, avec une marge négative pour que la croix reste optiquement au bord
+  // de la carte malgré sa zone élargie.
+  fermer: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    marginRight: -spacing.xs,
+    marginVertical: -spacing.sm,
+  },
+  fermerTxt: { fontSize: 15 },
   etapes: { marginTop: spacing.sm, gap: spacing.xs },
   etape: {
     flexDirection: 'row',
@@ -120,12 +144,12 @@ const styles = StyleSheet.create({
   },
   etapeActive: { backgroundColor: colors.surface2, borderColor: colors.line2 },
   puce: { width: 18, textAlign: 'center', color: colors.inkDim2, fontWeight: '800' },
-  puceFaite: { color: colors.accent },
+  puceFaite: { color: colors.accentTexte },
   puceActive: { color: colors.ink },
   texte: { flex: 1 },
   titre: { color: colors.inkDim, fontWeight: '700' },
   titreFait: { color: colors.inkDim2, textDecorationLine: 'line-through' },
   titreActif: { color: colors.ink },
   aide: { fontSize: 12 },
-  action: { color: colors.accent, fontWeight: '800', fontSize: 13 },
+  action: { color: colors.accentTexte, fontWeight: '800', fontSize: 13 },
 });

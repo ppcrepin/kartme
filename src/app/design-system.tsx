@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   calDay: { fontFamily: fonts.serifBlack, fontSize: 18, color: colors.ink },
-  calMonth: { color: colors.accent, marginTop: -2 },
+  calMonth: { color: colors.accentTexte, marginTop: -2 },
   grades: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
   grade: { alignItems: 'center', width: 72, gap: spacing.xs },
   gradeName: { textAlign: 'center', fontSize: 11 },

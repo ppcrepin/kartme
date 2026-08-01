@@ -738,6 +738,7 @@ export const fr = {
     step2Hint: 'Tes amis en un tap ; les autres, au pseudo ou en invité.',
     step3: 'Saisir le classement',
     step3Hint: 'L’ordre d’arrivée — les points s’échangent tout seuls.',
+    hide: 'Masquer cette aide',
     go: 'C’est parti',
     resume: 'Continuer',
   },

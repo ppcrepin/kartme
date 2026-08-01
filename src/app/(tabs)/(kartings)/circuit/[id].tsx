@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   rule: { width: 64 },
   recordRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.md, marginVertical: spacing.xs },
   recordTime: { fontFamily: fonts.sans, fontSize: 28, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  holder: { color: colors.accent, fontWeight: '700' },
+  holder: { color: colors.accentTexte, fontWeight: '700' },
   tabsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm },
   tab: { paddingVertical: 4, paddingHorizontal: spacing.sm, borderRadius: radius.sharp, backgroundColor: colors.surface },
   tabOn: { backgroundColor: colors.accent },
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   rank: { width: 18, textAlign: 'right', fontVariant: ['tabular-nums'] },
   time: { fontVariant: ['tabular-nums'], fontWeight: '700' },
   lifeTitle: { marginTop: spacing.sm },
-  reportLink: { color: colors.accent, fontWeight: '700' },
+  reportLink: { color: colors.accentTexte, fontWeight: '700' },
   attrib: { fontSize: 11 },
   flex: { flex: 1 },
 });

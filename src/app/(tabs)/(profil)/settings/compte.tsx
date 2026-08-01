@@ -267,8 +267,8 @@ const styles = StyleSheet.create({
   hint: { marginTop: spacing.xs },
   ok: { color: colors.pos },
   action: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xs },
-  unblock: { color: colors.accent, fontWeight: '800' },
+  unblock: { color: colors.accentTexte, fontWeight: '800' },
   photoRow: { flexDirection: 'row', gap: spacing.md, marginTop: 2 },
-  photoLink: { color: colors.accent, fontWeight: '700', fontSize: 12 },
+  photoLink: { color: colors.accentTexte, fontWeight: '700', fontSize: 12 },
   photoError: { color: states.err, fontSize: 12, marginTop: 2 },
 });

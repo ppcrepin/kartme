@@ -78,7 +78,7 @@ export default function BadgesScreen() {
                 color={detail.got ? colors.accent : colors.inkDim}
               />
               <View style={styles.flex}>
-                <Body style={[styles.detailName, detail.got && { color: colors.accent }]}>
+                <Body style={[styles.detailName, detail.got && { color: colors.accentTexte }]}>
                   {detail.item.name}
                 </Body>
                 <Muted>{detail.item.condition}</Muted>

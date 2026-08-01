@@ -24,7 +24,7 @@ import {
 } from '@/lib/profile';
 
 const fmtDelta = (d: number) => (d > 0 ? `▲ +${d}` : d < 0 ? `▼ ${d}` : '—');
-const deltaColor = (d: number) => (d > 0 ? colors.pos : d < 0 ? colors.accent : colors.inkDim);
+const deltaColor = (d: number) => (d > 0 ? colors.pos : d < 0 ? colors.accentTexte : colors.inkDim);
 // 5 dernières courses (décision PO 2026-07-30) : le profil complet tient d'un
 // coup ; l'historique entier vit sur son propre écran.
 const HISTORY_CAP = 5;

@@ -90,5 +90,5 @@ const styles = StyleSheet.create({
   invitation: { color: colors.gold, fontWeight: '700' },
   linkCenter: { alignItems: 'center', paddingVertical: spacing.sm },
   linkTxt: { color: colors.inkDim },
-  error: { color: colors.accent },
+  error: { color: colors.accentTexte },
 });

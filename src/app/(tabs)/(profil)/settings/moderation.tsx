@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   renameBox: { marginTop: spacing.sm, gap: spacing.sm },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm, alignItems: 'center' },
   circuitsTitle: { marginTop: spacing.lg },
-  deleteLink: { color: colors.accent, marginTop: spacing.sm, textDecorationLine: 'underline' },
+  deleteLink: { color: colors.accentTexte, marginTop: spacing.sm, textDecorationLine: 'underline' },
   resolveRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
