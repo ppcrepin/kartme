@@ -149,33 +149,52 @@ export default function CompteScreen() {
         {/* Identité : photo + e-mail (déménagés depuis le Profil, A17) */}
         <Card>
           <View style={styles.row}>
-            <Avatar name={initialName || '?'} size={44} uri={avatarUrl} cacheKey={avatarPath} />
+            {/* La PHOTO est le bouton. Taper une photo pour la changer est un
+                geste universel : l'écrire à côté était un mot de plus à lire
+                pour une chose qu'on fait sans y penser (retour de test
+                2026-08-01). Le lien ne survit que pour AJOUTER une première
+                photo — un rond d'initiales, lui, n'annonce rien. */}
+            {avatarPickSupported() ? (
+              <Pressable
+                onPress={onPickPhoto}
+                disabled={photoBusy}
+                accessibilityRole="button"
+                accessibilityLabel={t.profile.photoChangeA11y}
+                aria-disabled={photoBusy}
+                aria-busy={photoBusy}
+                style={styles.photoZone}>
+                <Avatar name={initialName || '?'} size={44} uri={avatarUrl} cacheKey={avatarPath} />
+              </Pressable>
+            ) : (
+              <Avatar name={initialName || '?'} size={44} uri={avatarUrl} cacheKey={avatarPath} />
+            )}
             <View style={styles.flex}>
               {session?.user.email ? <Muted>{session.user.email}</Muted> : null}
               {avatarPickSupported() ? (
                 <View style={styles.photoRow}>
-                  <Pressable
-                    onPress={onPickPhoto}
-                    disabled={photoBusy}
-                    accessibilityRole="button"
-                    accessibilityLabel={t.profile.photoChangeA11y}
-                    aria-disabled={photoBusy}
-                    aria-busy={photoBusy}>
-                    <Muted style={styles.photoLink}>
-                      {photoBusy
-                        ? t.profile.photoBusy
-                        : avatarPath
-                          ? t.profile.photoChange
-                          : t.profile.photoAdd}
-                    </Muted>
-                  </Pressable>
+                  {/* Sans photo, ou pendant l'envoi : un mot reste nécessaire. */}
+                  {photoBusy || !avatarPath ? (
+                    <Pressable
+                      onPress={onPickPhoto}
+                      disabled={photoBusy}
+                      accessibilityRole="button"
+                      accessibilityLabel={t.profile.photoChangeA11y}
+                      aria-disabled={photoBusy}
+                      aria-busy={photoBusy}
+                      style={styles.photoLienZone}>
+                      <Muted style={styles.photoLink}>
+                        {photoBusy ? t.profile.photoBusy : t.profile.photoAdd}
+                      </Muted>
+                    </Pressable>
+                  ) : null}
                   {avatarPath ? (
                     <Pressable
                       onPress={onRemovePhoto}
                       disabled={photoBusy}
                       accessibilityRole="button"
                       accessibilityLabel={t.profile.photoRemoveA11y}
-                      aria-disabled={photoBusy}>
+                      aria-disabled={photoBusy}
+                      style={styles.photoLienZone}>
                       <Muted style={styles.photoLink}>{t.profile.photoRemove}</Muted>
                     </Pressable>
                   ) : null}
@@ -270,6 +289,10 @@ const styles = StyleSheet.create({
   action: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xs },
   unblock: { color: colors.accentTexte, fontWeight: '800' },
   photoRow: { flexDirection: 'row', gap: spacing.md, marginTop: 2 },
+  // La photo est tapable : 44 px autour d'un avatar de 44, et une marge
+  // négative pour que la carte ne s'écarte pas.
+  photoZone: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  photoLienZone: { minHeight: 44, justifyContent: 'center' },
   photoLink: { color: colors.accentTexte, fontWeight: '700', fontSize: 12 },
   photoError: { color: states.err, fontSize: 12, marginTop: 2 },
 });

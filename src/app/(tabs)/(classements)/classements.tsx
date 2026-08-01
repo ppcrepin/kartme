@@ -345,7 +345,17 @@ function RangRow({
           </Muted>
         )
       }
-      right={!calibrating ? <GradeMedal grade={grade} size={24} /> : undefined}
+      right={
+        // Un chevron, même discret. La ligne EST tapable — elle ouvre la fiche
+        // du pilote — mais RIEN ne le disait : un testeur en a conclu que le
+        // classement n'était pas cliquable (retour 2026-08-01). La médaille
+        // occupait seule la colonne de droite, et une médaille n'a jamais
+        // signifié « ouvre-moi ».
+        <View style={styles.rowRight}>
+          {!calibrating ? <GradeMedal grade={grade} size={24} /> : null}
+          <Muted style={styles.chevron}>›</Muted>
+        </View>
+      }
     />
   );
   // Ma ligne : fond surligné, coins doux — le regard la trouve sans lire.
@@ -356,6 +366,8 @@ const styles = StyleSheet.create({
   filters: { flexDirection: 'row', gap: spacing.sm },
   list: { gap: spacing.sm, paddingBottom: spacing.xxl * 2, paddingTop: spacing.xs },
   rank: { fontFamily: fonts.serifBlack, fontSize: 16, color: colors.inkDim, minWidth: 26, textAlign: 'center' },
+  rowRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  chevron: { fontSize: 18, lineHeight: 20 },
   rowName: { fontSize: 14, lineHeight: 18, fontWeight: '600' },
   rowSub: { fontSize: 11, lineHeight: 14 },
   meRow: {

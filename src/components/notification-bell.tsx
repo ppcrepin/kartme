@@ -79,24 +79,31 @@ const styles = StyleSheet.create({
   // 44 px : la cloche mesurait 32 × 32. C'est la porte de « on t'attend » et
   // de « ça bouge » — et `hitSlop` est inerte sur web.
   wrap: { padding: spacing.xs, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  // Les deux pastilles vivaient SUR la cloche : à 24 px, elles en recouvraient
+  // la moitié droite et il ne restait qu'un amas de ronds — un testeur l'a
+  // prise pour un menu d'options (retour 2026-08-01). Elles sortent donc du
+  // pictogramme, qui redevient une cloche reconnaissable.
   badge: {
     position: 'absolute',
-    top: -2,
-    right: -4,
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 4,
-    borderRadius: 9,
+    // Débordent LÉGÈREMENT de la zone de 44 px : posées à ras, elles mangeaient
+    // encore un quart du pictogramme. À -3, la cloche garde sa silhouette et
+    // les compteurs restent parfaitement lisibles.
+    top: -3,
+    right: -3,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 3,
+    borderRadius: 8,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   // Blanc, comme le libellé des boutons primaires : #0a0706 sur #e10600
   // tombe à ~3,7:1, sous le minimum AA pour du 11 px.
-  badgeTxt: { fontSize: 11, fontWeight: '800', color: '#ffffff', lineHeight: 14 },
+  badgeTxt: { fontSize: 10, fontWeight: '800', color: '#ffffff', lineHeight: 13 },
   // « Ça bouge » : or, EN BAS de la cloche. `top` explicite : sur web,
   // `top: undefined` n'efface pas le `top: -2` du style de base et les deux
   // pastilles se superposaient — l'or recouvrait le rouge (audit navigateur).
-  badgeFeed: { top: 16, backgroundColor: colors.gold },
-  badgeFeedTxt: { fontSize: 11, fontWeight: '800', color: '#0a0706', lineHeight: 14 },
+  badgeFeed: { top: 'auto', bottom: -3, backgroundColor: colors.gold },
+  badgeFeedTxt: { fontSize: 10, fontWeight: '800', color: '#0a0706', lineHeight: 13 },
 });

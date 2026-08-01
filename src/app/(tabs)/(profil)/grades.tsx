@@ -10,7 +10,17 @@ import { t } from '@/i18n';
 import { GRADES, gradeForElo } from '@/lib/grade';
 import { getMyProfile } from '@/lib/profile';
 
-/** R2 — l'échelle des 6 grades, avec la position du joueur. */
+/**
+ * R2 — l'échelle des 6 grades, avec la position du joueur.
+ *
+ * Vit dans l'onglet PROFIL, et non plus Classement. On n'y accède que d'un
+ * endroit — le bouton « L'échelle des grades » du profil — et chaque onglet
+ * porte sa propre pile : depuis Classement, l'ouvrir CHANGEAIT d'onglet, si
+ * bien que le « ← » remontait la pile du classement et déposait le pilote sur
+ * le tableau des scores au lieu de son profil (retour de test 2026-08-01).
+ *
+ * Le repli de sortie suit : `/profil`, jamais `/classements`.
+ */
 export default function GradesScreen() {
   const router = useRouter();
   const [myElo, setMyElo] = useState<number | null>(null);
@@ -29,10 +39,11 @@ export default function GradesScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
         <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/classements'))}
+          // Lien profond (PWA relancée) : sans historique, on remonte au
+          // profil — l'écran d'où l'on vient toujours.
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/profil'))}
           accessibilityRole="button"
           accessibilityLabel="Retour"
-          hitSlop={10}
           style={styles.back}>
           <Muted>←</Muted>
         </Pressable>
@@ -67,7 +78,16 @@ export default function GradesScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl * 2 },
-  back: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
+  // 44 px, marge négative pour rester optiquement au bord. `hitSlop` est
+  // inerte sur `Pressable` en react-native-web.
+  back: {
+    alignSelf: 'flex-start',
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    marginLeft: -spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
   list: { gap: spacing.sm, marginTop: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   flex: { flex: 1 },
