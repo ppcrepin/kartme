@@ -107,14 +107,35 @@ export default function ProfilScreen() {
                 {gp.current.name} · {profile.elo}
               </Body>
             </View>
-            <GradeMedal grade={gp.current} size={42} />
+            <GradeMedal grade={gp.current} size={42} explicable elo={profile.elo} />
           </View>
 
-          <Gauge value={gp.progress} color={gp.current.color} />
+          {/* La part vide prend la teinte du grade VISÉ, et son nom s'écrit
+              dans la même couleur juste dessous : la jauge montait vers rien
+              qu'on puisse nommer (retour de test 2026-08-01). */}
+          <Gauge
+            value={gp.progress}
+            color={gp.current.color}
+            couleurSuivante={gp.next?.color}
+          />
           <Muted style={styles.nextGrade}>
-            {gp.next
-              ? t.profile.nextGrade.replace('%n', String(gp.remaining)).replace('%g', gp.next.name)
-              : t.profile.maxGrade}
+            {gp.next ? (
+              (() => {
+                const [avant, apres] = t.profile.nextGrade
+                  .replace('%n', String(gp.remaining))
+                  .replace('%s', String(gp.next.min))
+                  .split('%g');
+                return (
+                  <>
+                    {avant}
+                    <Muted style={{ color: gp.next.colorTexte }}>{gp.next.name}</Muted>
+                    {apres}
+                  </>
+                );
+              })()
+            ) : (
+              t.profile.maxGrade
+            )}
           </Muted>
           {isCalibrating(stats.races) ? (
             <Muted style={styles.nextGrade}>
@@ -122,7 +143,13 @@ export default function ProfilScreen() {
             </Muted>
           ) : null}
 
-          {curve.length > 0 ? <EloCurve points={curve} height={72} /> : null}
+          {curve.length > 0 ? (
+            <EloCurve
+              points={curve}
+              height={72}
+              seuil={gp.next ? { valeur: gp.next.min, couleur: gp.next.color } : null}
+            />
+          ) : null}
         </Card>
 
         {/* ── Stats en 4 colonnes — les badges rejoignent la rangée (L6) : le

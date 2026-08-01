@@ -415,7 +415,9 @@ export const fr = {
     photoUnreadable: 'Format non reconnu (HEIC d’iPhone ?). Essaie un JPEG ou un PNG.',
     photoRemoveA11y: 'Retirer ma photo de profil',
     eloLabel: 'Elo',
-    nextGrade: 'plus que %n → %g',
+    // %s = l'Elo à atteindre. Le repère chiffré manquait : « plus que 90 »
+    // ne dit pas 90 vers QUOI (retour de test 2026-08-01).
+    nextGrade: 'Encore %n pts → %g, à partir de %s',
     maxGrade: 'Grade maximal atteint 🏆',
     // Période de calibration : les 5 premières courses, le niveau se règle vite.
     calibrating: 'En calibration',
@@ -435,6 +437,26 @@ export const fr = {
     gradesLadder: 'Échelle des grades',
     gradesLadderSub: 'Six grades, du bitume à la légende. Ton Elo décide.',
     you: 'toi',
+  },
+  // Les fiches qui s'ouvrent au tap sur un médaillon de grade ou un badge
+  // (retour de test 2026-08-01 : « je ne comprends pas ce que valent les
+  // grades »). Le vocabulaire y est celui d'un joueur, pas celui d'un moteur
+  // de classement : ni « somme nulle », ni « palier », ni « borne ».
+  explications: {
+    gradeTitre: 'Ton niveau',
+    gradeAria: '%g — voir ce que vaut ce grade',
+    // %e = plage d'Elo du grade.
+    plage: 'Elo %e',
+    plageOuverte: 'Elo %m et au-delà',
+    quoi:
+      'Ton Elo est un compteur de points : tu en gagnes en battant des pilotes inscrits, tu en perds quand ils te battent. Le grade, c’est le nom que prend ce compteur.',
+    tonElo: 'Ton Elo : %e',
+    ilTeReste: 'Encore %n avant %g.',
+    auSommet: 'Tu es tout en haut de l’échelle. Il n’y a plus rien au-dessus.',
+    echelle: 'Les six grades',
+    badgeTitre: 'Ce badge',
+    badgeObtenu: 'Décroché le %d.',
+    badgeAFaire: 'Pas encore décroché.',
   },
   badges: {
     title: 'Badges',
@@ -611,7 +633,10 @@ export const fr = {
     creditsFont: 'Police Fraunces, sous licence SIL Open Font License.',
     faqTitle: 'Questions fréquentes',
     faq: [
-      { q: 'Comment mon Elo est-il calculé ?', a: 'À chaque course, tu échanges des points avec les autres pilotes inscrits selon votre classement d’arrivée : battre plus fort rapporte plus. Les scores sont à somme nulle entre inscrits.' },
+      // Réécrit sans jargon (retour de test 2026-08-01 : « l'explication de
+      // l'Elo est trop technique »). « Somme nulle » disait la vérité, mais
+      // pas à quelqu'un qui vient de finir sa première course.
+      { q: 'Comment mon Elo est-il calculé ?', a: 'À chaque course, les pilotes inscrits se passent des points selon l’ordre d’arrivée : ceux que tu bats t’en donnent, ceux qui te battent t’en prennent. Battre plus fort que soi rapporte beaucoup ; battre plus faible rapporte peu. Ce que tu gagnes, quelqu’un le perd : rien n’est créé, rien ne disparaît.' },
       { q: 'Pourquoi un joueur non inscrit ne me fait pas gagner de points ?', a: 'Pour empêcher la triche, l’Elo ne s’échange qu’entre comptes inscrits. Les pilotes « invités » comptent dans la course mais pas dans l’Elo.' },
       { q: 'Qui peut voir mon profil ?', a: 'Par défaut tout le monde. Passe ton profil en « privé » dans Compte pour ne le montrer qu’à tes amis.' },
       { q: 'Comment corriger un classement erroné ?', a: 'Une fois validé, un classement est définitif — pour préserver l’Elo de tous. Vérifie bien l’ordre avant de valider ; en cas d’erreur manifeste, contacte l’éditeur.' },

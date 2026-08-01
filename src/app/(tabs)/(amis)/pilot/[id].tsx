@@ -205,7 +205,13 @@ export default function PilotScreen() {
                     </Muted>
                   )}
                 </View>
-                {calibrating ? null : <GradeMedal grade={grade} size={46} />}
+                {/* Tapable : le grade d'un AUTRE pilote est celui qu'on
+                    comprend le moins — c'est là qu'on se demande « ça vaut
+                    quoi, Missile des Stands ? ». L'Elo n'est passé que s'il
+                    est exact (profil privé : on ne situe pas dans le grade). */}
+                {calibrating ? null : (
+                  <GradeMedal grade={grade} size={46} explicable elo={pilot.eloExact ? pilot.elo : null} />
+                )}
               </View>
               {pilot.isPrivate && !pilot.eloExact ? (
                 <Muted style={styles.privateNote}>{t.friends.privateProfile}</Muted>

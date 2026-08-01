@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 
+import { FournisseurExplications } from '@/components/explications';
 import { TabIcon } from '@/components/tab-icon';
 import { colors } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -23,6 +24,10 @@ const teinteIcone = (couleur: unknown) =>
 
 export default function TabsLayout() {
   return (
+    // Les fiches d'explication (grade, badge) sont montées UNE fois, ici :
+    // le médaillon de grade apparaît sur six écrans répartis dans quatre
+    // onglets, et une feuille par écran aurait garanti l'oubli de l'un d'eux.
+    <FournisseurExplications>
     <Tabs
       // Sans ça, un navigateur d'onglets renvoie au PREMIER onglet sur
       // `router.back()` (backBehavior par défaut : firstRoute) : un « ← »
@@ -75,5 +80,6 @@ export default function TabsLayout() {
         options={{ title: t.tabs.profile, tabBarIcon: ({ color }) => <TabIcon name="profile" color={teinteIcone(color)} /> }}
       />
     </Tabs>
+    </FournisseurExplications>
   );
 }

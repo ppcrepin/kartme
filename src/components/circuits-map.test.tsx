@@ -23,6 +23,11 @@ const mockCarte: any = {
   getZoom: jest.fn(() => 5),
   on: jest.fn(),
   getContainer: jest.fn(() => mockConteneur),
+  // Le recadrage sur une sélection hors champ interroge les bornes de la vue.
+  // Sans ces deux-là, l'effet levait `getBounds is not a function` et faisait
+  // tomber le test — un faux Leaflet doit suivre ce que le composant appelle.
+  getBounds: jest.fn(() => ({ pad: () => ({ contains: () => true }) })),
+  panTo: jest.fn(),
 };
 
 jest.mock(

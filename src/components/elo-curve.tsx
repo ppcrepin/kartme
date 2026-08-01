@@ -18,19 +18,40 @@ const PAD = 10;
  * chute sans dire si le pilote avait mal couru ou s'il n'avait pas fini — deux
  * choses très différentes, et impossibles à démêler six mois plus tard.
  */
-export function EloCurve({ points, height = 120 }: { points: EloPoint[]; height?: number }) {
+export function EloCurve({
+  points,
+  height = 120,
+  seuil,
+}: {
+  points: EloPoint[];
+  height?: number;
+  /**
+   * Le prochain palier à franchir. La courbe disait où l'on est passé, jamais
+   * où l'on va — « il manque des repères » (retour de test 2026-08-01). Sa
+   * valeur entre dans l'échelle verticale : un trait hors cadre ne repérerait
+   * rien.
+   */
+  seuil?: { valeur: number; couleur: string } | null;
+}) {
   const HEIGHT = height;
   const [width, setWidth] = useState(0);
   const values = [1000, ...points.map((p) => p.elo)];
 
   if (values.length < 2) return null;
 
+  // Deux échelles, et c'est délibéré. La LÉGENDE dit le min et le max
+  // RÉELLEMENT atteints : y glisser le seuil ferait afficher « max 1300 » à un
+  // pilote qui n'a jamais dépassé 1250 — la courbe mentirait pour dessiner un
+  // repère. Le DESSIN, lui, doit contenir le trait du seuil, sinon il tombe
+  // hors cadre et ne repère rien.
   const min = Math.min(...values);
   const max = Math.max(...values);
-  const span = Math.max(max - min, 20); // évite une ligne écrasée à ±0
+  const basDessin = seuil ? Math.min(min, seuil.valeur) : min;
+  const hautDessin = seuil ? Math.max(max, seuil.valeur) : max;
+  const span = Math.max(hautDessin - basDessin, 20); // évite une ligne écrasée à ±0
 
   const x = (i: number) => PAD + (i * (width - 2 * PAD)) / (values.length - 1);
-  const y = (v: number) => HEIGHT - PAD - ((v - min) / span) * (HEIGHT - 2 * PAD);
+  const y = (v: number) => HEIGHT - PAD - ((v - basDessin) / span) * (HEIGHT - 2 * PAD);
 
   const svgPoints = values.map((v, i) => `${x(i)},${y(v)}`).join(' ');
   const last = values[values.length - 1];
@@ -50,6 +71,20 @@ export function EloCurve({ points, height = 120 }: { points: EloPoint[]; height?
               strokeWidth={1}
               strokeDasharray="4 5"
             />
+            {/* Le palier visé, dans la couleur du grade d'après : c'est la
+                seule ligne de la courbe qui parle du FUTUR. */}
+            {seuil ? (
+              <Line
+                x1={PAD}
+                y1={y(seuil.valeur)}
+                x2={width - PAD}
+                y2={y(seuil.valeur)}
+                stroke={seuil.couleur}
+                strokeWidth={1.5}
+                strokeDasharray="2 4"
+                opacity={0.75}
+              />
+            ) : null}
             <Polyline
               points={svgPoints}
               fill="none"

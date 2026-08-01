@@ -50,7 +50,7 @@ export default function GradesScreen() {
             return (
               <Card key={g.key} style={mine ? { borderColor: g.color } : undefined}>
                 <View style={styles.row}>
-                  <GradeMedal grade={g} size={44} />
+                  <GradeMedal grade={g} size={44} explicable elo={mine ? myElo : null} />
                   <View style={styles.flex}>
                     <Body style={[styles.name, { color: g.colorTexte }]}>{g.name}</Body>
                     <Muted>
