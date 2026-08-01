@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Image, Platform, Share, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, Image, StyleSheet, View } from 'react-native';
 
 import { Button, Card } from '@/components/ui';
 import { Label, Muted } from '@/components/ui/text';
@@ -17,12 +17,19 @@ import { ecrireDelta, hauteurPodium, imagePodium, LARGEUR, type DonneesPodium } 
  * image à des gens, et personne n'envoie à l'aveugle quelque chose qui porte
  * son propre résultat.
  *
- * Trois chemins de sortie, du meilleur au moindre :
- *   1. partage natif AVEC le fichier (Android, iOS) — l'image arrive dans la
- *      conversation ;
- *   2. téléchargement (ordinateur) — on la joint soi-même ;
- *   3. si le navigateur ne sait pas dessiner, la carte ne s'affiche pas du
- *      tout et le partage texte, qui existe toujours, reste seul.
+ * WEB SEULEMENT, et c'est assumé (arbitrage PO 2026-08-01). L'image est
+ * dessinée sur un `canvas`, qui n'existe pas dans le rendu natif : sur une
+ * application iOS/Android, `imagePodium` renvoie `null`, la carte ne s'affiche
+ * pas, et le partage par LIEN — qui vit dans `ShareCard`, juste en dessous —
+ * reste seul. La bêta tourne dans le navigateur ; le jour où une application
+ * native sortira, il faudra `react-native-view-shot` + `expo-sharing`, et donc
+ * un SECOND chemin de rendu à maintenir. Mieux vaut ne rien promettre ici que
+ * de garder un repli qui n'en est pas un.
+ *
+ * Deux chemins de sortie sur le web, du meilleur au moindre :
+ *   1. partage natif du navigateur AVEC le fichier (mobile) — l'image arrive
+ *      dans la conversation ;
+ *   2. téléchargement (ordinateur) — on la joint soi-même.
  */
 export function PartagePodium({ donnees }: { donnees: DonneesPodium }) {
   const [image, setImage] = useState<string | null>(null);
@@ -83,10 +90,10 @@ export function PartagePodium({ donnees }: { donnees: DonneesPodium }) {
     if (!image) return;
     track('share_clicked', { kind: 'podium' }).catch(() => {});
 
-    if (Platform.OS !== 'web' || typeof navigator === 'undefined') {
-      await Share.share({ message: donnees.partage });
-      return;
-    }
+    // Pas de branche native : sans `document`, `imagePodium` a déjà renvoyé
+    // `null` et le composant n'est pas monté. Un repli écrit ici serait du code
+    // mort — et il envoyait `kartsquad://`, c'est-à-dire rien d'exploitable.
+    if (typeof navigator === 'undefined' || typeof document === 'undefined') return;
 
     // Le partage de FICHIER est tenté à part, et son échec ne doit pas emporter
     // le téléchargement : `new File(...)` n'existe pas partout (WebView
