@@ -343,15 +343,18 @@ export default function RankScreen() {
         ) : (
           <>
             <Title>{isCorrect ? t.races.correctTitle : t.races.rankingTitle}</Title>
-            <Muted>
-              {isCorrect ? t.races.correctHint : mode === 'drag' ? t.races.dragHint : t.races.tapHint}
-            </Muted>
-            {isLocked && !isCorrect ? <Muted>{t.races.lockedRankHint}</Muted> : null}
 
             {/* Le choix du geste vit AU-DESSUS de la liste. Il était un lien
                 gris SOUS les pilotes : avec six ou huit noms, il tombait hors
                 écran au moment précis où l'on galère. Un testeur est resté
-                bloqué sur le glisser sans savoir que l'autre mode existait. */}
+                bloqué sur le glisser sans savoir que l'autre mode existait.
+
+                Et il vient AVANT le mode d'emploi, pas après : le texte du
+                glisser fait deux lignes là où celui du toucher n'en fait
+                qu'une, si bien que choisir un mode faisait DESCENDRE les deux
+                pastilles — le bouton fuyait sous le doigt qui venait de le
+                toucher. Ancrées sous le titre, elles ne bougent plus, et le
+                mode d'emploi peut respirer autant qu'il veut. */}
             {!isCorrect ? (
               <View style={styles.modeRow} accessibilityRole="radiogroup">
                 {(['tap', 'drag'] as const).map((m) => (
@@ -373,6 +376,14 @@ export default function RankScreen() {
                 ))}
               </View>
             ) : null}
+
+            {/* Le mode d'emploi du geste choisi, juste au-dessus de la liste
+                qu'il décrit. C'est LUI qui change de hauteur d'un mode à
+                l'autre : il est donc placé sous ce qui ne doit pas bouger. */}
+            <Muted>
+              {isCorrect ? t.races.correctHint : mode === 'drag' ? t.races.dragHint : t.races.tapHint}
+            </Muted>
+            {isLocked && !isCorrect ? <Muted>{t.races.lockedRankHint}</Muted> : null}
 
             {mode === 'drag' ? (
               <DragList
