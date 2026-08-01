@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BadgeIcon, Card } from '@/components/ui';
+import { BadgeIcon, BoutonRetour, Card } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, radius, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -29,14 +29,7 @@ export default function BadgesScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/profil'))}
-          accessibilityRole="button"
-          accessibilityLabel="Retour"
-          hitSlop={10}
-          style={styles.back}>
-          <Muted>←</Muted>
-        </Pressable>
+        <BoutonRetour onPress={() => (router.canGoBack() ? router.back() : router.replace('/profil'))} />
         <Title>{t.badges.title}</Title>
         <Muted>{t.badges.subtitle}</Muted>
         {unlocked ? (
@@ -99,7 +92,6 @@ export default function BadgesScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl * 2 },
-  back: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
   progress: { marginTop: spacing.xs },
   grid: {
     flexDirection: 'row',

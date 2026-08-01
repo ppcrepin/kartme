@@ -164,8 +164,13 @@ export default function ClassementsScreen() {
   }
 
   function openPilot(row: LeaderboardRow) {
-    if (row.isMe) router.push('/profil');
-    else if (row.pilotId) router.push(`/pilot/${row.pilotId}`);
+    // MA ligne ne navigue plus. Elle envoyait sur l'onglet Profil, qui est une
+    // RACINE d'onglet : zéro bouton retour, mesuré au navigateur. On tape une
+    // ligne de liste et on se retrouve téléporté, sans marche arrière. Et tout
+    // ce qu'elle promettait est déjà dans la carte « Ma position » juste
+    // au-dessus. Le chevron disparaît avec elle (voir `RangRow`).
+    if (row.isMe) return;
+    if (row.pilotId) router.push(`/pilot/${row.pilotId}`);
   }
 
   function switchScope(sc: LeaderboardScope) {
@@ -351,9 +356,18 @@ function RangRow({
         // classement n'était pas cliquable (retour 2026-08-01). La médaille
         // occupait seule la colonne de droite, et une médaille n'a jamais
         // signifié « ouvre-moi ».
-        <View style={styles.rowRight}>
+        //
+        // Il n'apparaît QUE si la ligne mène quelque part : ni sur la mienne
+        // (elle ne navigue plus), ni sur une ligne sans identifiant. Promettre
+        // une navigation qui n'arrive pas est pire que ne rien promettre — et
+        // les deux autres listes du dépôt conditionnent déjà leur chevron.
+        //
+        // `aria-hidden` : sans lui, le glyphe entre dans le nom accessible de
+        // la ligne, déjà composé du rang, des initiales, du pseudo, du grade
+        // et de l'Elo. Un lecteur d'écran finissait sur « guillemet fermant ».
+        <View style={styles.rowRight} aria-hidden>
           {!calibrating ? <GradeMedal grade={grade} size={24} /> : null}
-          <Muted style={styles.chevron}>›</Muted>
+          {!row.isMe && row.pilotId ? <Muted style={styles.chevron}>›</Muted> : null}
         </View>
       }
     />

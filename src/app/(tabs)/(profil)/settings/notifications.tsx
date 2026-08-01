@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Banner, Button, Card } from '@/components/ui';
+import { Banner, BoutonRetour, Button, Card } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -80,12 +80,9 @@ export default function NotificationsSettingsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable
+        <BoutonRetour
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings'))}
-          accessibilityRole="button"
-          style={styles.back}>
-          <Muted>←</Muted>
-        </Pressable>
+        />
         <Title>{t.notifications.title}</Title>
         <Muted>{t.notifications.intro}</Muted>
 
@@ -188,7 +185,6 @@ function PrefRow({
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl * 2 },
-  back: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
   section: { gap: spacing.sm },
   prefRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm },
   flex: { flex: 1 },

@@ -1,6 +1,7 @@
 export { Avatar } from './avatar';
 export { BadgeIcon, type BadgeKey } from './badge-icon';
 export { Banner, type BannerKind } from './banner';
+export { BoutonRetour } from './bouton-retour';
 export { Button } from './button';
 export { Card } from './card';
 export { CheckeredRule } from './checkered-rule';

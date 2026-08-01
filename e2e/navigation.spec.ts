@@ -52,11 +52,44 @@ test('une ligne de classement DIT qu’elle s’ouvre, et elle s’ouvre', async
 
   await ligne.click();
   await expect(page).toHaveURL(/pilot\/u2/, { timeout: 15_000 });
+
+  // Et le chemin du RETOUR, qui est là où le doute portait : la fiche pilote
+  // vit dans l'onglet Amis, donc l'ouvrir depuis le classement change
+  // d'onglet. Mesuré : le « ← » ramène bien au classement, et l'onglet
+  // redevient Classement. Ce test l'écrit, pour qu'on cesse d'en douter.
+  await page.getByLabel('Retour').first().click();
+  await expect(page).toHaveURL(/classements/, { timeout: 15_000 });
+  await expect(page.getByText('Sophie_K', { exact: false }).first()).toBeVisible();
 });
 
-test('la cloche reste une CLOCHE : les pastilles ne la recouvrent pas', async ({ page }) => {
+test('MA ligne de classement ne mène nulle part — et ne le promet pas', async ({ page }) => {
   await sessionSimulee(page);
-  await reseauSimule(page, { 'rpc/unread_notifications_count': 3, 'rpc/unread_feed_count': 2 });
+  await reseauSimule(page, {
+    'rpc/get_leaderboard': CLASSEMENT,
+    'rpc/get_my_rank': [{ rank: 2, elo: 1210, races: 6, total: 2 }],
+  });
+  await page.goto('/classements');
+
+  const maLigne = page.getByRole('button', { name: /Moi/ }).first();
+  await expect(maLigne).toBeVisible({ timeout: 20_000 });
+
+  // Elle envoyait sur l'onglet Profil, qui est une RACINE d'onglet : zéro
+  // bouton retour, mesuré au navigateur. On tapait une ligne de liste et on
+  // se retrouvait téléporté, sans marche arrière. Et tout ce qu'elle
+  // promettait est déjà dans la carte « Ma position », juste au-dessus.
+  await expect(maLigne).not.toContainText('›');
+  await maLigne.click();
+  await page.waitForTimeout(700);
+  await expect(page).toHaveURL(/classements/);
+});
+
+// Deux jeux : le cas courant, et le PIRE — « 99+ » élargit la pastille rouge
+// vers la gauche, donc vers le pictogramme. Le test d'origine n'exerçait que
+// le premier, à sept points du seuil.
+for (const [notifs, fil] of [[3, 2], [128, 20]] as const) {
+test(`la cloche reste une CLOCHE (${notifs}/${fil})`, async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, { 'rpc/unread_notifications_count': notifs, 'rpc/unread_feed_count': fil });
   await page.goto('/');
   await expect(page.getByText('Courses', { exact: true }).and(sceneActive(page)).first()).toBeVisible({
     timeout: 20_000,
@@ -78,9 +111,13 @@ test('la cloche reste une CLOCHE : les pastilles ne la recouvrent pas', async ({
     if (!svg || !bouton) return -1;
     // Part de la surface du pictogramme mangée par les pastilles.
     let pris = 0;
-    for (const p of bouton.querySelectorAll('div')) {
+    // Enfants DIRECTS seulement : `Text` de react-native-web rend lui aussi un
+    // `div`, si bien qu'un `querySelectorAll('div')` comptait chaque pastille
+    // deux fois — sa `View` et son libellé — et gonflait la mesure.
+    for (const p of bouton.children) {
+      if (p.tagName.toLowerCase() === 'svg') continue;
       const r = p.getBoundingClientRect();
-      if (r.width === 0 || r.width > 40) continue; // les pastilles seulement
+      if (r.width === 0) continue;
       const l = Math.max(0, Math.min(r.right, svg.right) - Math.max(r.left, svg.left));
       const h = Math.max(0, Math.min(r.bottom, svg.bottom) - Math.max(r.top, svg.top));
       pris += l * h;
@@ -92,20 +129,42 @@ test('la cloche reste une CLOCHE : les pastilles ne la recouvrent pas', async ({
   expect(recouvrement).toBeGreaterThanOrEqual(0);
   expect(recouvrement).toBeLessThan(0.1);
 });
+}
 
-test('la photo de profil est le bouton — plus besoin de l’écrire', async ({ page }) => {
+test('avec une photo : elle EST le bouton, et un badge le dit', async ({ page }) => {
   await sessionSimulee(page);
   await reseauSimule(page, {
     'rest/v1/profiles': { ...MOI, avatar_path: `${UID}/photo.jpg` },
-    'storage/v1': { signedURL: '/favicon.ico' },
+    // Forme RÉELLE de `createSignedUrls` : un tableau de { path, signedUrl }.
+    // Un bouchon approximatif laissait le rond d'initiales à l'écran, et le
+    // test mesurait donc autre chose que ce qu'il annonçait.
+    'storage/v1': [{ path: `${UID}/photo.jpg`, signedUrl: '/favicon.ico' }],
   });
   await page.goto('/settings/compte');
 
-  // Taper une photo pour la changer est un geste universel : le lien
-  // « Changer la photo » était un mot de plus pour une chose qu'on fait sans
-  // y penser. Il ne survit que pour AJOUTER une première photo.
-  const photo = page.getByRole('button', { name: /photo/i }).first();
+  // Par nom EXACT : « Retirer ma photo de profil » contient aussi « photo »,
+  // et une expression régulière laissait passer la disparition du bouton
+  // qu'on teste.
+  const photo = page.getByRole('button', { name: 'Changer ma photo', exact: true });
   await expect(photo).toBeVisible({ timeout: 20_000 });
   const b = await photo.boundingBox();
   expect(b && b.height >= 44).toBeTruthy();
+
+  // Retirer le lien texte sans rien mettre à la place aurait reproduit le
+  // défaut corrigé au classement : une zone tapable que rien n'annonce. Sur
+  // mobile il n'y a même pas de curseur pour deviner.
+  await expect(photo.getByText('✎')).toBeVisible();
+});
+
+test('sans photo : un seul bouton par action, aux noms distincts', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, { 'rest/v1/profiles': { ...MOI, avatar_path: null } });
+  await page.goto('/settings/compte');
+
+  // Deux portes vers le même sélecteur (l'avatar et le lien) portaient le
+  // MÊME nom accessible : un lecteur d'écran annonçait deux fois la même
+  // chose, et la commande vocale ne pouvait pas les distinguer.
+  await expect(page.getByRole('button', { name: 'Ajouter une photo', exact: true })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Changer ma photo', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Retirer ma photo de profil' })).toHaveCount(0);
 });

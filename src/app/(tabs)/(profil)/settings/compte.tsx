@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Avatar, Banner, Button, Card, Field } from '@/components/ui';
+import { Avatar, Banner, BoutonRetour, Button, Card, Field } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, spacing, states } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -24,6 +24,9 @@ import { validateUsername } from '@/lib/username';
 export default function CompteScreen() {
   const router = useRouter();
   const { session, signOut } = useAuth();
+  // Garde d'entrée de `onPickPhoto` : lue et posée dans le gestionnaire,
+  // jamais au rendu (règle `react-hooks/refs`).
+  const envoiEnCours = useRef(false);
   const [username, setName] = useState('');
   const [initialName, setInitialName] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
@@ -98,16 +101,26 @@ export default function CompteScreen() {
   }
 
   async function onPickPhoto() {
+    // Le verrou arrivait APRÈS l'ouverture du sélecteur : `disabled` ne
+    // protégeait pas l'intervalle entre le tap et le choix du fichier. Avec
+    // deux portes vers cette fonction (la photo ET le lien), deux envois
+    // concurrents devenaient possibles — le premier `finally` rendait la main
+    // pendant que le second travaillait encore, et « Envoi en cours… »
+    // disparaissait trop tôt. Un `ref` : un état ne se lit pas assez vite pour
+    // garder l'entrée d'une fonction.
+    if (envoiEnCours.current) return;
+    envoiEnCours.current = true;
     setPhotoError(null);
-    const file = await pickImage();
-    if (!file) return;
     setPhotoBusy(true);
     try {
+      const file = await pickImage();
+      if (!file) return;
       await uploadAvatar(file);
       await load(); // le lien ne rend la main qu'une fois la photo à jour
     } catch (e) {
       setPhotoError(photoErrorLabel(e));
     } finally {
+      envoiEnCours.current = false;
       setPhotoBusy(false);
     }
   }
@@ -137,13 +150,7 @@ export default function CompteScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings'))}
-          accessibilityRole="button"
-          accessibilityLabel="Retour"
-          style={styles.back}>
-          <Muted>←</Muted>
-        </Pressable>
+        <BoutonRetour onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings'))} />
         <Title>{t.account.title}</Title>
 
         {/* Identité : photo + e-mail (déménagés depuis le Profil, A17) */}
@@ -159,11 +166,23 @@ export default function CompteScreen() {
                 onPress={onPickPhoto}
                 disabled={photoBusy}
                 accessibilityRole="button"
-                accessibilityLabel={t.profile.photoChangeA11y}
+                // Le nom accessible DOIT contenir le texte visible du badge —
+                // sinon « taper Changer » en commande vocale ne cible rien
+                // (WCAG 2.5.3). Et il diffère selon qu'il y a une photo ou non,
+                // sans quoi deux boutons portent le même nom.
+                accessibilityLabel={avatarPath ? t.profile.photoChange : t.profile.photoAdd}
                 aria-disabled={photoBusy}
                 aria-busy={photoBusy}
                 style={styles.photoZone}>
                 <Avatar name={initialName || '?'} size={44} uri={avatarUrl} cacheKey={avatarPath} />
+                {/* Le signal qui manquait. Retirer le lien « Changer ma photo »
+                    sans rien mettre à la place aurait reproduit exactement le
+                    défaut qu'on corrige au classement : une zone tapable que
+                    rien n'annonce. Sur mobile il n'y a même pas de curseur
+                    pour deviner. */}
+                <View style={styles.photoBadge}>
+                  <Body style={styles.photoBadgeTxt}>✎</Body>
+                </View>
               </Pressable>
             ) : (
               <Avatar name={initialName || '?'} size={44} uri={avatarUrl} cacheKey={avatarPath} />
@@ -172,21 +191,14 @@ export default function CompteScreen() {
               {session?.user.email ? <Muted>{session.user.email}</Muted> : null}
               {avatarPickSupported() ? (
                 <View style={styles.photoRow}>
-                  {/* Sans photo, ou pendant l'envoi : un mot reste nécessaire. */}
-                  {photoBusy || !avatarPath ? (
-                    <Pressable
-                      onPress={onPickPhoto}
-                      disabled={photoBusy}
-                      accessibilityRole="button"
-                      accessibilityLabel={t.profile.photoChangeA11y}
-                      aria-disabled={photoBusy}
-                      aria-busy={photoBusy}
-                      style={styles.photoLienZone}>
-                      <Muted style={styles.photoLink}>
-                        {photoBusy ? t.profile.photoBusy : t.profile.photoAdd}
-                      </Muted>
-                    </Pressable>
-                  ) : null}
+                  {/* Plus de lien « Ajouter une photo » : le badge ✎ sur
+                      l'avatar porte l'affordance dans les DEUX cas, et le
+                      doubler d'un lien créait deux boutons au même nom
+                      accessible sur le même écran — un lecteur d'écran
+                      annonçait la même chose deux fois, et la commande vocale
+                      ne pouvait pas les départager. Pendant l'envoi, un mot
+                      reste nécessaire : là il ne double rien. */}
+                  {photoBusy ? <Muted style={styles.photoLink}>{t.profile.photoBusy}</Muted> : null}
                   {avatarPath ? (
                     <Pressable
                       onPress={onRemovePhoto}
@@ -280,7 +292,6 @@ export default function CompteScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl * 2 },
-  back: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   blockedRow: { marginTop: spacing.sm },
   flex: { flex: 1 },
@@ -289,9 +300,22 @@ const styles = StyleSheet.create({
   action: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xs },
   unblock: { color: colors.accentTexte, fontWeight: '800' },
   photoRow: { flexDirection: 'row', gap: spacing.md, marginTop: 2 },
-  // La photo est tapable : 44 px autour d'un avatar de 44, et une marge
-  // négative pour que la carte ne s'écarte pas.
+  // La photo est tapable : 44 px autour d'un avatar de 44.
   photoZone: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  photoBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.accent,
+    borderWidth: 2,
+    borderColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoBadgeTxt: { fontSize: 9, lineHeight: 12, color: '#ffffff', fontWeight: '800' },
   photoLienZone: { minHeight: 44, justifyContent: 'center' },
   photoLink: { color: colors.accentTexte, fontWeight: '700', fontSize: 12 },
   photoError: { color: states.err, fontSize: 12, marginTop: 2 },

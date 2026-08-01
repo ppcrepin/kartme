@@ -413,7 +413,6 @@ export const fr = {
     photoTooBig: 'Photo trop lourde — choisis-en une plus légère (20 Mo maximum).',
     photoNotAnImage: 'Ce fichier n’est pas une image.',
     photoUnreadable: 'Format non reconnu (HEIC d’iPhone ?). Essaie un JPEG ou un PNG.',
-    photoChangeA11y: 'Choisir une photo de profil',
     photoRemoveA11y: 'Retirer ma photo de profil',
     eloLabel: 'Elo',
     nextGrade: 'plus que %n → %g',

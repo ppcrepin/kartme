@@ -1,9 +1,9 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Banner, Card } from '@/components/ui';
+import { Banner, BoutonRetour, Card } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -53,13 +53,7 @@ export default function StatsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings'))}
-          accessibilityRole="button"
-          accessibilityLabel="Retour"
-          style={styles.back}>
-          <Muted>←</Muted>
-        </Pressable>
+        <BoutonRetour onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings'))} />
         <Title>{t.stats.title}</Title>
 
         {error ? <Banner kind="err" title={error} /> : null}
@@ -159,7 +153,6 @@ export default function StatsScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl * 2 },
-  back: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
   stat: { minWidth: 72, gap: 2 },
   statValue: { fontFamily: fonts.serifBlack, fontSize: 24, color: colors.ink },

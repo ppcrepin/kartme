@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, GradeMedal } from '@/components/ui';
+import { BoutonRetour, Card, GradeMedal } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -38,15 +38,9 @@ export default function GradesScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable
-          // Lien profond (PWA relancée) : sans historique, on remonte au
-          // profil — l'écran d'où l'on vient toujours.
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/profil'))}
-          accessibilityRole="button"
-          accessibilityLabel="Retour"
-          style={styles.back}>
-          <Muted>←</Muted>
-        </Pressable>
+        {/* Lien profond (PWA relancée) : sans historique, on remonte au
+            profil — l'écran d'où l'on vient toujours. */}
+        <BoutonRetour onPress={() => (router.canGoBack() ? router.back() : router.replace('/profil'))} />
         <Title>{t.profile.gradesLadder}</Title>
         <Muted>{t.profile.gradesLadderSub}</Muted>
 
@@ -78,16 +72,6 @@ export default function GradesScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl * 2 },
-  // 44 px, marge négative pour rester optiquement au bord. `hitSlop` est
-  // inerte sur `Pressable` en react-native-web.
-  back: {
-    alignSelf: 'flex-start',
-    minWidth: 44,
-    minHeight: 44,
-    justifyContent: 'center',
-    marginLeft: -spacing.sm,
-    paddingHorizontal: spacing.sm,
-  },
   list: { gap: spacing.sm, marginTop: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   flex: { flex: 1 },

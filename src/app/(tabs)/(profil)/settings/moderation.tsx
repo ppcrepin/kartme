@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Avatar, Banner, Button, Card, Field } from '@/components/ui';
+import { Avatar, Banner, BoutonRetour, Button, Card, Field } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -85,13 +85,7 @@ export default function ModerationScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings'))}
-          accessibilityRole="button"
-          accessibilityLabel="Retour"
-          style={styles.back}>
-          <Muted>←</Muted>
-        </Pressable>
+        <BoutonRetour onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings'))} />
         <Title>{t.moderation.title}</Title>
 
         <View style={styles.filter}>
@@ -338,7 +332,6 @@ export default function ModerationScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl * 2 },
-  back: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
   filter: { flexDirection: 'row', gap: spacing.lg },
   tab: { color: colors.inkDim },
   tabOn: { fontWeight: '800', textDecorationLine: 'underline' },

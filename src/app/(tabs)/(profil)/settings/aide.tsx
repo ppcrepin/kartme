@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card } from '@/components/ui';
+import { BoutonRetour, Card } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -14,13 +14,7 @@ export default function AideScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings'))}
-          accessibilityRole="button"
-          accessibilityLabel="Retour"
-          style={styles.back}>
-          <Muted>←</Muted>
-        </Pressable>
+        <BoutonRetour onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings'))} />
         <Title>{t.help.title}</Title>
 
         <Label>{t.help.faqTitle}</Label>
@@ -67,7 +61,6 @@ export default function AideScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl * 2 },
-  back: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
   q: { fontWeight: '800' },
   a: { marginTop: spacing.xs },
   links: { gap: spacing.sm, marginTop: spacing.md },

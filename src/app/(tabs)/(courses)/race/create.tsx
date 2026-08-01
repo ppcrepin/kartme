@@ -1,11 +1,11 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CircuitPicker } from '@/components/circuit-picker';
 import { DateTimeField } from '@/components/date-time-field';
-import { Button } from '@/components/ui';
+import { BoutonRetour, Button } from '@/components/ui';
 import { Body, Muted, Title } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -87,9 +87,10 @@ export default function CreateRaceScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} accessibilityRole="button" style={styles.back}>
-          <Muted>← {t.tabs.races}</Muted>
-        </Pressable>
+        <BoutonRetour
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+          label={t.tabs.races}
+        />
         <Title>{t.races.newRace}</Title>
 
         <CircuitPicker value={circuit} onChange={setCircuit} />
@@ -108,7 +109,6 @@ export default function CreateRaceScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, gap: spacing.lg },
-  back: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
   warn: { color: colors.gold },
   error: { color: colors.accentTexte },
 });
