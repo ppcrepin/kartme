@@ -4,9 +4,9 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EloCurve } from '@/components/elo-curve';
-import { Avatar, BadgeIcon, Button, Card, GradeMedal, ListRow, SkeletonCard, Tag } from '@/components/ui';
+import { Avatar, BadgeIcon, Button, Card, GradeMedal, ListRow, SkeletonCard, Tag, RangNum } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
-import { colors, fonts, spacing, couleurRang } from '@/constants/theme';
+import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { pluriel } from '@/lib/nombre';
 import { useAuth } from '@/lib/auth';
@@ -356,14 +356,13 @@ export default function PilotScreen() {
                           left={
                             /* Un abandon a une position en base (l'index l'exige),
                                mais l'afficher laisserait croire qu'il a fini là. */
-                            <Body
-                    style={[
-                      [styles.historyPos, h.dnf && styles.historyPosDnf],
-                      !h.dnf && couleurRang(h.position) ? { color: couleurRang(h.position)! } : null,
-                    ]}
-                  >
-                              {h.dnf ? t.races.dnfShort : h.position}
-                            </Body>
+                            <RangNum
+                      rang={h.position}
+                      dnf={!!h.dnf}
+                      dnfLabel={t.races.dnfShort}
+                      style={styles.historyPos}
+                      dnfStyle={styles.historyPosDnf}
+                    />
                           }
                           title={h.circuitName ?? t.races.noCircuit}
                           sub={h.scheduledAt ? formatRaceDate(h.scheduledAt) : undefined}

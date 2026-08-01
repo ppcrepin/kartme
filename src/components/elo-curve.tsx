@@ -23,13 +23,17 @@ export interface SeuilCourbe {
  * glisser le seuil ferait afficher « max 1300 » à un pilote qui n'a jamais
  * dépassé 1250 — la courbe mentirait pour dessiner un repère.
  *
- * `bas`/`haut` cadrent le DESSIN et englobent TOUJOURS le seuil (décision PO
- * 2026-08-01 : « les courbes en pointillés n'apparaissent pas toujours, il faut
- * bien zoomer au bon niveau »). Une règle antérieure l'abandonnait dès qu'il
- * s'éloignait de plus d'une fois et demie l'amplitude, pour éviter d'écraser le
- * tracé — mais un repère qui disparaît sans prévenir est pire qu'un tracé
- * plat : on ne sait pas s'il n'y a pas de palier, ou s'il est simplement trop
- * loin. Le prix est assumé : juste après une promotion, la courbe se tasse.
+ * `bas`/`haut` cadrent le DESSIN. Le seuil y est TOUJOURS représenté (décision
+ * PO 2026-08-01 : « les courbes en pointillés n'apparaissent pas toujours »),
+ * mais le cadre ne s'étire pas sans limite pour aller le chercher : au-delà
+ * d'une fois et demie l'amplitude du tracé, on CLAMPE et le trait se pose sur
+ * le bord, drapeau `horsCadre` levé.
+ *
+ * Sans ce clampage, un pilote à 1310 visant 1700 voyait ses cinq dernières
+ * courses tenir dans 2,6 px de haut : une ligne horizontale, mesurée à l'audit.
+ * On aurait montré le palier en supprimant la courbe. Avec, les deux
+ * informations survivent — le tracé garde au moins 40 % de la hauteur, et le
+ * pointillé ne disparaît jamais.
  *
  * Fonction pure et exportée : c'est la seule partie de la courbe qui décide
  * quelque chose, et elle est intestable à travers un SVG dont la géométrie
@@ -38,17 +42,32 @@ export interface SeuilCourbe {
 export function echelleCourbe(
   values: number[],
   seuil?: SeuilCourbe | null,
-): { min: number; max: number; bas: number; haut: number; repere: SeuilCourbe | null } {
+): {
+  min: number;
+  max: number;
+  bas: number;
+  haut: number;
+  repere: SeuilCourbe | null;
+  /** Le seuil est au-delà du cadre : le trait est posé sur le bord. */
+  horsCadre: boolean;
+} {
   const min = Math.min(...values);
   const max = Math.max(...values);
+  const amplitude = Math.max(max - min, 20);
   const repere = seuil ?? null;
-  return {
-    min,
-    max,
-    bas: repere ? Math.min(min, repere.valeur) : min,
-    haut: repere ? Math.max(max, repere.valeur) : max,
-    repere,
-  };
+  let bas = min;
+  let haut = max;
+  let horsCadre = false;
+  if (repere) {
+    if (repere.valeur > max) {
+      haut = Math.min(repere.valeur, max + amplitude * 1.5);
+      horsCadre = haut < repere.valeur;
+    } else if (repere.valeur < min) {
+      bas = Math.max(repere.valeur, min - amplitude * 1.5);
+      horsCadre = bas > repere.valeur;
+    }
+  }
+  return { min, max, bas, haut, repere, horsCadre };
 }
 
 /**
@@ -80,7 +99,10 @@ export function EloCurve({
 
   if (values.length < 2) return null;
 
-  const { min, max, bas: basDessin, haut: hautDessin, repere } = echelleCourbe(values, seuil);
+  const { min, max, bas: basDessin, haut: hautDessin, repere, horsCadre } = echelleCourbe(
+    values,
+    seuil,
+  );
   const span = Math.max(hautDessin - basDessin, 20); // évite une ligne écrasée à ±0
 
   const x = (i: number) => PAD + (i * (width - 2 * PAD)) / (values.length - 1);
@@ -97,12 +119,30 @@ export function EloCurve({
   // gauche aurait désigné le mauvais point — d'un quart de la largeur sur un
   // historique de trois courses.
   const LARGEUR_DATE = 68;
+  const dernier = values.length - 1;
   const indicesDates = [1];
-  // Un repère du milieu seulement s'il a la place de ne pas toucher les deux
-  // autres : trois libellés de 68 px demandent 204 px, plus de l'air.
-  if (points.length >= 4 && width >= 260) indicesDates.push(Math.round(values.length / 2));
-  if (values.length - 1 > 1) indicesDates.push(values.length - 1);
+  // Un repère du milieu seulement s'il a la place de ne toucher NI le premier
+  // NI le dernier. Le garde-fou porte sur l'ÉCART entre repères, pas sur la
+  // largeur totale : à 260 px et quatre courses, l'écart tombait à 60 px pour
+  // des libellés de 68, et les deux dates de droite se chevauchaient (31 px de
+  // recouvrement mesurés à l'audit sur 320 px).
+  const milieu = 1 + Math.round((dernier - 1) / 2);
+  const pas = (width - 2 * PAD) / (values.length - 1);
+  if (
+    milieu > 1 &&
+    milieu < dernier &&
+    (milieu - 1) * pas >= LARGEUR_DATE + 8 &&
+    (dernier - milieu) * pas >= LARGEUR_DATE + 8
+  ) {
+    indicesDates.push(milieu);
+  }
+  if (dernier > 1) indicesDates.push(dernier);
   const dates = [...new Set(indicesDates)];
+  // L'ANNÉE n'apparaît que si l'historique en franchit une. Sans elle, un
+  // parcours 2024 → 2026 affichait « 12 janv. » … « 8 févr. » : l'ambiguïté
+  // que les dates étaient censées lever. Avec elle partout, on paie deux
+  // chiffres de largeur sur la saison en cours, qui est le cas ordinaire.
+  const avecAnnee = new Set(points.map((p) => new Date(p.at).getFullYear())).size > 1;
 
   return (
     <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
@@ -124,9 +164,9 @@ export function EloCurve({
             {repere ? (
               <Line
                 x1={PAD}
-                y1={y(repere.valeur)}
+                y1={y(Math.min(Math.max(repere.valeur, basDessin), hautDessin))}
                 x2={width - PAD}
-                y2={y(repere.valeur)}
+                y2={y(Math.min(Math.max(repere.valeur, basDessin), hautDessin))}
                 stroke={repere.couleur}
                 strokeWidth={1.5}
                 strokeDasharray="2 4"
@@ -169,7 +209,10 @@ export function EloCurve({
             ) : null}
             {repere ? (
               <Muted style={[styles.legendTxt, { color: repere.couleur }]}>
-                {t.profile.curveSeuil.replace('%s', String(repere.valeur))}
+                {(horsCadre ? t.profile.curveSeuilLoin : t.profile.curveSeuil).replace(
+                  '%s',
+                  String(repere.valeur),
+                )}
               </Muted>
             ) : null}
             <Muted style={styles.legendTxt}>max {max}</Muted>
@@ -193,7 +236,7 @@ export function EloCurve({
                     },
                   ]}
                 >
-                  {jourCourt(points[i - 1].at)}
+                  {jourCourt(points[i - 1].at, avecAnnee)}
                 </Muted>
               ))}
             </View>

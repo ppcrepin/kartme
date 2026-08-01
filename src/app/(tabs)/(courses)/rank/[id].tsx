@@ -25,10 +25,14 @@ type Step = 'presents' | 'order';
 type Mode = 'drag' | 'tap';
 
 export default function RankScreen() {
-  const { id, correct, locked } = useLocalSearchParams<{ id: string; correct?: string; locked?: string }>();
+  const { id, correct } = useLocalSearchParams<{ id: string; correct?: string }>();
   const isCorrect = correct === '1'; // mode correction (lot 2.6) : roster figé, on ré-ordonne
-  const isLocked = locked === '1'; // course clôturée : grille figée → tous présents (pas d'étape « présents »)
-  const rosterFinal = isCorrect || isLocked; // roster définitif : on saute l'étape « présents »
+  // Seule la CORRECTION fige le roster : on re-classe des pilotes qui ont déjà
+  // couru. Une grille clôturée passait aussi par ici et faisait sauter l'étape
+  // « Qui était présent ? » — or depuis C11 la clôture est obligatoire, donc
+  // l'étape n'était plus jamais atteinte, et un invité qui ne s'est pas
+  // présenté ne pouvait plus être retiré.
+  const rosterFinal = isCorrect;
   const router = useRouter();
   const { session } = useAuth();
 
@@ -109,16 +113,13 @@ export default function RankScreen() {
             setOrdered(ord.length ? ord : parts);
             setOrdreEtabli(ord.length > 0);
             setDnfs(new Set(saved.dnf));
-          } else if (isLocked) {
-            // Course clôturée : roster figé → tous présents, ordre à saisir.
-            setOrdered(parts);
           }
         })
         .catch(() => {});
       return () => {
         alive = false;
       };
-    }, [id, session?.user.id, isCorrect, isLocked]),
+    }, [id, session?.user.id, isCorrect]),
   );
 
   /**
@@ -407,7 +408,6 @@ export default function RankScreen() {
                       : t.races.tapHint}
               </Muted>
             </View>
-            {isLocked && !isCorrect ? <Muted>{t.races.lockedRankHint}</Muted> : null}
 
             {/* Le geste de SECOURS. Un lien discret, en retrait, et un seul —
                 plus deux grandes pastilles qui demandaient de choisir entre

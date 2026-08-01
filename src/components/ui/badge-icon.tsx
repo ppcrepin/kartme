@@ -119,23 +119,30 @@ const ICONS: Record<BadgeKey, ReactElement> = {
       <Path d="M33 14l-7 1M33 14l-1 7" />
     </>
   ),
-  // 13. Sous tension — prise de recharge : l'éclair DANS le kart.
+  // 13. Sous tension — un kart, l'éclair AU-DESSUS.
+  //
+  // Il traversait la ligne de toit et se confondait avec elle : posé au-dessus,
+  // il se lit d'un coup, et la silhouette du kart reste entière.
   sous_tension: (
     <>
-      <Line x1={9} y1={33} x2={39} y2={33} />
-      <Path d="M11 33v-6l5-5h16l5 5v6" />
-      <Circle cx={16} cy={33} r={3} />
-      <Circle cx={32} cy={33} r={3} />
-      <Path d="M25 12l-6 9h5l-2 7 7-10h-5z" />
+      <Line x1={9} y1={36} x2={39} y2={36} />
+      <Path d="M11 36v-5l5-4h16l5 4v5" />
+      <Circle cx={16} cy={36} r={3} />
+      <Circle cx={32} cy={36} r={3} />
+      <Path d="M25 6l-6 10h5l-2 8 8-12h-5z" />
     </>
   ),
-  // 14. Haute tension — le même éclair, doublé et cerclé : le palier d'après.
+  // 14. Haute tension — TROIS éclairs alignés, rien autour.
+  //
+  // La première version cerclait un éclair et ajoutait deux traits diagonaux
+  // flottants : à 48 px, l'audit l'a lue comme un panneau d'INTERDICTION —
+  // l'inverse exact de ce qu'est une récompense. Un cercle qui coupe un
+  // symbole se lit toujours comme une négation.
   haute_tension: (
     <>
-      <Circle cx={24} cy={24} r={15} />
-      <Path d="M23 11l-6 10h5l-2 8 7-11h-5z" />
-      <Path d="M31 15l-4 7" />
-      <Path d="M35 21l-4 5" />
+      <Path d="M14 12l-5 12h5l-3 12 9-14h-5z" />
+      <Path d="M27 12l-5 12h5l-3 12 9-14h-5z" />
+      <Path d="M40 12l-5 12h5l-3 12 9-14h-5z" />
     </>
   ),
 };

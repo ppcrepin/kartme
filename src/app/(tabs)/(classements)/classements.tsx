@@ -3,9 +3,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
-import { Avatar, Button, Card, Field, GradeMedal, ListRow, Tag } from '@/components/ui';
+import { Avatar, Button, Card, Field, GradeMedal, ListRow, Tag, RangNum } from '@/components/ui';
 import { Body, Label, Muted } from '@/components/ui/text';
-import { colors, fonts, spacing, couleurRang } from '@/constants/theme';
+import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { SIGNED_TTL_S, signedAvatarUrls } from '@/lib/avatar';
 import {
@@ -700,12 +700,11 @@ function RangRow({
       left={
         <>
           {/* Or, argent, bronze sur les trois premiers (décision PO) : dans
-              une liste de vingt lignes, la couleur est le seul repère qui
-              survit à un coup d'œil. Au-delà du podium, la teinte discrète
-              d'origine — sinon plus rien ne ressort. */}
-          <Body style={[styles.rank, couleurRang(row.rank) ? { color: couleurRang(row.rank)! } : null]}>
-            {row.rank}
-          </Body>
+              une liste de vingt lignes, c'est le seul repère qui survit à un
+              coup d'œil. En PASTILLE et non en chiffre coloré — le nom du
+              grade, sur la même ligne, porte lui aussi une teinte métallique
+              (voir `ui/rang`). */}
+          <RangNum rang={row.rank} style={styles.rank} taille={26} />
           <Avatar
             name={row.username}
             size={28}

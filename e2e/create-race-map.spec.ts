@@ -35,11 +35,11 @@ test('choisir sur la carte préserve la date déjà saisie', async ({ page }) =>
   // 2. Aller sur la carte. SÉLECTION EN DEUX TEMPS (retour PO) : un tap
   //    montre la fiche, seul « Choisir ce karting » valide et ramène.
   await page.getByText('Choisir sur la carte').click();
-  await expect(page.getByText('Choisir un karting', { exact: true })).toBeVisible();
+  await expect(page.getByText('Choisir un circuit', { exact: true })).toBeVisible();
   await page.getByText('Kart Racer', { exact: true }).click();
   // Toujours sur la carte : rien ne s'est engagé tout seul.
-  await expect(page.getByText('Choisir un karting', { exact: true })).toBeVisible();
-  await page.getByText('Choisir ce karting', { exact: true }).click();
+  await expect(page.getByText('Choisir un circuit', { exact: true })).toBeVisible();
+  await page.getByText('Choisir ce circuit', { exact: true }).click();
 
   // 3. Retour au formulaire : la piste est sélectionnée ET la date n'a pas
   //    bougé. `sceneActive` : la carte reste montée derrière le formulaire —
@@ -57,7 +57,7 @@ test('rouvrir la création après un passage donne un formulaire NEUF', async ({
   await page.goto('/race/create');
   await page.getByText('Choisir sur la carte').click();
   await page.getByText('Kart Racer', { exact: true }).first().click();
-  await page.getByText('Choisir ce karting', { exact: true }).click();
+  await page.getByText('Choisir ce circuit', { exact: true }).click();
   await expect(page.getByText('Modifier', { exact: true }).and(sceneActive(page))).toBeVisible();
   await page.getByText('← Courses', { exact: true }).click();
 

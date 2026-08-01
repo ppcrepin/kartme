@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
-import { Button, Card, CheckeredRule, Tag } from '@/components/ui';
+import { Button, Card, CheckeredRule, Tag, RangNum } from '@/components/ui';
 import { Body, Label, Muted } from '@/components/ui/text';
 import { colors, fonts, radius, spacing, electriqueColor } from '@/constants/theme';
 import { t } from '@/i18n';
@@ -176,7 +176,10 @@ export default function CircuitPageScreen() {
                 )}
               </Body>
             ) : null}
-            {page.motorKind ? (
+            {/* Pas deux fois la même information : sur un circuit électrique,
+                la pastille en tête de fiche le dit déjà, trente pixels plus
+                haut et bien plus visiblement. */}
+            {page.motorKind && page.motorKind !== 'electrique' ? (
               <Muted style={styles.specTxt}>{t.races.circuitPage.motorKinds[page.motorKind]}</Muted>
             ) : null}
             {page.usageKind ? (
@@ -304,7 +307,9 @@ export default function CircuitPageScreen() {
                   accessibilityRole={l.pilotId ? 'button' : 'none'}
                   disabled={!l.pilotId}
                   onPress={() => l.pilotId && router.push(`/pilot/${l.pilotId}`)}>
-                  <Muted style={styles.rank}>{l.rank}</Muted>
+                  {/* C'est un classement : les trois premiers portent leur
+                      médaille comme ailleurs (décision PO). */}
+                  <RangNum rang={l.rank} style={styles.rank} taille={20} />
                   <Body style={styles.time}>{formatLap(l.bestLapMs)}</Body>
                   <Body style={styles.flex}>
                     {l.username ?? t.races.circuitPage.privatePilot}
@@ -382,7 +387,7 @@ const styles = StyleSheet.create({
   tabTxtOn: { color: '#fff', fontWeight: '700', fontSize: 13 },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.sharp, backgroundColor: colors.surface },
   rowMe: { borderWidth: 1, borderColor: colors.accent },
-  rank: { width: 18, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  rank: { width: 20, textAlign: 'right', fontVariant: ['tabular-nums'], color: colors.inkDim, fontSize: 13 },
   time: { fontVariant: ['tabular-nums'], fontWeight: '700' },
   lifeTitle: { marginTop: spacing.sm },
   reportLink: { color: colors.accentTexte, fontWeight: '700' },

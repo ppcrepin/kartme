@@ -23,11 +23,15 @@ export function Tag({
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="button"
+      // SANS `onPress`, ce n'est pas une commande : une étiquette purement
+      // descriptive (« ⚡ Électrique », « Homologué FFSA ») annoncée « bouton,
+      // non sélectionné » à un lecteur d'écran promet une action qui n'existe
+      // pas — et `aria-selected` sur un `role="button"` est de l'ARIA invalide.
+      accessibilityRole={onPress ? 'button' : 'none'}
       // `accessibilityState` n'est pas lu par react-native-web : seules les
       // props `aria-*` atteignent le DOM. Un état non annoncé, c'est une
       // sélection qui n'existe que dans la couleur.
-      aria-selected={!!selected}
+      aria-selected={onPress ? !!selected : undefined}
       style={[
         styles.base,
         selected ? styles.on : styles.off,

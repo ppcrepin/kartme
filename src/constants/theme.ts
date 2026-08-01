@@ -92,10 +92,17 @@ export const gradeTextColors = {
  * de vingt lignes. Les trois teintes étaient déjà dans l'image de podium
  * partagée — elles vivent ici pour que l'écran et l'image ne divergent pas.
  *
- * Sur le carbone : 10,4:1, 11,6:1 et 5,6:1. Le bronze est le plus juste et
- * reste au-dessus du seuil AA.
+ * Les trois sont volontairement PLUS CLAIRES que leurs voisines de la rampe
+ * des grades, qui est elle aussi métallique (« Roue libre » bronze, « Rookie »
+ * argent, « Missile » or) : mesurées côte à côte, l'argent était identique au
+ * pixel près et le bronze à huit unités de rouge. Ce qui les sépare vraiment
+ * reste la FORME — le rang est un aplat plein, le grade un texte (`ui/rang`).
+ *
+ * Le bronze a été éclairci : à `#c1793f` il donnait 5,40:1 sur la carte, soit
+ * MOINS que le chiffre gris du 4ᵉ juste en dessous (5,92:1) — le 3ᵉ ressortait
+ * moins que celui qu'il devance.
  */
-export const podiumColors = ['#e2c14d', '#cfd4d8', '#c1793f'] as const;
+export const podiumColors = ['#eccb52', '#dfe4ea', '#d2884a'] as const;
 
 /**
  * Le VERT du karting électrique (C13, décision PO 2026-08-01 : promouvoir ces

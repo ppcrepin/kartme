@@ -9,6 +9,7 @@ export { Field } from './field';
 export { Gauge } from './gauge';
 export { GradeMedal } from './grade-medal';
 export { ListRow } from './list-row';
+export { RangNum } from './rang';
 export { Sheet } from './sheet';
 export { Skeleton, SkeletonCard } from './skeleton';
 export { Tag } from './tag';

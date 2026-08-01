@@ -55,8 +55,13 @@ declare
   r uuid := 'e2000000-0000-0000-0000-000000000001';
   g uuid := 'e3000000-0000-0000-0000-000000000001';
 begin
+  -- Course À VENIR : le rappel « Course bientôt 🏁 » n'a de sens que là.
+  -- Elle était planifiée à `now()`, ce qui ne distinguait pas les deux cas —
+  -- or depuis C11 la clôture arrive le plus souvent APRÈS la course (c'est le
+  -- passage obligé vers la saisie du classement), et le rappel ne doit alors
+  -- pas partir. Voir le scénario 1bis.
   insert into races (id, admin_id, circuit_id, scheduled_at)
-    values (r, A, 'e1000000-0000-0000-0000-000000000001', now());
+    values (r, A, 'e1000000-0000-0000-0000-000000000001', now() + interval '2 days');
   insert into participations (race_id, profile_id) values (r, A), (r, B), (r, C);
   insert into ghost_profiles (id, display_name, created_by) values (g, 'Fantôme', A);
   insert into participations (race_id, ghost_id) values (r, g);
@@ -82,6 +87,70 @@ begin
   raise notice 'Scénario 1 (verrou + rappel unique) ✔';
 end $$;
 
+-- ═══ Scénario 1bis : course DÉJÀ COURUE → aucun rappel (C11bis) ═══
+-- Depuis C11, « Valider la grille » est le seul chemin vers la saisie du
+-- classement : le parcours nominal est « on court, puis on valide ». Sans
+-- garde, tous les participants recevaient une alerte poussée annonçant une
+-- course « bientôt » qui avait eu lieu deux heures plus tôt, sa date au passé
+-- dans le corps du message.
+do $$
+declare
+  A uuid := 'e0000000-0000-0000-0000-00000000000a';
+  B uuid := 'e0000000-0000-0000-0000-00000000000b';
+  r uuid := 'e2000000-0000-0000-0000-0000000000ff';
+begin
+  insert into races (id, admin_id, circuit_id, scheduled_at)
+    values (r, A, 'e1000000-0000-0000-0000-000000000001', now() - interval '2 hours');
+  insert into participations (race_id, profile_id) values (r, A), (r, B);
+
+  truncate net._calls;
+  perform tests.as_admin(A);
+  perform public.lock_race(r);
+
+  perform tests.eq((select case when status = 'locked' then 1 else 0 end from races where id = r), 1,
+                   'course passée en locked malgré tout');
+  perform tests.eq((select count(*) from net._calls), 0,
+                   'aucun rappel pour une course déjà courue');
+  -- `reminded_at` est POSÉ quand même : c'est le drapeau « on a déjà eu
+  -- l'occasion de prévenir ». Le laisser nul ferait partir le rappel à une
+  -- réouverture ultérieure, encore plus tard après la course.
+  perform tests.eq((select case when reminded_at is not null then 1 else 0 end from races where id = r), 1,
+                   'reminded_at posé quand même');
+  raise notice 'Scénario 1bis (course passée : pas de rappel) ✔';
+end $$;
+
+-- ═══ Scénario 1ter : retirer un ABSENT d'une grille figée (C11bis) ═══
+-- La grille figée veut dire « elle ne grossit plus ». Elle n'a jamais voulu
+-- dire « on ne peut plus en retirer quelqu'un qui n'est pas venu » — et depuis
+-- C11 l'étape « Qui était présent ? » se joue forcément après la clôture.
+do $$
+declare
+  A uuid := 'e0000000-0000-0000-0000-00000000000a';
+  B uuid := 'e0000000-0000-0000-0000-00000000000b';
+  r uuid := 'e2000000-0000-0000-0000-0000000000ff';   -- la course locked ci-dessus
+  refuse boolean := false;
+begin
+  perform tests.as_admin(A);
+  set local role authenticated;
+
+  delete from public.participations where race_id = r and profile_id = B;
+
+  -- Mais elle ne GROSSIT toujours pas.
+  begin
+    insert into public.participations (race_id, profile_id)
+      values (r, 'e0000000-0000-0000-0000-00000000000c');
+  exception when others then refuse := true;
+  end;
+  -- `reset role` AVANT les assertions : le rôle `authenticated` n'a pas accès
+  -- au schéma `tests`.
+  reset role;
+  perform tests.eq((select count(*) from public.participations where race_id = r and profile_id = B), 0,
+                   'l''absent est retiré d''une grille figée');
+  perform tests.eq(case when refuse then 1 else 0 end, 1,
+                   'ajouter sur une grille figée reste interdit');
+  raise notice 'Scénario 1ter (retrait d''un absent, ajout toujours interdit) ✔';
+end $$;
+
 -- ═══ Scénario 2 : gel du roster — écriture interdite quand locked ═══
 do $$
 declare
@@ -102,12 +171,15 @@ begin
   reset role;
   if not denied then raise exception 'ÉCHEC : ajout d''un pilote possible sur une course figée'; end if;
 
-  -- DELETE silencieusement filtré (using) → 0 ligne retirée.
+  -- DELETE, lui, est AUTORISÉ à l'organisateur depuis C11bis : la grille figée
+  -- ne grossit plus, mais un invité qui ne s'est pas présenté doit pouvoir en
+  -- sortir — c'est l'étape « Qui était présent ? », qui se joue désormais
+  -- forcément après la clôture. (Avant, elle était silencieusement filtrée.)
   perform tests.as_admin(A);
   set local role authenticated;
   delete from participations where race_id = r and profile_id = 'e0000000-0000-0000-0000-00000000000b';
   reset role;
-  perform tests.eq((select count(*) from participations where race_id = r), 4, 'roster inchangé (aucune suppression sur course figée)');
+  perform tests.eq((select count(*) from participations where race_id = r), 3, 'l''absent est bien sorti de la grille figée');
 
   -- Après réouverture, l'ajout redevient possible.
   perform tests.as_admin(A);
@@ -132,8 +204,13 @@ declare
   pc uuid := 'e4000000-0000-0000-0000-000000000033';
   elo_a1 int; elo_c1 int; elo_a2 int; elo_c2 int; sum_delta int;
 begin
+  -- Course À VENIR : le rappel « Course bientôt 🏁 » n'a de sens que là.
+  -- Elle était planifiée à `now()`, ce qui ne distinguait pas les deux cas —
+  -- or depuis C11 la clôture arrive le plus souvent APRÈS la course (c'est le
+  -- passage obligé vers la saisie du classement), et le rappel ne doit alors
+  -- pas partir. Voir le scénario 1bis.
   insert into races (id, admin_id, circuit_id, scheduled_at)
-    values (r, A, 'e1000000-0000-0000-0000-000000000001', now());
+    values (r, A, 'e1000000-0000-0000-0000-000000000001', now() + interval '2 days');
   insert into participations (id, race_id, profile_id) values (pa, r, A), (pb, r, B), (pc, r, C);
 
   perform tests.as_admin(A);

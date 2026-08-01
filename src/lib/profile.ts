@@ -94,13 +94,27 @@ export async function getEloCurve(profileId?: string): Promise<EloPoint[]> {
   if (!id) return [];
   const { data, error } = await supabase
     .from('elo_history')
-    .select('elo, created_at, dnf')
+    // La date de la COURSE, pas celle de la saisie. `created_at` est l'instant
+    // où l'organisateur a validé le classement : la courbe étiquetait
+    // « 1 août » pendant que la ligne d'historique de la même course, trente
+    // pixels plus bas, affichait « ven. 18 juil. ». Et un organisateur qui
+    // rattrape trois soirées le même week-end produisait trois repères
+    // identiques — un axe qui ne dit rien.
+    .select('elo, created_at, dnf, race:races(scheduled_at)')
     .eq('profile_id', id)
     .order('created_at');
   if (error) throw new Error(error.message);
-  // `dnf` peut être absent sur une base pas encore migrée : on ne casse pas la
-  // courbe pour un drapeau manquant.
-  return (data ?? []).map((r) => ({ elo: r.elo, at: r.created_at, dnf: r.dnf === true }));
+  // L'ORDRE reste celui de la validation : c'est lui qui a produit les points
+  // d'Elo, et deux courses rattrapées dans le désordre doivent rester dans
+  // l'ordre où elles ont été comptées. Seule l'ÉTIQUETTE change.
+  //
+  // `dnf` peut être absent sur une base pas encore migrée, et `race` être nul
+  // (course supprimée : `on delete set null`) : on ne casse pas la courbe pour
+  // un champ manquant, on retombe sur la date de saisie.
+  return (data ?? []).map((r) => {
+    const course = r.race as unknown as { scheduled_at?: string } | null;
+    return { elo: r.elo, at: course?.scheduled_at ?? r.created_at, dnf: r.dnf === true };
+  });
 }
 
 type RawHistory = {

@@ -24,17 +24,34 @@ describe('echelleCourbe', () => {
     expect(e.repere).toEqual(OR);
   });
 
-  it('garde le trait MÊME très loin du tracé', () => {
-    // Amplitude réelle 20 points, seuil 390 au-dessus : la courbe s'aplatit.
-    // C'est assumé (décision PO 2026-08-01). La règle précédente abandonnait le
-    // repère au-delà d'une fois et demie l'amplitude — et il disparaissait sans
-    // rien dire, exactement le symptôme rapporté : « les courbes en pointillés
-    // n'apparaissent pas toujours ».
+  it('garde le trait très loin du tracé, mais SANS écraser la courbe', () => {
+    // Amplitude réelle 20 points, seuil 390 au-dessus. Étirer le cadre jusqu'à
+    // 1700 réduisait les cinq dernières courses à 2,6 px de haut : une ligne
+    // horizontale, mesurée à l'audit navigateur. On aurait montré le palier en
+    // supprimant la courbe.
+    //
+    // Le cadre est donc CLAMPÉ à une fois et demie l'amplitude, et le trait se
+    // pose sur le bord avec `horsCadre` — il ne disparaît jamais, ce qui était
+    // le symptôme rapporté (« les pointillés n'apparaissent pas toujours »).
     const e = echelleCourbe([1290, 1300, 1310], { valeur: 1700, couleur: '#ef7f27' });
     expect(e.repere).not.toBeNull();
-    expect(e.haut).toBe(1700);
+    expect(e.horsCadre).toBe(true);
+    expect(e.haut).toBe(1340); // 1310 + 1,5 × 20
     // La LÉGENDE, elle, continue de dire la vérité du tracé.
     expect(e.max).toBe(1310);
+  });
+
+  it('un seuil ATTEIGNABLE reste dans le cadre, sans flèche', () => {
+    // Amplitude 210, seuil 90 au-dessus : largement sous la limite.
+    const e = echelleCourbe([1000, 1180, 1210], { valeur: 1300, couleur: '#ecc63f' });
+    expect(e.horsCadre).toBe(false);
+    expect(e.haut).toBe(1300);
+  });
+
+  it('clampe AUSSI vers le bas (grade perdu, palier loin en dessous)', () => {
+    const e = echelleCourbe([1500, 1510], { valeur: 1000, couleur: '#a89c8f' });
+    expect(e.horsCadre).toBe(true);
+    expect(e.bas).toBe(1470); // 1500 − 1,5 × 20
   });
 
   it('sans seuil, l’échelle du dessin est celle de la légende', () => {

@@ -140,18 +140,27 @@ export function CircuitsMap({
         keyboard: false,
         icon: L.divIcon({
           className: '',
-          // ÉLECTRIQUE : pastille verte + éclair (décision PO 2026-08-01,
-          // pour promouvoir ces circuits). La couleur SEULE n'aurait pas
-          // suffi — un daltonien deutéranope ne distingue pas ce vert du
-          // rouge de marque, et le rouge sert déjà à toutes les autres
-          // épingles. Le symbole double l'information : il reste lisible en
-          // noir et blanc comme sur une capture d'écran compressée.
+          // ÉLECTRIQUE : pastille verte CARRÉE, plus un éclair (décision PO
+          // 2026-08-01, pour promouvoir ces circuits).
+          //
+          // La couleur seule n'aurait pas suffi — un daltonien deutéranope ne
+          // distingue pas ce vert du rouge de marque, et le rouge sert déjà à
+          // toutes les autres épingles. C'est la FORME qui porte l'information
+          // de façon fiable : le carré se voit à tous les zooms, y compris à
+          // 8 px, là où l'éclair n'est plus qu'une tache — or la carte s'ouvre
+          // précisément à ce zoom-là, sur la France entière.
+          //
+          // Le sélecteur de variation \ufe0e demande la forme TEXTE de
+          // l'éclair : sans lui, U+26A1 est rendu en emoji couleur (jaune sur
+          // bleu) et la teinte imposée n'a aucun effet. Toutes les polices ne
+          // l'honorent pas — raison de plus pour que la forme, et non le
+          // glyphe, soit le vrai porteur.
           //
           // Le « mixte » n'est PAS marqué : on ne sait pas si l'on y roulera
           // en électrique, et un éclair y promettrait plus que la donnée.
           html:
             c.motor_kind === 'electrique'
-              ? '<span class="ks-pin ks-pin-elec">\u26a1</span>'
+              ? '<span class="ks-pin ks-pin-elec">\u26a1\ufe0e</span>'
               : '<span class="ks-pin"></span>',
           iconSize: [16, 16],
           iconAnchor: [8, 8],
@@ -237,13 +246,16 @@ export function CircuitsMap({
               transform:translate(4px,4px)}
             [data-zoom="moyen"] .ks-pin{width:11px;height:11px;
               transform:translate(2px,2px)}
-            .ks-pin-elec{background:${electriqueColor};color:#06210f;font-size:9px;
-              line-height:10px;text-align:center;font-weight:700}
-            /* À l'échelle « loin », la pastille tombe à 8 px : l'éclair y
-               devient une tache. On le retire et il ne reste que la couleur —
-               à ce zoom, on ne choisit pas un karting, on repère une région. */
-            [data-zoom="loin"] .ks-pin-elec{font-size:0}
-            [data-zoom="moyen"] .ks-pin-elec{font-size:7px;line-height:7px}
+            /* Carré (rayon 2 px) contre rond : la forme distingue l'épingle
+               électrique même quand la couleur ne le peut pas, et même à 8 px
+               où le glyphe disparaît. */
+            .ks-pin-elec{background:${electriqueColor};border-radius:2px;
+              color:#06210f;font-size:9px;line-height:14px;text-align:center;
+              font-weight:700}
+            /* À l'échelle « loin », la pastille tombe à 8 px : l'éclair n'y
+               est plus qu'une tache. Il s'efface, le CARRÉ reste. */
+            [data-zoom="loin"] .ks-pin-elec{font-size:0;border-radius:1px}
+            [data-zoom="moyen"] .ks-pin-elec{font-size:7px;line-height:11px}
             .ks-pin-on{outline:3px solid ${colors.accent};outline-offset:2px}
             .leaflet-container{background:${colors.surface};font-family:inherit}
           `,

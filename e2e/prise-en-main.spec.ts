@@ -40,7 +40,7 @@ test('aucune course : la checklist s’affiche à 0/3 et mène à la création',
   // Seule l'étape courante porte son aide et son appel : proposer les trois
   // d'un coup, c'est reproduire le mur de choix qu'on vient de démonter.
   await expect(page.getByText('C’est parti ›', { exact: true })).toBeVisible();
-  await expect(page.getByText('Un karting, une date. Trente secondes.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Un circuit, une date. Trente secondes.', { exact: true })).toBeVisible();
   await expect(page.getByText('L’ordre d’arrivée — les points s’échangent tout seuls.', { exact: true })).toHaveCount(0);
 
   // On cible la LIGNE, pas son texte : « Créer une course » nomme aussi le
@@ -80,7 +80,10 @@ test('grille remplie : 2/3, il ne reste que le classement', async ({ page }) => 
 
   await expect(page.getByText('2/3', { exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(
-    page.getByText('L’ordre d’arrivée — les points s’échangent tout seuls.', { exact: true }),
+    page.getByText(
+      'On fige les partants, puis on met l’ordre d’arrivée — les points s’échangent tout seuls.',
+      { exact: true },
+    ),
   ).toBeVisible();
 });
 
@@ -102,7 +105,7 @@ test('inscrit par un ami, sans rien créer : la checklist reste à 0/3', async (
   // « + Ajouter » ni « Saisir le classement » n'existent.
   await expect(page.getByText('0/3', { exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText('C’est parti ›', { exact: true })).toBeVisible();
-  await expect(page.getByText('Un karting, une date. Trente secondes.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Un circuit, une date. Trente secondes.', { exact: true })).toBeVisible();
 });
 
 test('le « ✕ » chasse la checklist, et elle revient au palier suivant', async ({ page }) => {

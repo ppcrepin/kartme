@@ -90,11 +90,11 @@ test.describe('Onglet Kartings', () => {
 
   test('signaler un karting manquant : le parcours aboutit', async ({ page }) => {
     await ouvrirKartings(page);
-    const lien = page.getByText('Un karting manque ou a fermé ? Signale-le', { exact: true });
+    const lien = page.getByText('Un circuit manque ou a fermé ? Signale-le', { exact: true });
     await lien.scrollIntoViewIfNeeded();
     await lien.click();
 
-    await expect(page.getByText('Signaler un karting', { exact: true })).toBeVisible();
+    await expect(page.getByText('Signaler un circuit', { exact: true })).toBeVisible();
     await page.getByPlaceholder('Ex. : Karting du Bocage').fill('Karting du Bocage');
     await page.getByPlaceholder('Ex. : Vire').fill('Vire');
     await page.getByText('Envoyer le signalement', { exact: true }).click();
@@ -123,7 +123,7 @@ test.describe('Onglet Kartings', () => {
     await page.getByText('Kart Racer', { exact: true }).click();
     await expect(page.getByText('Créer une course ici', { exact: true })).toBeVisible();
     // On tape une recherche : la fiche s'efface, les résultats d'abord.
-    await page.getByPlaceholder('Chercher un karting par nom ou par ville…').fill('Nantes');
+    await page.getByPlaceholder('Chercher un circuit par nom ou par ville…').fill('Nantes');
     await expect(page.getByText('Créer une course ici', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Le Karting', { exact: true })).toBeVisible();
   });
@@ -133,13 +133,13 @@ test.describe('Onglet Kartings', () => {
     await expect(page.getByText('Tes circuits', { exact: true })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('Mon Karting Habituel', { exact: true })).toBeVisible();
     // Et une recherche les efface : on cherche dans TOUT le référentiel.
-    await page.getByPlaceholder('Chercher un karting par nom ou par ville…').fill('Nantes');
+    await page.getByPlaceholder('Chercher un circuit par nom ou par ville…').fill('Nantes');
     await expect(page.getByText('Tes circuits', { exact: true })).toHaveCount(0);
   });
 
   test('la recherche trouve par nom, par ville et par sigle', async ({ page }) => {
     await ouvrirKartings(page);
-    const champ = page.getByPlaceholder('Chercher un karting par nom ou par ville…');
+    const champ = page.getByPlaceholder('Chercher un circuit par nom ou par ville…');
     await champ.fill('Nantes');
     await expect(page.getByText('Le Karting', { exact: true })).toBeVisible();
     await expect(page.getByText('Sologne Karting', { exact: true })).toHaveCount(0);

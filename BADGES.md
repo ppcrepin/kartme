@@ -24,7 +24,7 @@ Les jeux de mots viennent de l'univers karting/course (voir aussi `PUNS.md`). Ch
 > l'historique ont été purgés (migration `20260801120000`). La numérotation
 > d'origine est conservée ci-dessous pour que les archives restent lisibles.
 
-## ✅ Retenus pour le MVP (9)
+## ✅ Retenus pour le MVP (11)
 
 | # | Badge | Jeu de mots | Condition |
 |---|---|---|---|
@@ -37,6 +37,12 @@ Les jeux de mots viennent de l'univers karting/course (voir aussi `PUNS.md`). Ch
 | 10 | DRS | aileron F1 (dépassement) | Battre un pilote **inscrit** 300+ Elo au-dessus de soi |
 | 11 | Safety car | voiture de sécurité | Finir devant tous les pilotes inscrits mieux classés que soi |
 | 12 | Push | « push ! » à la radio | Gagner **au moins 45** points d'Elo en une course |
+| 13 | Sous tension | électricité / pression | Courir sur un circuit **électrique** (`motor_kind = 'electrique'`, jamais « mixte ») |
+| 14 | Haute tension | le palier d'après | **5** courses sur circuit électrique |
+
+Les deux derniers sont arrivés le 2026-08-01 (C13) pour promouvoir le karting
+électrique. Ils ne comptent que des courses **classées** : sans cela, un pilote
+seul fabriquait cinq courses dans la soirée et repartait avec les deux.
 
 ---
 

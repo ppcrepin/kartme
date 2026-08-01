@@ -34,9 +34,12 @@ export function formatJour(iso: string): string {
  * Jour + mois COURTS, sans année : « 14 juil. ». C'est le format d'un repère
  * d'axe, où la place est comptée en pixels et où l'année se déduit du reste.
  */
-export function jourCourt(iso: string): string {
+export function jourCourt(iso: string, avecAnnee = false): string {
   const d = new Date(iso);
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  const base = `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  // L'année sur DEUX chiffres : sur un repère d'axe, chaque caractère se paie
+  // en pixels, et « 26 » ne s'ambiguïse avec rien à côté d'un mois.
+  return avecAnnee ? `${base} ${String(d.getFullYear()).slice(2)}` : base;
 }
 
 /** Pour le médaillon calendrier (jour + mois court). */

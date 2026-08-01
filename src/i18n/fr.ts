@@ -85,7 +85,7 @@ export const fr = {
     create: 'Créer une course',
     newRace: 'Nouvelle course',
     circuit: 'Circuit',
-    circuitSearch: 'Rechercher un karting…',
+    circuitSearch: 'Rechercher un circuit…',
     // Référentiel de circuits maîtrisé (pas d'ajout libre) : sections du sélecteur.
     circuitRecents: 'Tes circuits',
     circuitAll: 'Tous les circuits',
@@ -93,38 +93,43 @@ export const fr = {
     // « Près de moi » (A12a) : la position n'est demandée QUE sur ce bouton,
     // pour que la fenêtre du navigateur arrive quand le pilote l'a voulue.
     circuitNear: 'Près de moi',
-    // Onglet Kartings (A12b) — carte Leaflet + fond OpenStreetMap.
+    // Onglet Circuits (A12b) — carte Leaflet + fond OpenStreetMap.
+    //
+    // TOUS ces libellés disaient « karting » quand l'onglet a été rebaptisé
+    // « Circuits » : le titre annonçait « Circuits » et la ligne juste en
+    // dessous « 277 kartings en France ». Un renommage à moitié fait est pire
+    // que pas de renommage — l'application parle maintenant d'une seule voix.
     mapTitle: 'Circuits',
-    mapSubtitle: '%n kartings en France',
+    mapSubtitle: '%n circuits en France',
     mapLoading: 'Chargement de la carte…',
     mapWebOnly: 'La carte n’est disponible que dans le navigateur pour le moment.',
     mapLocate: 'Me localiser',
     mapCreateHere: 'Créer une course ici',
     mapAttribution: 'Fond de carte et données : © contributeurs OpenStreetMap',
-    mapFailed: 'Impossible de charger les kartings.',
-    mapAria: 'Carte des kartings de France',
+    mapFailed: 'Impossible de charger les circuits.',
+    mapAria: 'Carte des circuits de France',
     mapTiles: 'Fond de carte indisponible — la liste ci-dessous reste utilisable.',
-    mapNoPos: 'Quelques kartings',
-    mapSearch: 'Chercher un karting par nom ou par ville…',
-    mapNone: 'Aucun karting ne correspond.',
+    mapNoPos: 'Quelques circuits',
+    mapSearch: 'Chercher un circuit par nom ou par ville…',
+    mapNone: 'Aucun circuit ne correspond.',
     mapViewMap: 'Carte',
     mapViewList: 'Liste',
-    mapPickTitle: 'Choisir un karting',
-    mapPickConfirm: 'Choisir ce karting',
+    mapPickTitle: 'Choisir un circuit',
+    mapPickConfirm: 'Choisir ce circuit',
     mapChooseOnMap: 'Choisir sur la carte',
     // Signalement de circuit (demande PO 2026-07-29) : le référentiel vient
     // d'OpenStreetMap, il est incomplet par nature et il vieillit. Les
     // pilotes, eux, savent.
-    reportCircuitLink: 'Un karting manque ou a fermé ? Signale-le',
+    reportCircuitLink: 'Un circuit manque ou a fermé ? Signale-le',
     reportCircuitFor: 'Signaler un problème sur cette fiche',
-    reportTitle: 'Signaler un karting',
+    reportTitle: 'Signaler un circuit',
     reportKindLabel: 'Que signales-tu ?',
     reportKinds: {
       manquant: 'Il manque',
       ferme: 'Il a fermé',
       erreur: 'Le nom ou la ville sont faux',
     } as Record<string, string>,
-    reportName: 'Nom du karting',
+    reportName: 'Nom du circuit',
     reportNamePh: 'Ex. : Karting du Bocage',
     reportCity: 'Ville (ou la plus proche)',
     reportCityPh: 'Ex. : Vire',
@@ -141,7 +146,7 @@ export const fr = {
     reportCommentLeft: 'Il reste %n',
     reportSend: 'Envoyer le signalement',
     reportDone: 'Merci ! Un modérateur va regarder. Le référentiel profite à tous les pilotes.',
-    reportNeedName: 'Indique au moins le nom du karting.',
+    reportNeedName: 'Indique au moins le nom du circuit.',
     reportBack: 'Retour à la carte',
     // Un visiteur sans jeton d'invitation : le lien nu ouvre bien la page (elle
     // n'est pas secrète), mais n'ouvre pas la grille. Le dire, plutôt que de
@@ -201,7 +206,7 @@ export const fr = {
     circuitTruncated: '%n circuits affichés sur %t — précise ta recherche (nom ou ville).',
     circuitNearTitle: 'Autour de toi',
     circuitLocating: 'Recherche de ta position…',
-    circuitNearEmpty: 'Aucun karting connu à moins de 150 km. Cherche par nom ou par ville.',
+    circuitNearEmpty: 'Aucun circuit connu à moins de 150 km. Cherche par nom ou par ville.',
     // Message volontairement NEUTRE : nommer Safari était faux pour qui
     // navigue sous Chrome, et prêtait à confusion. La marche à suivre dépend
     // du navigateur ; on décrit le principe, pas un chemin de menus.
@@ -386,7 +391,6 @@ export const fr = {
     correctTitle: 'Corriger le classement',
     correctHint: 'Remets les pilotes dans le bon ordre d’arrivée, puis confirme. L’Elo sera recalculé.',
     confirmCorrection: 'Confirmer la correction',
-    lockedRankHint: 'Grille figée : tous les inscrits sont comptés. Un absent ? Reviens à la course et rouvre les invitations pour le retirer.',
     results: 'Résultats',
     completed: 'Course terminée',
     grade: 'Grade',
@@ -498,12 +502,19 @@ export const fr = {
     // Le trait pointillé coloré de la courbe : sans légende, deux pointillés
     // (départ 1000 en gris, palier visé en couleur) ne se distinguaient pas.
     curveSeuil: '┄ palier %s',
+    // Le palier est HORS du cadre : le trait est posé sur le bord, la flèche
+    // dit qu'il continue au-delà. Sans elle, on lirait le bord comme le
+    // palier lui-même, et donc comme « j'y suis presque ».
+    curveSeuilLoin: '┄ palier %s ↑',
     calibratingHint: 'En calibration : ton niveau se règle plus vite (encore %c).',
     stats: 'Statistiques',
     races: 'Courses',
     wins: 'Victoires',
     podiums: 'Podiums',
-    curve: 'Évolution de l’Elo',
+    // « Ta courbe » et non « Évolution de l'Elo » : le segment de la fiche
+    // course s'appelle désormais « Évolution Elo » (décision PO), et deux
+    // libellés quasi identiques désignaient deux écrans différents.
+    curve: 'Ta courbe',
     curveEmpty: 'Ta courbe apparaîtra après ta première course.',
     history: 'Mes courses',
     historyOther: 'Ses courses',
@@ -549,7 +560,10 @@ export const fr = {
   },
   badges: {
     title: 'Badges',
-    subtitle: 'Neuf trophées à décrocher sur la piste.',
+    // Pas de nombre en toutes lettres : le compteur juste dessous en donne
+    // un, et les deux se contredisaient dès qu'un badge s'ajoutait (« Neuf
+    // trophées » au-dessus de « 0 sur 11 débloqués »).
+    subtitle: 'Des trophées à décrocher sur la piste.',
     progress: '%u sur %t débloqués',
     locked: 'À débloquer',
     unlockedBanner: 'Badge gagné sur cette course : %s 🏆',
@@ -717,7 +731,7 @@ export const fr = {
     // viennent d'OpenStreetMap, la source doit rester visible pour l'utilisateur.
     creditsTitle: 'Sources des données',
     creditsOsm:
-      'Les circuits de karting proviennent d’OpenStreetMap, sous licence ODbL. Un karting manquant, fermé ou mal nommé ? La correction se fait sur openstreetmap.org — elle profite à tout le monde, KartSquad compris.',
+      'Les circuits de karting proviennent d’OpenStreetMap, sous licence ODbL. Un circuit manquant, fermé ou mal nommé ? La correction se fait sur openstreetmap.org — elle profite à tout le monde, KartSquad compris.',
     // Le relevé consolidé (A16) s'appuie sur la FFSA et des annuaires publics :
     // citer ses sources est la même hygiène que l'attribution ODbL.
     creditsReferentiel:
@@ -854,11 +868,16 @@ export const fr = {
     stepDone: 'fait',
     stepTodo: 'à faire',
     step1: 'Créer une course',
-    step1Hint: 'Un karting, une date. Trente secondes.',
+    step1Hint: 'Un circuit, une date. Trente secondes.',
     step2: 'Ajouter des pilotes',
     step2Hint: 'Tes amis en un tap ; les autres, au pseudo ou en invité.',
-    step3: 'Saisir le classement',
-    step3Hint: 'L’ordre d’arrivée — les points s’échangent tout seuls.',
+    // L'étape 3 couvre les DEUX gestes depuis C11 : valider la grille, puis
+    // saisir l'arrivée. Elle disait « Saisir le classement » et envoyait sur
+    // une course dont le bouton principal est « Valider la grille » — un geste
+    // que la checklist n'avait jamais mentionné, au nez du nouveau venu
+    // qu'elle est précisément là pour guider.
+    step3: 'Valider la grille, puis le classement',
+    step3Hint: 'On fige les partants, puis on met l’ordre d’arrivée — les points s’échangent tout seuls.',
     hide: 'Masquer cette aide',
     go: 'C’est parti',
     resume: 'Continuer',

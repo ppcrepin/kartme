@@ -16,9 +16,9 @@ import { DateTimeField } from '@/components/date-time-field';
 import { Podium } from '@/components/podium';
 import { PartagePodium } from '@/components/partage-podium';
 import { ShareCard } from '@/components/share-card';
-import { Avatar, Banner, Button, Card, Field, GradeMedal, ListRow, Sheet, Tag } from '@/components/ui';
+import { Avatar, Banner, Button, Card, Field, GradeMedal, ListRow, Sheet, Tag, RangNum } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
-import { colors, fonts, spacing, couleurRang } from '@/constants/theme';
+import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { track } from '@/lib/analytics';
 import { signedAvatarUrls } from '@/lib/avatar';
@@ -525,6 +525,7 @@ export default function RaceDetailScreen() {
 
   async function onLock() {
     setBusy(true);
+    setActionError(null);
     try {
       await lockRace(id!);
       // Le bloc d'ajout se démonte, mais la saisie lui survivrait : rouvrir la
@@ -532,6 +533,12 @@ export default function RaceDetailScreen() {
       // invité » déjà armé sous le pouce.
       resetRecherche();
       await refresh();
+    } catch (e) {
+      // Depuis C11, figer la grille est le SEUL chemin vers la saisie du
+      // classement : un échec avalé laissait l'organisateur devant un bouton
+      // qui ne fait rien, sans un mot, au bord de la piste — réseau coupé,
+      // session expirée, ou double tap sur une course déjà clôturée.
+      setActionError(messageErreur(e));
     } finally {
       setBusy(false);
     }
@@ -539,9 +546,13 @@ export default function RaceDetailScreen() {
 
   async function onReopen() {
     setBusy(true);
+    setActionError(null);
     try {
       await reopenRace(id!);
       await refresh();
+    } catch (e) {
+      // Même raison : rouvrir est la seule marche arrière une fois figé.
+      setActionError(messageErreur(e));
     } finally {
       setBusy(false);
     }
@@ -920,17 +931,13 @@ export default function RaceDetailScreen() {
                                 {/* Or, argent, bronze — un podium se lit à la
                                     couleur avant de se lire au chiffre. Pas
                                     sur un abandon : il n'a pas de rang. */}
-                                <Body
-                                  style={[
-                                    styles.posNum,
-                                    r.dnf && styles.posNumDnf,
-                                    !r.dnf && couleurRang(r.position)
-                                      ? { color: couleurRang(r.position)! }
-                                      : null,
-                                  ]}
-                                >
-                                  {r.dnf ? t.races.dnfShort : r.position}
-                                </Body>
+                                <RangNum
+                                  rang={r.position}
+                                  dnf={r.dnf}
+                                  dnfLabel={t.races.dnfShort}
+                                  style={styles.posNum}
+                                  dnfStyle={styles.posNumDnf}
+                                />
                                 <Avatar
                                   name={r.hiddenProfile ? '?' : r.name}
                                   size={28}
@@ -1005,17 +1012,13 @@ export default function RaceDetailScreen() {
                                 first={i === 0}
                                 onPress={() => setExpanded(isOpen ? null : r.participationId)}
                                 left={
-                                  <Body
-                                    style={[
-                                      styles.posNum,
-                                      r.dnf && styles.posNumDnf,
-                                      !r.dnf && couleurRang(r.position)
-                                        ? { color: couleurRang(r.position)! }
-                                        : null,
-                                    ]}
-                                  >
-                                    {r.dnf ? t.races.dnfShort : r.position}
-                                  </Body>
+                                  <RangNum
+                                    rang={r.position}
+                                    dnf={r.dnf}
+                                    dnfLabel={t.races.dnfShort}
+                                    style={styles.posNum}
+                                    dnfStyle={styles.posNumDnf}
+                                  />
                                 }
                                 title={
                                   <Body style={styles.rowName} numberOfLines={1}>
@@ -1369,6 +1372,10 @@ export default function RaceDetailScreen() {
           ) : null
         ) : isAdmin ? (
           <View style={styles.barre}>
+            {/* L'erreur s'affiche DANS la barre fixe : posée au milieu du
+                contenu, elle se lit hors champ sur une grille de huit pilotes
+                — donc pas du tout. */}
+            {actionError ? <Muted style={styles.rematchErr}>{actionError}</Muted> : null}
             {participants.length < 2 ? (
               <Muted style={styles.barreHint}>{t.races.needTwoPilots}</Muted>
             ) : null}
@@ -1387,7 +1394,14 @@ export default function RaceDetailScreen() {
                 <Button
                   label={t.races.enterRanking}
                   disabled={participants.length < 2}
-                  onPress={() => router.push(`/rank/${id}?locked=1`)}
+                  // SANS `?locked=1` : ce drapeau faisait sauter l'étape
+                  // « Qui était présent ? », et depuis C11 il n'existe plus
+                  // d'autre chemin — l'étape devenait inatteignable, et un
+                  // invité qui ne s'est pas présenté ne pouvait plus être
+                  // retiré autrement qu'en le marquant « abandon », ce qui est
+                  // faux : il n'a pas couru. Le serveur autorise désormais le
+                  // retrait sur une grille figée (delete seulement).
+                  onPress={() => router.push(`/rank/${id}`)}
                 />
                 <Pressable
                   onPress={onReopen}
