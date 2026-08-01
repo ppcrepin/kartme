@@ -132,10 +132,6 @@ export const fr = {
     // un signalement qu'il ne peut pas traiter. L'objection d'origine — « une
     // porte d'entrée pour les insultes » — est levée par le fait que ce texte
     // n'est JAMAIS public : il ne sort pas de la file de modération.
-    // Un visiteur sans jeton d'invitation : le lien nu ouvre bien la page (elle
-    // n'est pas secrète), mais n'ouvre pas la grille. Le dire, plutôt que de
-    // laisser un bouton qui échouera.
-    joinNeedsInvite: 'Seul l’organisateur peut inviter sur cette course.',
     reportComment: 'Précisions (facultatif)',
     reportCommentPh: 'Ex. : fermé depuis mars, le portail est condamné.',
     reportCommentHint: 'Lu par la modération uniquement — jamais affiché aux autres pilotes.',
@@ -145,6 +141,10 @@ export const fr = {
     reportDone: 'Merci ! Un modérateur va regarder. Le référentiel profite à tous les pilotes.',
     reportNeedName: 'Indique au moins le nom du karting.',
     reportBack: 'Retour à la carte',
+    // Un visiteur sans jeton d'invitation : le lien nu ouvre bien la page (elle
+    // n'est pas secrète), mais n'ouvre pas la grille. Le dire, plutôt que de
+    // laisser un bouton qui échouera.
+    joinNeedsInvite: 'Seul l’organisateur peut inviter sur cette course.',
     // Fiche circuit (A11).
     circuitPage: {
       alsoKnown: 'Aussi connu : %a',
@@ -291,6 +291,21 @@ export const fr = {
     // feuille glissante, vues segmentées, menu ⋯ pour les actions d'admin.
     menu: 'Options',
     addPilots: 'Ajouter des pilotes',
+    // Partage du podium en image (lot C4, décision PO 2026-08-01 : « le
+    // podium, avec les points échangés »). Un message texte collé dans une
+    // conversation ne se distingue de rien et n'apprend rien à qui ne connaît
+    // pas l'application ; une image se regarde, et elle porte l'adresse.
+    podiumImageTitle: 'Partager le podium',
+    podiumImageHint: 'Une image à envoyer dans la conversation — le podium, les points échangés, et où s’inscrire.',
+    podiumImageShare: 'Partager l’image',
+    podiumImageSaved: 'Image enregistrée ✓',
+    podiumImageLoading: 'Préparation de l’image…',
+    podiumImageAria: 'Aperçu de l’image à partager : podium de la course à %c, %d',
+    // Écrit DANS l'image : elle circule chez des gens qui n'ont pas l'app, et
+    // « +24 » tout seul ne dit rien. %n arrive déjà accordé.
+    podiumImageResume: '%n · les points ne s’échangent qu’entre pilotes inscrits',
+    shareResultsOpen: 'Partager les résultats',
+    shareResultsOpenHint: 'Le podium en image, ou le lien de la course.',
     shareOpen: 'Inviter la bande',
     shareOpenHint: 'Lien, QR code — la course en un tap.',
     vueRanking: 'Classement',

@@ -1,5 +1,5 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -14,6 +14,7 @@ import { CircuitPicker } from '@/components/circuit-picker';
 import { LapField } from '@/components/lap-field';
 import { DateTimeField } from '@/components/date-time-field';
 import { Podium } from '@/components/podium';
+import { PartagePodium } from '@/components/partage-podium';
 import { ShareCard } from '@/components/share-card';
 import { Avatar, Banner, Button, Card, Field, GradeMedal, ListRow, Sheet, Tag } from '@/components/ui';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
@@ -29,6 +30,8 @@ import { messageFr } from '@/lib/erreur-fr';
 import { digitsToMs, formatLap, msToDigits } from '@/lib/laptime';
 import { listFriends, searchPilots, type FriendEntry, type Pilot } from '@/lib/friends';
 import { gradeForElo, isCalibrating } from '@/lib/grade';
+import { pluriel } from '@/lib/nombre';
+import { lignesPodium } from '@/lib/podium-image';
 import {
   addGhostParticipant,
   addProfileParticipant,
@@ -772,6 +775,27 @@ export default function RaceDetailScreen() {
       ].join('\n')
     : undefined;
 
+  // Les données de l'image de podium. Mémorisées : `PartagePodium` redessine à
+  // chaque changement de référence, et un objet recréé à chaque rendu ferait
+  // repeindre une image de 1080 × 1350 à chaque frappe de la saisie groupée
+  // des chronos.
+  const donneesPodium = useMemo(
+    () =>
+      completed && race && results.length > 0
+        ? {
+            circuit: race.circuit?.name ?? t.races.noCircuit,
+            date: formatRaceDate(race.scheduled_at),
+            lignes: lignesPodium(results, t.races.privatePilot),
+            // Sans protocole ni chemin : l'image se lit, elle ne se clique pas,
+            // et une URL de course n'apprendrait rien à qui n'a pas de compte.
+            url: appBaseUrl().replace(/^https?:\/\//, '').replace(/\/$/, ''),
+            abandon: t.races.dnfShort,
+            resume: t.races.podiumImageResume.replace('%n', pluriel(results.length, 'pilote')),
+          }
+        : null,
+    [completed, race, results],
+  );
+
   // Entrées pour le détail par paire (C10), recalculé à l'affichage. Les invités
   // sont exclus : l'Elo ne s'échange qu'entre inscrits (anti-triche), afficher un
   // duel contre eux laisserait croire à des points qui n'existent pas.
@@ -1140,6 +1164,23 @@ export default function RaceDetailScreen() {
                 </View>
                 ) : null}
 
+                {/* Partager les RÉSULTATS : la porte n'existait pas — la
+                    feuille de partage n'était atteignable que depuis une course
+                    à venir, et le titre « Partager les résultats » qu'elle
+                    porte n'avait donc jamais servi. C'est pourtant le moment où
+                    l'on a quelque chose à montrer (décision PO 2026-08-01). */}
+                <Pressable
+                  onPress={() => setShareOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t.races.shareResultsOpen}>
+                  <Card style={styles.inviteRow}>
+                    <View style={styles.flex}>
+                      <Body style={styles.rowName}>{t.races.shareResultsOpen}</Body>
+                      <Muted style={styles.rowSub}>{t.races.shareResultsOpenHint}</Muted>
+                    </View>
+                    <Body style={styles.chevron}>›</Body>
+                  </Card>
+                </Pressable>
               </View>
             ) : (
               /* ── Course à venir ── */
@@ -1342,6 +1383,9 @@ export default function RaceDetailScreen() {
 
       {/* ── Feuille : inviter / partager ── */}
       <Sheet open={shareOpen} onClose={() => setShareOpen(false)}>
+        {/* Sur une course TERMINÉE, l'image passe devant : c'est elle qu'on
+            envoie dans une conversation, le lien n'est qu'un repli. */}
+        {completed && donneesPodium ? <PartagePodium donnees={donneesPodium} /> : null}
         <ShareCard
           url={shareUrl}
           title={completed ? t.races.shareResults : undefined}
