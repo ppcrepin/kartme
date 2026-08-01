@@ -51,3 +51,7 @@ example
 .env
 .env.local
 !.env.example
+
+# Cache Python (scripts/logo.py)
+__pycache__/
+*.pyc

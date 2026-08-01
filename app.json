@@ -7,9 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "kartsquad",
     "userInterfaceStyle": "dark",
-    "ios": {
-      "icon": "./assets/expo.icon"
-    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#0a0706",
