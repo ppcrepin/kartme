@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts } from '@/constants/theme';
 import { t } from '@/i18n';
-import { useExplications } from '@/lib/explications';
+import { useExplications, type SujetGrade } from '@/lib/explications';
 import type { Grade } from '@/lib/grade';
 
 // L'apex (Légende, rouge de marque) porte un texte blanc ; les autres teintes
@@ -26,13 +26,13 @@ export function GradeMedal({
   grade,
   size = 52,
   explicable = false,
-  elo,
+  sujet,
 }: {
   grade: Grade;
   size?: number;
   explicable?: boolean;
-  /** Situe le pilote dans le grade (« encore 90 points avant… »). */
-  elo?: number | null;
+  /** De QUI parle la fiche : Elo à situer, pseudo si ce n'est pas soi, courses jouées. */
+  sujet?: SujetGrade;
 }) {
   const explications = useExplications();
   const dim = { width: size, height: size, borderRadius: size * 0.23 };
@@ -52,7 +52,7 @@ export function GradeMedal({
 
   return (
     <Pressable
-      onPress={() => explications.expliquerGrade(grade, elo)}
+      onPress={() => explications.expliquerGrade(grade, sujet)}
       accessibilityRole="button"
       accessibilityLabel={t.explications.gradeAria.replace('%g', grade.name)}
       // 44 px de zone minimum : `hitSlop` est inerte sur `Pressable` en

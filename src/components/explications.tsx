@@ -2,18 +2,32 @@ import { ReactNode, useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { BadgeIcon, GradeMedal, Sheet } from '@/components/ui';
-import { Body, Label, Muted } from '@/components/ui/text';
+import { Body, Heading, Label, Muted } from '@/components/ui/text';
 import { colors, radius, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import type { BadgeKey } from '@/lib/badges';
-import { formatRaceDate } from '@/lib/datetime';
-import { ContexteExplications, type Explications } from '@/lib/explications';
-import { GRADES, gradeProgress, type Grade } from '@/lib/grade';
+import { formatJour } from '@/lib/datetime';
+import {
+  ContexteExplications,
+  type Explications,
+  type SujetGrade,
+} from '@/lib/explications';
+import { CALIBRATION_RACES, GRADES, gradeProgress, isCalibrating, type Grade } from '@/lib/grade';
 import { pluriel } from '@/lib/nombre';
 
 type Cible =
-  | { genre: 'grade'; grade: Grade; elo: number | null }
+  | { genre: 'grade'; grade: Grade; sujet: SujetGrade }
   | { genre: 'badge'; badge: BadgeKey; obtenuLe: string | null };
+
+/** Le titre de la feuille, qui dit DE QUI l'on parle. */
+function titreDe(cible: Cible | null): string {
+  if (cible?.genre === 'badge') return t.explications.badgeTitre;
+  // « Ton niveau » ne vaut que pour SON propre grade : sur la fiche d'un autre
+  // pilote, ou sur l'échelle quand on tape un grade qu'on n'a pas, le titre
+  // mentait même quand le corps était juste.
+  const sien = cible?.genre === 'grade' && !cible.sujet.pseudo && cible.sujet.elo != null;
+  return sien ? t.explications.gradeTitre : t.explications.gradeTitreAutre;
+}
 
 /** La plage d'Elo d'un grade, écrite pour être lue à voix haute. */
 function plage(g: Grade): string {
@@ -33,8 +47,8 @@ function plage(g: Grade): string {
 export function FournisseurExplications({ children }: { children: ReactNode }) {
   const [cible, setCible] = useState<Cible | null>(null);
 
-  const expliquerGrade = useCallback((grade: Grade, elo?: number | null) => {
-    setCible({ genre: 'grade', grade, elo: elo ?? null });
+  const expliquerGrade = useCallback((grade: Grade, sujet?: SujetGrade) => {
+    setCible({ genre: 'grade', grade, sujet: sujet ?? {} });
   }, []);
   const expliquerBadge = useCallback((badge: BadgeKey, obtenuLe?: string | null) => {
     setCible({ genre: 'badge', badge, obtenuLe: obtenuLe ?? null });
@@ -51,10 +65,10 @@ export function FournisseurExplications({ children }: { children: ReactNode }) {
       <Sheet
         open={cible !== null}
         onClose={() => setCible(null)}
-        title={
-          cible?.genre === 'badge' ? t.explications.badgeTitre : t.explications.gradeTitre
-        }>
-        {cible?.genre === 'grade' ? <FicheGrade grade={cible.grade} elo={cible.elo} /> : null}
+        title={titreDe(cible)}>
+        {cible?.genre === 'grade' ? (
+          <FicheGrade grade={cible.grade} sujet={cible.sujet} />
+        ) : null}
         {cible?.genre === 'badge' ? (
           <FicheBadge badge={cible.badge} obtenuLe={cible.obtenuLe} />
         ) : null}
@@ -63,7 +77,9 @@ export function FournisseurExplications({ children }: { children: ReactNode }) {
   );
 }
 
-function FicheGrade({ grade, elo }: { grade: Grade; elo: number | null }) {
+function FicheGrade({ grade, sujet }: { grade: Grade; sujet: SujetGrade }) {
+  const elo = sujet.elo ?? null;
+  const autre = sujet.pseudo ?? null;
   const gp = elo === null ? null : gradeProgress(elo);
   return (
     <>
@@ -76,11 +92,18 @@ function FicheGrade({ grade, elo }: { grade: Grade; elo: number | null }) {
         </View>
       </View>
 
-      <Muted>{t.explications.quoi}</Muted>
+      <Muted>{autre ? t.explications.quoiAutre : t.explications.quoi}</Muted>
 
       {elo !== null ? (
         <View style={styles.bloc}>
-          <Label>{t.explications.tonElo.replace('%e', String(elo))}</Label>
+          {/* `Heading`, et non `Label` : c'est LE chiffre pour lequel la feuille
+              existe. En 11 px capitales et en gris discret, il passait derrière
+              le texte explicatif qui le surplombe. */}
+          <Heading style={styles.chiffre}>
+            {autre
+              ? t.explications.eloDe.replace('%p', autre).replace('%e', String(elo))
+              : t.explications.tonElo.replace('%e', String(elo))}
+          </Heading>
           {gp?.next ? (
             <Muted>
               {t.explications.ilTeReste
@@ -88,8 +111,19 @@ function FicheGrade({ grade, elo }: { grade: Grade; elo: number | null }) {
                 .replace('%g', gp.next.name)}
             </Muted>
           ) : (
-            <Muted>{t.explications.auSommet}</Muted>
+            <Muted>{autre ? t.explications.auSommetAutre : t.explications.auSommet}</Muted>
           )}
+          {/* La carte du profil annonce « En calibration » à deux pixels de là :
+              sans cette réserve, la feuille affirmait un objectif chiffré que
+              l'écran juste derrière déclarait provisoire. */}
+          {sujet.courses !== undefined && isCalibrating(sujet.courses) ? (
+            <Muted style={styles.reserve}>
+              {t.explications.calibration.replace(
+                '%c',
+                pluriel(Math.max(0, CALIBRATION_RACES - sujet.courses), 'course'),
+              )}
+            </Muted>
+          ) : null}
         </View>
       ) : null}
 
@@ -128,7 +162,11 @@ function FicheBadge({ badge, obtenuLe }: { badge: BadgeKey; obtenuLe: string | n
         </View>
         <View style={styles.flex}>
           <Body style={[styles.titre, got && { color: colors.accentTexte }]}>{item.name}</Body>
-          <Muted>{got ? t.explications.badgeObtenu.replace('%d', formatRaceDate(obtenuLe)) : t.explications.badgeAFaire}</Muted>
+          <Muted>
+            {got
+              ? t.explications.badgeObtenu.replace('%d', formatJour(obtenuLe))
+              : t.explications.badgeAFaire}
+          </Muted>
         </View>
       </View>
       <Muted>{item.condition}</Muted>
@@ -141,6 +179,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   titre: { fontWeight: '800', fontSize: 17 },
   bloc: { gap: spacing.xs },
+  chiffre: { fontSize: 20 },
+  reserve: { fontSize: 12 },
   section: { marginTop: spacing.xs },
   echelle: { gap: 2 },
   ligne: {

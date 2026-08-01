@@ -107,7 +107,12 @@ export default function ProfilScreen() {
                 {gp.current.name} · {profile.elo}
               </Body>
             </View>
-            <GradeMedal grade={gp.current} size={42} explicable elo={profile.elo} />
+            <GradeMedal
+              grade={gp.current}
+              size={42}
+              explicable
+              sujet={{ elo: profile.elo, courses: stats.races }}
+            />
           </View>
 
           {/* La part vide prend la teinte du grade VISÉ, et son nom s'écrit
@@ -128,7 +133,12 @@ export default function ProfilScreen() {
                 return (
                   <>
                     {avant}
-                    <Muted style={{ color: gp.next.colorTexte }}>{gp.next.name}</Muted>
+                    {/* `styles.nextGrade` aussi sur le texte IMBRIQUÉ : sans
+                        lui, le nom du grade retombait sur la taille par défaut
+                        de `Muted` (13 px) au milieu d'une phrase en 12 px. */}
+                    <Muted style={[styles.nextGrade, { color: gp.next.colorTexte }]}>
+                      {gp.next.name}
+                    </Muted>
                     {apres}
                   </>
                 );

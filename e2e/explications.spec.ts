@@ -42,37 +42,47 @@ test('taper son médaillon explique le grade, et ce qui reste à faire', async (
   await expect(page.getByText('Les six grades')).toHaveCount(0);
 });
 
-test('la fiche d’un badge s’ouvre DEVANT les yeux, pas sous la grille', async ({ page }) => {
-  await sessionSimulee(page);
-  await reseauSimule(page, {
-    'rest/v1/user_badges': [
-      { badge_key: 'kart_didentite', unlocked_at: '2026-07-14T10:00:00Z', race_id: null },
-    ],
-    'rest/v1/profiles': MOI,
+// Écran COURT, et badge de la DERNIÈRE rangée : le premier jet visait le
+// premier badge sur 844 px de haut, où l'ancienne carte de détail tombait
+// encore dans le cadre — il serait passé au vert AVANT la correction, donc il
+// ne prouvait rien (relevé par la relecture adversariale). Ici l'ancienne
+// carte, dessinée sous douze cellules, était hors de portée par construction.
+test.describe(() => {
+  test.use({ viewport: { width: 390, height: 568 } });
+
+  test('la fiche d’un badge s’ouvre DEVANT les yeux, pas sous la grille', async ({ page }) => {
+    await sessionSimulee(page);
+    await reseauSimule(page, {
+      'rest/v1/user_badges': [{ badge_key: 'push', unlocked_at: '2026-07-14T10:00:00Z', race_id: null }],
+      'rest/v1/profiles': MOI,
+    });
+    await page.goto('/badges');
+
+    // « Push » est le douzième et dernier badge de la grille.
+    const dernier = page.getByRole('button', { name: /^Push$/ }).first();
+    await expect(dernier).toBeVisible({ timeout: 20_000 });
+    await dernier.scrollIntoViewIfNeeded();
+    await dernier.click();
+
+    // La preuve que c'est bien une FEUILLE, et non la carte d'autrefois : le
+    // dialogue et sa commande de fermeture existent.
+    await expect(page.getByLabel('Fermer')).toHaveCount(1, { timeout: 10_000 });
+
+    const condition = page.getByText(/Gagner au moins 45 points d’Elo/).first();
+    await expect(condition).toBeVisible();
+    // En attente ACTIVE, et non une mesure unique : la feuille monte de 80 px
+    // en 220 ms, si bien qu'une mesure prise pendant le glissement la trouve
+    // encore sous le bord — vert en solo, rouge dans la campagne complète,
+    // pour une raison qui n'a rien à voir avec le défaut testé.
+    await expect
+      .poll(async () => {
+        const b = await condition.boundingBox();
+        return b ? b.y >= 0 && b.y + b.height <= 568 : false;
+      }, { timeout: 5_000 })
+      .toBe(true);
+
+    await expect(page.getByText('Décroché le 14 juil. 2026.').first()).toBeVisible();
   });
-  await page.goto('/badges');
-
-  const premier = page.getByRole('button', { name: /Kart d’identité/ }).first();
-  await expect(premier).toBeVisible({ timeout: 20_000 });
-  await premier.click();
-
-  // Le détail vivait dans une carte SOUS une grille de douze cellules : taper
-  // un badge de la première rangée ne montrait rien sans défiler. On tapait,
-  // il ne se passait « rien ». La feuille se pose forcément dans le cadre.
-  const condition = page.getByText('Jouer sa première course.').first();
-  await expect(condition).toBeVisible({ timeout: 10_000 });
-  // En attente ACTIVE, et non une mesure unique : la feuille monte de 80 px en
-  // 220 ms, si bien qu'une mesure prise pendant le glissement la trouve encore
-  // sous le bord — vert en solo, rouge dans la campagne complète, pour une
-  // raison qui n'a rien à voir avec le défaut testé.
-  await expect
-    .poll(async () => {
-      const b = await condition.boundingBox();
-      return b ? b.y >= 0 && b.y + b.height <= 844 : false;
-    }, { timeout: 5_000 })
-    .toBe(true);
-
-  await expect(page.getByText(/Décroché le/).first()).toBeVisible();
 });
 
 test('un badge NON décroché dit comment le décrocher', async ({ page }) => {
@@ -84,9 +94,11 @@ test('un badge NON décroché dit comment le décrocher', async ({ page }) => {
   await expect(cible).toBeVisible({ timeout: 20_000 });
   await cible.click();
 
-  await expect(page.getByText('Remporter sa première victoire.').first()).toBeVisible({
-    timeout: 10_000,
-  });
+  // La feuille, pas la carte d'autrefois : l'ancienne affichait EXACTEMENT les
+  // mêmes deux chaînes, un test qui s'en contente resterait vert si l'on
+  // revenait en arrière.
+  await expect(page.getByLabel('Fermer')).toHaveCount(1, { timeout: 10_000 });
+  await expect(page.getByText('Remporter sa première victoire.').first()).toBeVisible();
   await expect(page.getByText('Pas encore décroché.').first()).toBeVisible();
 });
 
@@ -126,4 +138,52 @@ test('la jauge du profil annonce le seuil à atteindre', async ({ page }) => {
   // palier (retour de test — « la jauge mériterait des repères »).
   await expect(page.getByText(/Encore 90 pts/).first()).toBeVisible();
   await expect(page.getByText(/à partir de 1300/).first()).toBeVisible();
+});
+
+test('sur la fiche d’un AUTRE pilote, la feuille ne tutoie pas son Elo', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, {
+    'rpc/get_pilot': [
+      { id: 'u2', username: 'Sophie_K', elo: 1450, elo_exact: true, is_private: false, races: 12, avatar_path: null },
+    ],
+    'rest/v1/profiles': MOI,
+  });
+  await page.goto('/pilot/u2');
+
+  const medaille = page.getByRole('button', { name: /voir ce que vaut ce grade/ }).first();
+  await expect(medaille).toBeVisible({ timeout: 20_000 });
+  await medaille.click();
+
+  // Le défaut relevé par les DEUX audits : la feuille affichait « Ton niveau »
+  // et « Ton Elo : 1450 » sur la fiche de quelqu'un d'autre. Un utilisateur y
+  // lisait son propre Elo à 1450 — une information fausse, pas une maladresse
+  // de ton.
+  await expect(page.getByText('Elo de Sophie_K : 1450').first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText('Ton Elo', { exact: false })).toHaveCount(0);
+  await expect(page.getByText('Ton niveau', { exact: false })).toHaveCount(0);
+  // Le corps explicatif aussi : « tu en gagnes » n'a pas de sens ici.
+  await expect(page.getByText(/^L’Elo est un compteur de points/).first()).toBeVisible();
+});
+
+test('la feuille et la carte disent LA MÊME chose sur la calibration', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, { 'rest/v1/profiles': MOI });
+  await page.goto('/profil');
+
+  // La carte du profil et la feuille lisent la même source (les courses
+  // terminées) : c'est leur ACCORD qu'on teste, pas une valeur en dur. Sans
+  // cette réserve, la feuille affirmait un objectif chiffré que l'écran juste
+  // derrière, à deux pixels de là, déclarait provisoire.
+  const medaille = page.getByRole('button', { name: /voir ce que vaut ce grade/ }).first();
+  // Le compte se prend APRÈS le chargement du profil, sinon il vaut zéro parce
+  // que la carte n'existe pas encore — et le test comparait alors l'absence
+  // d'écran à la présence de feuille.
+  await expect(medaille).toBeVisible({ timeout: 20_000 });
+  const carteEnCalibration = await page.getByText(/En calibration/).count();
+
+  await medaille.click();
+  await expect(page.getByText('Les six grades').first()).toBeVisible({ timeout: 10_000 });
+
+  const feuilleEnCalibration = await page.getByText(/de calibration/).count();
+  expect(feuilleEnCalibration > 0).toBe(carteEnCalibration > 0);
 });

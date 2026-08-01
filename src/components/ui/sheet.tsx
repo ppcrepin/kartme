@@ -44,7 +44,11 @@ export function Sheet({
   const translateY = glisse.interpolate({ inputRange: [0, 1], outputRange: [80, 0] });
 
   return (
-    <Modal transparent visible animationType="none" onRequestClose={onClose}>
+    // `aria-label` : react-native-web pose bien `role="dialog"` et
+    // `aria-modal`, mais AUCUN nom — un lecteur d'écran annonçait « dialogue »
+    // sans dire lequel, alors que le titre est juste là. Le prop traverse le
+    // `rest` de Modal jusqu'à la `View` qui porte le rôle.
+    <Modal transparent visible animationType="none" onRequestClose={onClose} aria-label={title}>
       <View style={styles.voileZone}>
         {/* Le voile ferme au tap mais n'est PAS annoncé comme un bouton : la
             poignée ci-dessous est la commande de fermeture, et deux boutons

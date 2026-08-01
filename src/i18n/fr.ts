@@ -422,6 +422,9 @@ export const fr = {
     // Période de calibration : les 5 premières courses, le niveau se règle vite.
     calibrating: 'En calibration',
     curveDnf: '○ abandon',
+    // Le trait pointillé coloré de la courbe : sans légende, deux pointillés
+    // (départ 1000 en gris, palier visé en couleur) ne se distinguaient pas.
+    curveSeuil: '┄ palier %s',
     calibratingHint: 'En calibration : ton niveau se règle plus vite (encore %c).',
     stats: 'Statistiques',
     races: 'Courses',
@@ -443,16 +446,29 @@ export const fr = {
   // grades »). Le vocabulaire y est celui d'un joueur, pas celui d'un moteur
   // de classement : ni « somme nulle », ni « palier », ni « borne ».
   explications: {
+    // DEUX jeux de libellés, et ce n'est pas de la coquetterie : le même
+    // médaillon s'ouvre depuis MON profil et depuis la fiche d'un autre
+    // pilote. Un tutoiement en dur y affichait « Ton Elo : 1450 » sur la fiche
+    // de quelqu'un d'autre — un chiffre faux, présenté comme le sien.
     gradeTitre: 'Ton niveau',
+    gradeTitreAutre: 'Ce grade',
     gradeAria: '%g — voir ce que vaut ce grade',
     // %e = plage d'Elo du grade.
     plage: 'Elo %e',
     plageOuverte: 'Elo %m et au-delà',
     quoi:
       'Ton Elo est un compteur de points : tu en gagnes en battant des pilotes inscrits, tu en perds quand ils te battent. Le grade, c’est le nom que prend ce compteur.',
+    quoiAutre:
+      'L’Elo est un compteur de points : on en gagne en battant des pilotes inscrits, on en perd quand ils vous battent. Le grade, c’est le nom que prend ce compteur.',
     tonElo: 'Ton Elo : %e',
+    // %p = pseudo du pilote regardé.
+    eloDe: 'Elo de %p : %e',
+    // Sans pronom : sert aux deux cas.
     ilTeReste: 'Encore %n avant %g.',
     auSommet: 'Tu es tout en haut de l’échelle. Il n’y a plus rien au-dessus.',
+    auSommetAutre: 'C’est le dernier grade : personne ne monte plus haut.',
+    calibration:
+      'Encore %c de calibration : le grade et les points restent provisoires tant que le niveau se cherche.',
     echelle: 'Les six grades',
     badgeTitre: 'Ce badge',
     badgeObtenu: 'Décroché le %d.',
@@ -463,7 +479,6 @@ export const fr = {
     subtitle: 'Douze trophées à décrocher sur la piste.',
     progress: '%u sur %t débloqués',
     locked: 'À débloquer',
-    unlockedOn: 'Débloqué le %d',
     unlockedBanner: 'Badge gagné sur cette course : %s 🏆',
     unlockedBannerMany: 'Badges gagnés sur cette course : %s 🏆',
     seeAll: 'Voir tous les badges',

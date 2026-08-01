@@ -16,9 +16,28 @@ import type { Grade } from './grade';
  * fournisseur (`components/explications`) doit pouvoir afficher un médaillon.
  * Les deux dans un même module feraient un cycle d'imports.
  */
+/** De QUI parle la fiche de grade. */
+export interface SujetGrade {
+  /** L'Elo à situer dans le grade. `null` = on ne le connaît pas (profil privé). */
+  elo?: number | null;
+  /**
+   * Le pseudo du pilote regardé, quand ce n'est PAS soi. Son absence fait
+   * basculer la fiche au tutoiement — c'est le seul commutateur, et il doit
+   * rester unique : « Ton Elo : 1450 » sur la fiche de quelqu'un d'autre est un
+   * chiffre faux présenté comme le sien (relevé aux deux audits du 2026-08-01).
+   */
+  pseudo?: string | null;
+  /**
+   * Nombre de courses jouées. Sert à savoir si le pilote est encore en
+   * calibration — auquel cas la fiche le dit, faute de quoi elle affirmait un
+   * objectif chiffré que l'écran juste derrière déclarait provisoire.
+   */
+  courses?: number;
+}
+
 export interface Explications {
-  /** Ouvre la fiche d'un grade. `elo` situe le pilote dedans quand on le connaît. */
-  expliquerGrade: (grade: Grade, elo?: number | null) => void;
+  /** Ouvre la fiche d'un grade. */
+  expliquerGrade: (grade: Grade, sujet?: SujetGrade) => void;
   /** Ouvre la fiche d'un badge. `obtenuLe` = date ISO, ou null s'il reste à décrocher. */
   expliquerBadge: (badge: BadgeKey, obtenuLe?: string | null) => void;
 }

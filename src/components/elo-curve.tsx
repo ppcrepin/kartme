@@ -9,6 +9,48 @@ import type { EloPoint } from '@/lib/profile';
 
 const PAD = 10;
 
+/** Le palier visé, tel qu'on le passe à la courbe. */
+export interface SeuilCourbe {
+  valeur: number;
+  couleur: string;
+}
+
+/**
+ * Les DEUX échelles de la courbe, et c'est délibéré.
+ *
+ * `min`/`max` sont ceux RÉELLEMENT atteints : ils légendent la courbe. Y
+ * glisser le seuil ferait afficher « max 1300 » à un pilote qui n'a jamais
+ * dépassé 1250 — la courbe mentirait pour dessiner un repère.
+ *
+ * `bas`/`haut` cadrent le DESSIN et englobent le seuil, sinon son trait tombe
+ * hors du SVG et ne repère rien. Mais seulement s'il reste PROCHE du tracé :
+ * juste après une promotion (1300 atteint, prochain palier 1700) il ferait
+ * passer l'échelle de 300 à 700 points, et la courbe s'écraserait dans son
+ * tiers bas sur 72 px de haut. Au-delà, `repere` est nul — on ne trace rien
+ * plutôt que de sacrifier la lecture du passé à un repère du futur.
+ *
+ * Fonction pure et exportée : c'est la seule partie de la courbe qui décide
+ * quelque chose, et elle est intestable à travers un SVG dont la géométrie
+ * dépend d'une largeur mesurée au navigateur.
+ */
+export function echelleCourbe(
+  values: number[],
+  seuil?: SeuilCourbe | null,
+): { min: number; max: number; bas: number; haut: number; repere: SeuilCourbe | null } {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const amplitude = Math.max(max - min, 20);
+  const debord = seuil ? (seuil.valeur > max ? seuil.valeur - max : min - seuil.valeur) : 0;
+  const repere = seuil && debord <= amplitude * 1.5 ? seuil : null;
+  return {
+    min,
+    max,
+    bas: repere ? Math.min(min, repere.valeur) : min,
+    haut: repere ? Math.max(max, repere.valeur) : max,
+    repere,
+  };
+}
+
 /**
  * Courbe d'évolution de l'Elo. Part de l'Elo de départ (1000) puis une valeur
  * par course. Ligne accent, point final marqué, repères min/max discrets.
@@ -27,11 +69,10 @@ export function EloCurve({
   height?: number;
   /**
    * Le prochain palier à franchir. La courbe disait où l'on est passé, jamais
-   * où l'on va — « il manque des repères » (retour de test 2026-08-01). Sa
-   * valeur entre dans l'échelle verticale : un trait hors cadre ne repérerait
-   * rien.
+   * où l'on va — « il manque des repères » (retour de test 2026-08-01). Voir
+   * `echelleCourbe` pour ce qu'il fait à l'échelle.
    */
-  seuil?: { valeur: number; couleur: string } | null;
+  seuil?: SeuilCourbe | null;
 }) {
   const HEIGHT = height;
   const [width, setWidth] = useState(0);
@@ -39,15 +80,7 @@ export function EloCurve({
 
   if (values.length < 2) return null;
 
-  // Deux échelles, et c'est délibéré. La LÉGENDE dit le min et le max
-  // RÉELLEMENT atteints : y glisser le seuil ferait afficher « max 1300 » à un
-  // pilote qui n'a jamais dépassé 1250 — la courbe mentirait pour dessiner un
-  // repère. Le DESSIN, lui, doit contenir le trait du seuil, sinon il tombe
-  // hors cadre et ne repère rien.
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const basDessin = seuil ? Math.min(min, seuil.valeur) : min;
-  const hautDessin = seuil ? Math.max(max, seuil.valeur) : max;
+  const { min, max, bas: basDessin, haut: hautDessin, repere } = echelleCourbe(values, seuil);
   const span = Math.max(hautDessin - basDessin, 20); // évite une ligne écrasée à ±0
 
   const x = (i: number) => PAD + (i * (width - 2 * PAD)) / (values.length - 1);
@@ -73,13 +106,13 @@ export function EloCurve({
             />
             {/* Le palier visé, dans la couleur du grade d'après : c'est la
                 seule ligne de la courbe qui parle du FUTUR. */}
-            {seuil ? (
+            {repere ? (
               <Line
                 x1={PAD}
-                y1={y(seuil.valeur)}
+                y1={y(repere.valeur)}
                 x2={width - PAD}
-                y2={y(seuil.valeur)}
-                stroke={seuil.couleur}
+                y2={y(repere.valeur)}
+                stroke={repere.couleur}
                 strokeWidth={1.5}
                 strokeDasharray="2 4"
                 opacity={0.75}
@@ -118,6 +151,11 @@ export function EloCurve({
                 coûterait une ligne pour rien (lot de densité A17). */}
             {points.some((p) => p.dnf) ? (
               <Muted style={styles.legendTxt}>{t.profile.curveDnf}</Muted>
+            ) : null}
+            {repere ? (
+              <Muted style={[styles.legendTxt, { color: repere.couleur }]}>
+                {t.profile.curveSeuil.replace('%s', String(repere.valeur))}
+              </Muted>
             ) : null}
             <Muted style={styles.legendTxt}>max {max}</Muted>
           </View>

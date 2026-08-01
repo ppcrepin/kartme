@@ -19,6 +19,17 @@ export function formatRaceDate(iso: string): string {
   return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/**
+ * Jour SEUL : « 14 juil. 2026 ». Pour ce qui s'est produit un jour donné sans
+ * qu'on ait rendez-vous — un badge décroché. `formatRaceDate` y ajoutait une
+ * heure (« mar. 14 juil. · 10:00 ») qui n'apprend rien et se lit mal suivie
+ * d'un point final.
+ */
+export function formatJour(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 /** Pour le médaillon calendrier (jour + mois court). */
 export function dayAndMonth(iso: string): { day: string; month: string } {
   const d = new Date(iso);

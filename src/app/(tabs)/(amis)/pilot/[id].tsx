@@ -210,7 +210,12 @@ export default function PilotScreen() {
                     quoi, Missile des Stands ? ». L'Elo n'est passé que s'il
                     est exact (profil privé : on ne situe pas dans le grade). */}
                 {calibrating ? null : (
-                  <GradeMedal grade={grade} size={46} explicable elo={pilot.eloExact ? pilot.elo : null} />
+                  <GradeMedal
+                    grade={grade}
+                    size={46}
+                    explicable
+                    sujet={{ elo: pilot.eloExact ? pilot.elo : null, pseudo: pilot.username }}
+                  />
                 )}
               </View>
               {pilot.isPrivate && !pilot.eloExact ? (
