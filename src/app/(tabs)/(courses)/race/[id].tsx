@@ -37,6 +37,7 @@ import {
   getCircuitRecord,
   getRace,
   joinRace,
+  raceInviteToken,
   listParticipants,
   listResults,
   lockRace,
@@ -103,7 +104,9 @@ function WaitingFlag() {
 }
 
 export default function RaceDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // `j` : le jeton porté par le lien de partage de l'admin. C'est lui qui
+  // autorise à rejoindre — le serveur l'exige (« seul l'admin invite »).
+  const { id, j: jeton } = useLocalSearchParams<{ id: string; j?: string }>();
   const router = useRouter();
   const { session } = useAuth();
   const selfId = session?.user.id;
@@ -426,7 +429,7 @@ export default function RaceDetailScreen() {
     setBusy(true);
     setJoinError(null);
     try {
-      await joinRace(id!);
+      await joinRace(id!, jeton ?? null);
       await refresh();
     } catch (e) {
       setJoinError(e instanceof Error ? e.message : t.races.joinError);
@@ -734,7 +737,24 @@ export default function RaceDetailScreen() {
     </>
   );
 
-  const shareUrl = `${appBaseUrl()}race/${id}`;
+  // Le lien de partage porte le JETON, et le jeton ne se demande qu'à
+  // l'ouverture de la feuille : un non-admin n'a aucune raison de déclencher un
+  // refus serveur à chaque visite de la course. Tant qu'il n'est pas revenu, la
+  // feuille montre le lien nu — qui ouvre bien la page, mais ne fait entrer
+  // personne, ce qui est exactement la règle.
+  const [jetonPartage, setJetonPartage] = useState<string | null>(null);
+  useEffect(() => {
+    if (!shareOpen || !isAdmin || !id || jetonPartage !== null) return;
+    let vivant = true;
+    raceInviteToken(id)
+      .then((tk) => vivant && setJetonPartage(tk))
+      .catch(() => {});
+    return () => {
+      vivant = false;
+    };
+  }, [shareOpen, isAdmin, id, jetonPartage]);
+
+  const shareUrl = `${appBaseUrl()}race/${id}${jetonPartage ? `?j=${encodeURIComponent(jetonPartage)}` : ''}`;
 
   // Résumé texte des résultats (podium) pour le partage.
   const resultsMessage = completed
@@ -858,7 +878,7 @@ export default function RaceDetailScreen() {
                         title={(myNewBadges.length > 1
                           ? t.badges.unlockedBannerMany
                           : t.badges.unlockedBanner
-                        ).replace('%s', myNewBadges.map((k) => t.badges.items[k].name).join(' · '))}
+                        ).replace('%s', myNewBadges.map((k) => t.badges.items[k]?.name ?? k).join(' · '))}
                       />
                     ) : null}
 
@@ -1307,7 +1327,15 @@ export default function RaceDetailScreen() {
         ) : !selfParticipating && !locked ? (
           <View style={styles.barre}>
             {joinError ? <Muted style={styles.rematchErr}>{joinError}</Muted> : null}
-            <Button label={t.races.joinRace} onPress={onJoin} disabled={busy} />
+            {/* Sans jeton, le serveur refusera : mieux vaut le dire que
+                proposer un bouton dont on sait qu'il échouera. La page reste
+                lisible — elle n'est pas secrète —, c'est la GRILLE qui est
+                réservée aux invités de l'organisateur. */}
+            {jeton ? (
+              <Button label={t.races.joinRace} onPress={onJoin} disabled={busy} />
+            ) : (
+              <Muted style={styles.barreHint}>{t.races.joinNeedsInvite}</Muted>
+            )}
           </View>
         ) : null
       ) : null}

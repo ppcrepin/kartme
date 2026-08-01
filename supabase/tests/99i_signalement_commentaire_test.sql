@@ -23,12 +23,23 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', p, 'role', 'authenticated')::text, true);
 end $$;
 
-/** Vrai (1) si l'appel lève une exception — le refus attendu. */
-create function tests.refuse(sql text, msg text) returns void language plpgsql as $$
+/**
+ * Vérifie que l'appel est refusé POUR LA BONNE RAISON.
+ *
+ * `when others` seul ne discrimine rien : le scénario passerait au vert si
+ * `contains_banned_word` disparaissait (« fonction inexistante » est aussi une
+ * exception). On exige donc que le message contienne l'extrait attendu.
+ */
+create function tests.refuse(sql text, attendu text, msg text) returns void language plpgsql as $$
+declare v_err text;
 begin
   begin
     execute sql;
   exception when others then
+    v_err := sqlerrm;
+    if position(attendu in v_err) = 0 then
+      raise exception 'ÉCHEC : % (refusé, mais pour « % » au lieu de « % »)', msg, v_err, attendu;
+    end if;
     return;
   end;
   raise exception 'ÉCHEC : % (aucune erreur levée)', msg;
@@ -88,13 +99,13 @@ begin
   perform tests.refuse(
     $q$ select public.suggest_circuit('manquant', 'Karting Propre', 'Tours', null,
                                       'le patron est un connard') $q$,
-    'un commentaire injurieux est refusé');
+    'Nom ou ville non conforme', 'un commentaire injurieux est refusé');
   -- Et le contournement espacé, que la première passe du filtre attrape sur la
   -- forme collée : sans lui, « c o n n a r d » passerait.
   perform tests.refuse(
     $q$ select public.suggest_circuit('manquant', 'Karting Propre', 'Tours', null,
                                       'c o n n a r d') $q$,
-    'un commentaire injurieux espacé est refusé lui aussi');
+    'Nom ou ville non conforme', 'un commentaire injurieux espacé est refusé lui aussi');
   raise notice 'Scénario 2 (filtre de mots sur le commentaire) ✔';
 end $$;
 
@@ -147,7 +158,7 @@ begin
   perform public.suggest_circuit('manquant', 'Karting Cinq', 'Angers', null, 'cinquième');
   perform tests.refuse(
     $q$ select public.suggest_circuit('manquant', 'Karting Six', 'Nantes', null, 'sixième') $q$,
-    'le sixième signalement en une heure est refusé');
+    'Trop de signalements en une heure', 'le sixième signalement en une heure est refusé');
   raise notice 'Scénario 4 (plafond horaire préservé) ✔';
 end $$;
 

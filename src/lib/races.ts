@@ -40,7 +40,6 @@ export interface Race {
   circuit_id: string | null;
   scheduled_at: string;
   status: RaceStatus;
-  invite_token: string;
   completed_at: string | null;
   circuit: Circuit | null;
 }
@@ -187,8 +186,24 @@ export async function createRace(circuitId: string, scheduledAt: Date): Promise<
   return race;
 }
 
+// `invite_token` a QUITTÉ cette liste, et la colonne n'est plus lisible côté
+// serveur : c'est lui qui autorise à rejoindre une course, donc le laisser
+// filer dans chaque chargement de course revenait à donner le droit d'inviter
+// à tous les inscrits. Il se demande explicitement, et seul l'admin l'obtient
+// (`raceInviteToken`).
 const RACE_SELECT =
-  'id, admin_id, circuit_id, scheduled_at, status, invite_token, completed_at, circuit:circuits(*)';
+  'id, admin_id, circuit_id, scheduled_at, status, completed_at, circuit:circuits(*)';
+
+/**
+ * Le jeton d'invitation d'une course — réservé à son admin par le serveur.
+ * Demandé au moment d'ouvrir le partage, pas au chargement de l'écran : un
+ * non-admin n'a aucune raison de déclencher un refus à chaque visite.
+ */
+export async function raceInviteToken(raceId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('race_invite_token', { p_race_id: raceId });
+  if (error) throw new Error(error.message);
+  return (data as string | null) ?? '';
+}
 
 export async function listMyRaces(): Promise<{ upcoming: Race[]; past: Race[] }> {
   const { data: auth } = await supabase.auth.getUser();
@@ -353,9 +368,19 @@ export async function addProfileParticipant(raceId: string, profileId: string): 
   if (error) throw new Error(error.message);
 }
 
-/** Un invité rejoint lui-même une course ouverte (RPC : la RLS réserve l'ajout à l'admin). */
-export async function joinRace(raceId: string): Promise<void> {
-  const { error } = await supabase.rpc('join_race', { p_race_id: raceId });
+/**
+ * Rejoindre une course sur invitation de son admin.
+ *
+ * `token` vient du lien de partage (`?j=…`). Le serveur l'exige : sans lui, on
+ * ne rejoint pas — c'est ce qui fait de « seul l'admin invite » une règle et
+ * non un bouton masqué. Un pilote DÉJÀ inscrit repasse sans jeton (l'appel
+ * reste idempotent), et l'admin n'en a pas besoin sur sa propre course.
+ */
+export async function joinRace(raceId: string, token?: string | null): Promise<void> {
+  const { error } = await supabase.rpc('join_race', {
+    p_race_id: raceId,
+    p_token: token ?? null,
+  });
   if (error) throw new Error(error.message);
 }
 

@@ -46,7 +46,7 @@ test('les badges qui punissent ont disparu du catalogue', async ({ page }) => {
   await expect(page.getByRole('button', { name: /Kart d’identité/ })).toHaveCount(1);
 });
 
-test('un pilote NON admin ne peut pas diffuser le lien de la course', async ({ page }) => {
+test('un pilote NON admin ne voit aucune porte vers le lien de la course', async ({ page }) => {
   await sessionSimulee(page);
   await reseauSimule(page, {
     'rest/v1/races': { ...COURSE_A_VENIR, admin_id: 'u2' },
@@ -58,15 +58,54 @@ test('un pilote NON admin ne peut pas diffuser le lien de la course', async ({ p
     timeout: 20_000,
   });
 
-  // Le serveur refusait déjà à un non-admin d'AJOUTER quelqu'un (policy
-  // `participations_write_admin`). Mais ce lien contournait la règle par la
-  // bande : n'importe quel inscrit diffusait l'URL, et le destinataire se
-  // joignait tout seul. Une grille qui grossit sans que son organisateur le
-  // sache, c'est la grille de quelqu'un d'autre.
+  // Ce test mesure l'ÉCRAN, et rien d'autre — c'est sa limite, et il faut la
+  // dire : masquer un bouton n'est pas une règle. La règle elle-même est tenue
+  // par le serveur (`join_race` exige le jeton d'invitation, la colonne
+  // `invite_token` n'est plus lisible) et gardée par les scénarios 5 et 6 de
+  // supabase/tests/90_join_race_test.sql. C'est là qu'elle se casserait.
   await expect(page.getByRole('button', { name: /Inviter/ })).toHaveCount(0);
   // Le bloc d'ajout de pilotes ne lui était déjà pas proposé : on le vérifie
   // ici, c'est la même règle.
   await expect(page.getByText('Ajouter des pilotes', { exact: false })).toHaveCount(0);
+
+});
+
+test('sans jeton, la porte d’entrée est fermée — et le dit', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, {
+    'rest/v1/races': { ...COURSE_A_VENIR, admin_id: 'u2' },
+    // Une grille où je ne suis PAS : quelqu'un qui tombe sur la page sans
+    // avoir été invité. La page reste lisible — elle n'est pas secrète —,
+    // c'est la GRILLE qui est réservée aux invités de l'organisateur.
+    'rest/v1/participations': [PILOTES[1]],
+    'rest/v1/results': [],
+  });
+  await page.goto('/race/r1');
+  await expect(page.getByText('Sophie_K', { exact: false }).and(sceneActive(page)).first()).toBeVisible({
+    timeout: 20_000,
+  });
+
+  // Un bouton « Rejoindre » qu'on sait voué à un refus serveur vaut moins
+  // qu'une phrase qui explique la règle.
+  await expect(page.getByText('Seul l’organisateur peut inviter sur cette course.').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Rejoindre la course' })).toHaveCount(0);
+});
+
+test('avec le jeton du lien, la porte est ouverte', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, {
+    'rest/v1/races': { ...COURSE_A_VENIR, admin_id: 'u2' },
+    // Une grille où je ne suis PAS : c'est le cas de quelqu'un qui arrive par
+    // le lien de partage.
+    'rest/v1/participations': [PILOTES[1]],
+    'rest/v1/results': [],
+  });
+  await page.goto('/race/r1?j=un-jeton');
+
+  await expect(page.getByRole('button', { name: 'Rejoindre la course' }).first()).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByText('Seul l’organisateur peut inviter sur cette course.')).toHaveCount(0);
 });
 
 test('l’admin, lui, garde le lien et le QR', async ({ page }) => {
@@ -89,7 +128,10 @@ test('le signalement d’un karting accepte des précisions, et dit qui les lira
   await reseauSimule(page, {});
   await page.goto('/circuit-report');
 
-  const champ = page.getByLabel('Précisions (facultatif)');
+  // Le nom accessible du champ PORTE la mention de modération : c'est
+  // volontaire (un lecteur d'écran annonçait « Précisions, zone de texte »
+  // sans jamais dire qui allait lire ce qu'on y tape).
+  const champ = page.getByLabel(/Précisions \(facultatif\)/);
   await expect(champ).toBeVisible({ timeout: 20_000 });
 
   // Le lot d'origine avait REFUSÉ ce champ — « une porte d'entrée pour les
@@ -102,5 +144,8 @@ test('le signalement d’un karting accepte des précisions, et dit qui les lira
   // l'envoi, sans l'avoir vu venir, fait douter de l'envoi entier.
   await champ.fill('x'.repeat(260));
   expect((await champ.inputValue()).length).toBe(200);
-  await expect(page.getByText('0 caractères restants').first()).toBeVisible();
+  await expect(page.getByText('Il reste 0 caractère').first()).toBeVisible();
+  // Et l'accord suit : « Il reste 1 caractère », pas « 1 caractères ».
+  await champ.fill('y'.repeat(199));
+  await expect(page.getByText('Il reste 1 caractère').first()).toBeVisible();
 });

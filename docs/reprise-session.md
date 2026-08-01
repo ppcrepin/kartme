@@ -72,7 +72,7 @@ Phases 1, 2 et 3 (code) sont déployées et le SQL est collé en production.
 
 - **Elo** : K=64, diviseur D=800, plancher 100 / plafond 2500, somme nulle (arrondi au plus grand reste).
 - **Anti-triche central** : l'Elo ne s'échange **qu'entre comptes inscrits**. Les invités « fantômes » comptent dans la course mais leur Elo est **figé** et ils sont **hors du classement Global**.
-- **12 badges** nommés par le PO : Voiture balai, Midi moins le kart, DRS, Safety car, Push… (seuils ±45).
+- **9 badges** nommés par le PO : Midi moins le kart, DRS, Safety car, Push… (seuils ±45). *Les trois badges négatifs (Kart-astrophe, Voiture balai, Tête-à-queue) ont été retirés le 2026-08-01, moteur et historique compris.*
 - **Suppression RGPD** = anonymisation en place (« Joueur supprimé »), **jamais** de delete du profil (cela casserait l'Elo des autres).
 - **Correction de classement** : fenêtre 24 h, refusée si un pilote a couru depuis (Elo « à chemin »). Elle rembobine aussi les badges et **préserve les temps au tour**.
 - **Temps au tour** : informatif / prestige, **n'affecte pas l'Elo**. Chacun édite le sien, l'admin peut saisir pour tous.

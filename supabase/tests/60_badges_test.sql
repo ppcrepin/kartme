@@ -96,7 +96,7 @@ begin
                    'la Voiture balai ne tombe plus, à 2 pilotes comme à 3');
   perform tests.eq((select count(*) from user_badges where profile_id = A and badge_key = 'champagne'), 1,
                    'Champagne reste unique après une 2e victoire');
-  raise notice 'Scénario 2 (duel sans voiture balai, unicité) ✔';
+  raise notice 'Scénario 2 (unicité d''un badge après une 2e victoire) ✔';
 end $$;
 
 -- ═══ Scénario 3 : Push (≥ +45) + Safety car ; AUCUN badge négatif ═══

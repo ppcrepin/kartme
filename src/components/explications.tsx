@@ -152,7 +152,10 @@ function FicheGrade({ grade, sujet }: { grade: Grade; sujet: SujetGrade }) {
 }
 
 function FicheBadge({ badge, obtenuLe }: { badge: BadgeKey; obtenuLe: string | null }) {
-  const item = t.badges.items[badge];
+  // Ceinture et bretelles : `listBadges` filtre déjà les clés inconnues,
+  // mais une feuille ouverte sur une clé venue d'ailleurs afficherait un écran
+  // blanc plutôt qu'un libellé imparfait.
+  const item = t.badges.items[badge] ?? { name: badge, condition: '' };
   const got = obtenuLe !== null;
   return (
     <>

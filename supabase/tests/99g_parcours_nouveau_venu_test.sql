@@ -105,7 +105,9 @@ begin
   -- accueil — c'est le geste qu'on attend d'une nouvelle venue.
   insert into participations (race_id, profile_id) values (r, marc), (r, paul);
   perform tests.as_uid(lea);
-  perform public.join_race(r);
+  -- Avec le jeton du lien que Marc lui a envoyé : rejoindre sans invitation
+  -- n'est plus possible (décision PO « seul l'admin invite », 2026-08-01).
+  perform public.join_race(r, (select invite_token::text from races where id = r));
   perform tests.eq((select count(*) from participations where race_id = r), 3,
     'Léa a rejoint la course elle-même');
 

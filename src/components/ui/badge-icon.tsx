@@ -3,9 +3,9 @@ import Svg, { Circle, Line, Path, Polyline, Rect } from 'react-native-svg';
 
 // Icônes des 9 badges (12 à l'origine ; les trois qui punissaient une mauvaise
 // soirée ont été retirés le 2026-08-01). Style hérité du <Svg> parent :
-// trait 1.7, extrémités/jointures rondes, aucun remplissage. Les 7 badges
-// d'origine reprennent la maquette docs/badges-icones.html ; « Voiture balai »,
-// « Midi moins le kart », « DRS », « Safety car » et « Push » sont neufs.
+// trait 1.7, extrémités/jointures rondes, aucun remplissage. Les plus anciennes
+// reprennent la maquette docs/badges-icones.html ; « Midi moins le kart »,
+// « DRS », « Safety car » et « Push » sont neuves.
 
 export type BadgeKey =
   | 'kart_didentite'
@@ -110,7 +110,7 @@ const ICONS: Record<BadgeKey, ReactElement> = {
       <Line x1={23.5} y1={11} x2={23.5} y2={9} />
     </>
   ),
-  // 12. Push — courbe qui grimpe, flèche vers le haut (pendant de Kart-astrophe).
+  // 12. Push — courbe qui grimpe, flèche vers le haut.
   push: (
     <>
       <Polyline points="7,34 16,25 21,29 33,14" />

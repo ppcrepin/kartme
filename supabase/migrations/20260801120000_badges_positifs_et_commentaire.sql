@@ -275,4 +275,91 @@ $$;
 revoke all on function public.list_circuit_suggestions(boolean) from public, anon;
 grant execute on function public.list_circuit_suggestions(boolean) to authenticated;
 
+-- ═══ 4. « Seul l'admin invite » : une RÈGLE, pas un bouton masqué ═════════
+-- Masquer la ligne « Inviter la bande » aux non-admins ne retirait AUCUNE
+-- capacité, et la relecture adversariale l'a montré : le lien partagé était
+-- `…/race/<id>`, c'est-à-dire l'URL de la page elle-même, lisible dans la barre
+-- d'adresse de n'importe quel inscrit. `join_race` est `security definer`,
+-- contourne donc la RLS, et ne vérifiait ni jeton, ni parrain, ni amitié. Un
+-- inscrit copiait l'URL, l'envoyait, et le destinataire entrait — l'admin ne
+-- l'apprenant qu'après coup.
+--
+-- La grille est le socle de l'Elo : qui la remplit décide avec qui l'on échange
+-- des points. C'est une question d'intégrité, pas seulement de confort.
+--
+-- Deux verrous, et il faut les deux :
+--   a) le JETON d'invitation cesse d'être lisible par tout le monde ;
+--   b) `join_race` l'exige.
+
+-- a) `grant select` s'applique à TOUTES les colonnes : on redescend au niveau
+--    colonne pour tout sauf `invite_token`. Sans cela, un non-admin lit le
+--    jeton par l'API et fabrique lui-même le lien — le verrou (b) ne servirait
+--    à rien.
+revoke select on public.races from authenticated, anon;
+grant select (id, admin_id, circuit_id, scheduled_at, status,
+              created_at, updated_at, reminded_at, completed_at)
+  on public.races to authenticated;
+
+/**
+ * Le jeton d'invitation d'une course. RÉSERVÉ à son admin — c'est la seule
+ * porte vers lui maintenant que la colonne n'est plus lisible.
+ */
+create or replace function public.race_invite_token(p_race_id uuid)
+returns text
+language plpgsql stable security definer set search_path = public as $$
+declare v_token text; v_admin uuid;
+begin
+  select invite_token, admin_id into v_token, v_admin from races where id = p_race_id;
+  if v_admin is null then raise exception 'Course introuvable'; end if;
+  if v_admin <> auth.uid() then
+    raise exception 'Seul l''organisateur peut inviter sur cette course';
+  end if;
+  return v_token;
+end $$;
+revoke all on function public.race_invite_token(uuid) from public, anon;
+grant execute on function public.race_invite_token(uuid) to authenticated;
+
+-- b) L'ancienne signature part : la garder laisserait le trou ouvert pour un
+--    client qui appelle encore à un seul argument.
+drop function if exists public.join_race(uuid);
+
+/**
+ * Rejoindre une course sur invitation de son ADMIN.
+ *
+ * `p_token` est le jeton porté par le lien de partage. Sans lui, on ne rejoint
+ * pas : c'est ce qui fait de « seul l'admin invite » une règle tenue par le
+ * serveur et non un bouton caché.
+ *
+ * Deux exceptions, et elles ne rouvrent rien :
+ *   · l'admin lui-même (il se remet sur sa propre grille depuis l'écran) ;
+ *   · un pilote DÉJÀ inscrit, qui rappelle la fonction — retour silencieux,
+ *     l'appel reste idempotent comme avant.
+ */
+create or replace function public.join_race(p_race_id uuid, p_token text default null)
+returns void
+language plpgsql security definer set search_path = public as $$
+declare v_admin uuid; v_status text; v_token text; v_uid uuid := auth.uid();
+begin
+  if v_uid is null then raise exception 'Non authentifié'; end if;
+  select admin_id, status, invite_token into v_admin, v_status, v_token
+    from races where id = p_race_id;
+  if v_admin is null then raise exception 'Course introuvable'; end if;
+  if exists (select 1 from participations where race_id = p_race_id and profile_id = v_uid) then
+    return; -- déjà inscrit : idempotent, et sans exiger de jeton
+  end if;
+  if v_status <> 'upcoming' then raise exception 'Les inscriptions sont closes'; end if;
+  -- La comparaison est faite AVANT le blocage : un jeton faux et un blocage ne
+  -- doivent pas se distinguer par leur message, sinon l'un renseigne sur
+  -- l'autre. `is not distinct from` traite le jeton nul comme une non-égalité.
+  if v_uid <> v_admin and (p_token is null or v_token is null or p_token <> v_token) then
+    raise exception 'Seul l''organisateur peut inviter sur cette course';
+  end if;
+  if public.is_blocked(v_uid, v_admin) then
+    raise exception 'Impossible de rejoindre cette course';
+  end if;
+  insert into participations (race_id, profile_id) values (p_race_id, v_uid);
+end $$;
+revoke all on function public.join_race(uuid, text) from public, anon;
+grant execute on function public.join_race(uuid, text) to authenticated;
+
 commit;

@@ -37,7 +37,20 @@ export interface UnlockedBadge {
   raceId: string | null;
 }
 
-type RawBadge = { badge_key: BadgeKey; unlocked_at: string; race_id: string | null };
+type RawBadge = { badge_key: string; unlocked_at: string; race_id: string | null };
+
+/**
+ * Les clés que l'application sait afficher. La base peut en servir d'autres :
+ * le PO colle le SQL À LA MAIN, donc entre le déploiement du front et son
+ * collage, `user_badges` contient encore les trois badges retirés — et le
+ * moteur non migré continue d'en attribuer. Sans ce filtre, `t.badges.items[k]`
+ * valait `undefined` et la fiche pilote s'affichait BLANCHE ; le compteur, lui,
+ * annonçait « 12 sur 9 débloqués ».
+ *
+ * Le filtre reste utile après la migration : c'est la garantie que le catalogue
+ * de l'écran et celui de la base ne peuvent jamais se contredire à l'affichage.
+ */
+const CONNUS = new Set<string>(BADGE_KEYS);
 
 /** Badges débloqués d'un pilote (le mien par défaut), indexés par clé. */
 export async function listBadges(profileId?: string): Promise<Map<BadgeKey, UnlockedBadge>> {
@@ -54,7 +67,9 @@ export async function listBadges(profileId?: string): Promise<Map<BadgeKey, Unlo
     .eq('profile_id', target);
   if (error) throw new Error(error.message);
   for (const r of (data ?? []) as RawBadge[]) {
-    map.set(r.badge_key, { key: r.badge_key, unlockedAt: r.unlocked_at, raceId: r.race_id });
+    if (!CONNUS.has(r.badge_key)) continue;
+    const key = r.badge_key as BadgeKey;
+    map.set(key, { key, unlockedAt: r.unlocked_at, raceId: r.race_id });
   }
   return map;
 }
@@ -70,5 +85,10 @@ export async function badgesForRace(raceId: string): Promise<BadgeKey[]> {
     .eq('profile_id', me)
     .eq('race_id', raceId);
   if (error) throw new Error(error.message);
-  return ((data ?? []) as { badge_key: BadgeKey }[]).map((r) => r.badge_key);
+  // Même filtre que `listBadges` : le moteur non encore migré attribue
+  // toujours les badges retirés, et le bandeau post-course plantait sur le
+  // dernier de chaque course.
+  return ((data ?? []) as { badge_key: string }[])
+    .filter((r) => CONNUS.has(r.badge_key))
+    .map((r) => r.badge_key as BadgeKey);
 }

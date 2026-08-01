@@ -165,11 +165,16 @@ declare
   A uuid := 'bb000000-0000-0000-0000-00000000000a';
   D uuid := 'bb000000-0000-0000-0000-00000000000d';
   r uuid := 'bb200000-0000-0000-0000-000000000002';
+  v_token text;
 begin
   insert into races (id, admin_id, scheduled_at) values (r, A, now());
+  -- Le jeton du lien de partage : rejoindre l'exige depuis le 2026-08-01
+  -- (« seul l'admin invite »). D l'a reçu une fois ; ce scénario mesure ce
+  -- qu'il se passe s'il entre et ressort trente fois avec.
+  select invite_token into v_token from races where id = r;
   perform tests.as_uid(D);
   for i in 1..30 loop
-    perform public.join_race(r);
+    perform public.join_race(r, v_token);
     delete from participations where race_id = r and profile_id = D;
   end loop;
 

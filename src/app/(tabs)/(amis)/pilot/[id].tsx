@@ -324,7 +324,7 @@ export default function PilotScreen() {
                         <View
                           key={key}
                           style={styles.badgeMedal}
-                          accessibilityLabel={t.badges.items[key].name}>
+                          accessibilityLabel={t.badges.items[key]?.name ?? key}>
                           <BadgeIcon badge={key} size={26} color={colors.accent} />
                         </View>
                       ))}

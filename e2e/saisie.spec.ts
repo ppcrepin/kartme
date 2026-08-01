@@ -98,6 +98,47 @@ test('le lien de secours bascule dans les deux sens, et se souvient', async ({ p
   await expect(page.getByText(VERS_DRAG, { exact: true })).toBeVisible({ timeout: 20_000 });
 });
 
+// Écran COURT et liste LONGUE : c'est la seule combinaison qui révélait le
+// défaut, et les tests précédents n'exerçaient que trois pilotes sur 844 px.
+test.describe(() => {
+  test.use({ viewport: { width: 320, height: 568 } });
+
+  test('à huit pilotes sur un petit écran, on arrive EN HAUT de l’étape ordre', async ({ page }) => {
+    await sessionSimulee(page);
+    await reseauSimule(page, {
+      'rest/v1/races': COURSE,
+      'rest/v1/participations': Array.from({ length: 8 }, (_, i) => ({
+        id: `p${i}`,
+        profile_id: i === 0 ? UID : `u${i}`,
+        ghost_id: null,
+        profile: { username: i === 0 ? 'Moi' : `Pilote_${i}`, elo: 1000 + i * 10, races: 9, avatar_path: null },
+        ghost: null,
+      })),
+      'rest/v1/results': [],
+    });
+    await page.goto('/rank/r1');
+
+    // On DÉFILE pour atteindre « Continuer », comme n'importe qui le ferait à
+    // huit pilotes sur 568 px de haut.
+    const continuer = page.getByText('Continuer', { exact: false }).first();
+    await continuer.scrollIntoViewIfNeeded({ timeout: 20_000 });
+    await continuer.click();
+
+    // Cette position de défilement était REPORTÉE sur l'étape suivante : on
+    // atterrissait au milieu de la liste, sans titre, sans mode d'emploi, et
+    // avec le lien de secours jusqu'à 180 px AU-DESSUS du bord de l'écran.
+    // C'est le défaut qui avait bloqué un testeur en juillet, revenu par la
+    // porte du défilement.
+    const lien = page.getByRole('button', { name: /Passer au mode toucher/ });
+    await expect(lien).toBeVisible({ timeout: 20_000 });
+    const boite = await lien.boundingBox();
+    expect(boite && boite.y >= 0).toBeTruthy();
+    expect(boite && boite.y + boite.height <= 568).toBeTruthy();
+    // Et le titre de l'étape est là, lui aussi : c'est lui qui dit où l'on est.
+    await expect(page.getByText('Ordre d’arrivée', { exact: true }).first()).toBeVisible();
+  });
+});
+
 test('changer de geste ne DÉPLACE pas le lien qu’on vient de toucher', async ({ page }) => {
   await ouvrirEtapeOrdre(page);
 

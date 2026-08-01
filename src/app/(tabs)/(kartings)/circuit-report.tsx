@@ -7,6 +7,7 @@ import { Banner, Button, Card, Field } from '@/components/ui';
 import { Body, Label, Muted } from '@/components/ui/text';
 import { colors, radius, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
+import { pluriel } from '@/lib/nombre';
 import { suggestCircuit, type CircuitReportKind } from '@/lib/races';
 
 /** Plafond du champ libre — le même que la contrainte de la table. */
@@ -42,6 +43,10 @@ export default function CircuitReportScreen() {
   const [name, setName] = useState(correction ? (circuitName ?? '') : '');
   const [city, setCity] = useState('');
   const [comment, setComment] = useState('');
+  // Le champ grandit avec le texte, jusqu'à un plafond : à hauteur figée, on
+  // se relisait par un défilement INTERNE sans barre visible sur mobile —
+  // la moitié de son propre message hors de vue (audit navigateur 2026-08-01).
+  const [hauteurComment, setHauteurComment] = useState(84);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -127,6 +132,11 @@ export default function CircuitReportScreen() {
             <View>
               <Field
                 label={t.races.reportComment}
+                // La condition qui justifie l'existence du champ entre dans son
+                // NOM accessible : `aria-describedby` n'existe pas sur `Field`,
+                // et un lecteur d'écran annonçait « Précisions, zone de texte »
+                // sans jamais dire qui allait lire ce qu'on y tape.
+                accessibilityLabel={`${t.races.reportComment} — ${t.races.reportCommentHint}`}
                 placeholder={t.races.reportCommentPh}
                 value={comment}
                 onChangeText={setComment}
@@ -136,14 +146,20 @@ export default function CircuitReportScreen() {
                 // et se faire tronquer après l'envoi, sans l'avoir vu venir,
                 // est le genre de silence qui fait douter de l'envoi entier.
                 maxLength={COMMENT_MAX}
-                style={styles.commentaire}
+                onContentSizeChange={(e) =>
+                  setHauteurComment(Math.min(200, Math.max(84, e.nativeEvent.contentSize.height + 16)))
+                }
+                style={[styles.commentaire, { height: hauteurComment }]}
               />
               <Muted style={styles.hint}>{t.races.reportCommentHint}</Muted>
-              {comment.length > 0 ? (
-                <Muted style={styles.hint}>
-                  {t.races.reportCommentLeft.replace('%n', String(COMMENT_MAX - comment.length))}
-                </Muted>
-              ) : null}
+              {/* Affiché DÈS L'OUVERTURE, et pas seulement une fois qu'on a
+                  tapé : rien n'annonçait la limite avant de la rencontrer. */}
+              <Muted style={styles.hint}>
+                {t.races.reportCommentLeft.replace(
+                  '%n',
+                  pluriel(COMMENT_MAX - comment.length, 'caractère'),
+                )}
+              </Muted>
             </View>
 
             {error ? <Banner kind="err" title={error} /> : null}
@@ -166,7 +182,7 @@ const styles = StyleSheet.create({
   kindTxt: { color: colors.inkDim },
   kindTxtOn: { color: '#fff', fontWeight: '700' },
   hint: { fontSize: 11 },
-  // `textAlignVertical` n'existe pas sur web : la hauteur fixe suffit à faire
-  // lire le champ comme une zone de texte et non comme une ligne.
+  // La hauteur réelle est posée au rendu (`hauteurComment`) : ici, seulement
+  // ce qui ne dépend pas du contenu.
   commentaire: { minHeight: 84, paddingTop: spacing.sm },
 });

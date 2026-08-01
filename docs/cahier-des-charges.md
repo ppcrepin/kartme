@@ -114,7 +114,7 @@ Le grade est affiché sur le profil (à côté de l'Elo) et une **échelle des g
 
 **Gamification** :
 - Elo affiché en chiffre (référence précise) **+ un rang visuel** en complément (cf. §5.4).
-- Badges/trophées avec un ton fun et des jeux de mots. **12 badges retenus pour le MVP** (revue PO du 2026-07-13 ; catalogue complet + réserve enrichissable dans `BADGES.md` à la racine du repo) :
+- Badges/trophées avec un ton fun et des jeux de mots. **9 badges retenus pour le MVP** (12 à l'origine ; les trois badges négatifs — Kart-astrophe, Voiture balai, Tête-à-queue — ont été retirés le 2026-08-01 après un test utilisateur : ils récompensaient une mauvaise soirée) (revue PO du 2026-07-13 ; catalogue complet + réserve enrichissable dans `BADGES.md` à la racine du repo) :
 
 | Badge | Déclencheur |
 |---|---|
@@ -122,9 +122,6 @@ Le grade est affiché sur le profil (à côté de l'Elo) et une **échelle des g
 | Habitué des stands | 10 courses jouées |
 | Champagne ! | 1ère victoire |
 | Sur les chapeaux de roues | 3 victoires d'affilée |
-| Kart-astrophe | Perdre au moins 45 points d'Elo en une course |
-| Voiture balai | Finir dernier d'une course (3 pilotes ou plus) |
-| Tête-à-queue | Perdre un palier de grade entier |
 | Midi moins le kart | Participer à une course le matin (6h – midi) |
 | Chef d'écurie | Organiser 10 courses qui comptent (2 inscrits ou plus) |
 | DRS | Battre un pilote inscrit parti 300+ Elo au-dessus de soi |

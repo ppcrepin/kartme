@@ -132,10 +132,15 @@ export const fr = {
     // un signalement qu'il ne peut pas traiter. L'objection d'origine — « une
     // porte d'entrée pour les insultes » — est levée par le fait que ce texte
     // n'est JAMAIS public : il ne sort pas de la file de modération.
+    // Un visiteur sans jeton d'invitation : le lien nu ouvre bien la page (elle
+    // n'est pas secrète), mais n'ouvre pas la grille. Le dire, plutôt que de
+    // laisser un bouton qui échouera.
+    joinNeedsInvite: 'Seul l’organisateur peut inviter sur cette course.',
     reportComment: 'Précisions (facultatif)',
     reportCommentPh: 'Ex. : fermé depuis mars, le portail est condamné.',
     reportCommentHint: 'Lu par la modération uniquement — jamais affiché aux autres pilotes.',
-    reportCommentLeft: '%n caractères restants',
+    // %n arrive déjà accordé (« 1 caractère », « 12 caractères »).
+    reportCommentLeft: 'Il reste %n',
     reportSend: 'Envoyer le signalement',
     reportDone: 'Merci ! Un modérateur va regarder. Le référentiel profite à tous les pilotes.',
     reportNeedName: 'Indique au moins le nom du karting.',
@@ -316,8 +321,8 @@ export const fr = {
     modeVersDrag: '✥ Revenir au glisser-déposer',
     // Lus à voix haute : le pictogramme ne s'énonce pas, et « bouton » seul ne
     // dit pas qu'on change de mode de saisie.
-    modeVersTapAria: 'Passer au mode toucher : pointer les pilotes dans l’ordre d’arrivée',
-    modeVersDragAria: 'Revenir au mode glisser-déposer',
+    modeVersTapAria: 'Mode glisser-déposer actif. Passer au mode toucher : pointer les pilotes dans l’ordre d’arrivée',
+    modeVersDragAria: 'Mode toucher actif. Revenir au mode glisser-déposer',
     reset: 'Recommencer',
     validateRanking: 'Valider le classement',
     // Brouillon local de saisie (A10) : le réseau au circuit est mauvais, une
@@ -335,7 +340,10 @@ export const fr = {
     // La liste s'ouvre dans l'ordre des inscriptions : tant que personne n'a
     // été déplacé, ce n'est pas un classement. Le dire, plutôt que laisser un
     // bouton grisé sans explication.
-    dragUntouched: 'Place les pilotes dans l’ordre d’arrivée : appui long, puis glisse.',
+    // « 1er en haut » est ICI aussi : c'est le message d'OUVERTURE, et le sens
+    // de la liste ne doit pas s'apprendre après avoir déjà rangé son vainqueur
+    // en bas.
+    dragUntouched: 'Place les pilotes dans l’ordre d’arrivée, 1er en haut : appui long, puis glisse.',
     needTwoPilots: 'Ajoute au moins 2 pilotes pour saisir le classement.',
     // Cycle de vie (lot 2.6) : verrou + rappel, correction 24 h.
     lock: 'Clôturer les invitations',
@@ -472,7 +480,7 @@ export const fr = {
     // pilote. Un tutoiement en dur y affichait « Ton Elo : 1450 » sur la fiche
     // de quelqu'un d'autre — un chiffre faux, présenté comme le sien.
     gradeTitre: 'Ton niveau',
-    gradeTitreAutre: 'Ce grade',
+    gradeTitreAutre: 'À propos de ce grade',
     gradeAria: '%g — voir ce que vaut ce grade',
     // %e = plage d'Elo du grade.
     plage: 'Elo %e',
@@ -491,7 +499,7 @@ export const fr = {
     calibration:
       'Encore %c de calibration : le grade et les points restent provisoires tant que le niveau se cherche.',
     echelle: 'Les six grades',
-    badgeTitre: 'Ce badge',
+    badgeTitre: 'À propos de ce badge',
     badgeObtenu: 'Décroché le %d.',
     badgeAFaire: 'Pas encore décroché.',
   },

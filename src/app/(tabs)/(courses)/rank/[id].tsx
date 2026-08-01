@@ -1,5 +1,5 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -58,6 +58,13 @@ export default function RankScreen() {
   // `ordered` est un classement voulu ou un simple listing.
   const [ordreEtabli, setOrdreEtabli] = useState(false);
   const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
+  const defilement = useRef<ScrollView>(null);
+  // Le plancher du mode d'emploi se MESURE au lieu d'être codé à 38 px : les
+  // trois consignes ne font pas la même longueur, et un plancher en pixels ne
+  // suit pas l'agrandissement de police du navigateur — à 150 %, la consigne du
+  // glisser passait à trois lignes quand celle du toucher restait à deux, et le
+  // décalage sous le doigt revenait. On retient la plus haute vue.
+  const [plancherEmploi, setPlancherEmploi] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -147,6 +154,21 @@ export default function RankScreen() {
     persist({ absentIds: [...next] });
   }
 
+  /**
+   * Remonte en haut de l'écran au changement d'étape.
+   *
+   * Sans cela, la position de défilement de la liste des « présents » était
+   * reportée telle quelle sur l'étape de l'ordre : à six pilotes sur un petit
+   * écran, on atterrissait au MILIEU de la liste — ni titre, ni mode d'emploi,
+   * ni lien vers le mode toucher, qu'il fallait aller rechercher 350 px plus
+   * haut. C'est le défaut qui avait bloqué un testeur en juillet, revenu par la
+   * porte du défilement (mesuré à l'audit navigateur du 2026-08-01 : le lien
+   * tombait jusqu'à 180 px au-dessus du bord).
+   */
+  function remonter() {
+    defilement.current?.scrollTo({ y: 0, animated: false });
+  }
+
   function onConfirmPresents() {
     // Rien n'est écrit en base ici : le retrait effectif des absents se fait
     // à la validation finale (revenir en arrière n'a donc aucun effet).
@@ -154,6 +176,7 @@ export default function RankScreen() {
     setOrdered(present);
     setTapOrder([]);
     setStep('order');
+    remonter();
     persist({ step: 'order', orderedIds: present.map((p) => p.id), tapOrder: [], ordreEtabli: false });
   }
 
@@ -167,6 +190,7 @@ export default function RankScreen() {
     setOrdered(rosterFinal ? participants : []);
     setOrdreEtabli(false);
     setStep(rosterFinal ? 'order' : 'presents');
+    remonter();
   }
 
   function toggleDnf(pid: string) {
@@ -286,7 +310,7 @@ export default function RankScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} scrollEnabled={!dragging}>
+      <ScrollView ref={defilement} contentContainerStyle={styles.content} scrollEnabled={!dragging}>
         <Pressable
           onPress={() =>
             // Sans historique (PWA relancée en plein classement), le retour
@@ -366,8 +390,14 @@ export default function RankScreen() {
                 le PO avait relevé sur les anciennes pastilles (« ça décale vers
                 le bas »), et le déplacer sous le mode d'emploi le ramenait tel
                 quel. */}
-            <View style={styles.modeEmploi}>
-              <Muted style={enAttenteDeGeste ? styles.dragAttente : undefined}>
+            <View style={[styles.modeEmploi, { minHeight: plancherEmploi }]}>
+              {/* Pas de rouge : c'est l'état d'OUVERTURE de tout le monde, pas
+                  une erreur. Le « Valider » grisé juste dessous suffit à dire
+                  qu'il manque un geste. */}
+              <Muted
+                onLayout={(e) =>
+                  setPlancherEmploi((h) => Math.max(h, e.nativeEvent.layout.height))
+                }>
                 {isCorrect
                   ? t.races.correctHint
                   : enAttenteDeGeste
@@ -392,6 +422,9 @@ export default function RankScreen() {
               <Pressable
                 onPress={() => onSetMode(mode === 'drag' ? 'tap' : 'drag')}
                 accessibilityRole="button"
+                // Le libellé dit d'où l'on part ET où l'on va : les pastilles
+                // portaient un `aria-checked` qui annonçait le mode COURANT, et
+                // un lien seul ne dirait que ce qu'il fera.
                 accessibilityLabel={
                   mode === 'drag' ? t.races.modeVersTapAria : t.races.modeVersDragAria
                 }
@@ -527,7 +560,6 @@ const styles = StyleSheet.create({
   // dans la liste, pas un classement. Le rouge plein est réservé à ce qui a
   // été VOULU, comme les numéros du mode toucher.
   posEnAttente: { backgroundColor: 'transparent', borderColor: colors.line2, borderWidth: 1 },
-  dragAttente: { color: colors.accentTexte },
   posTxtOut: { color: colors.inkDim2, fontSize: 10, fontWeight: '800' },
   dnfBlock: { gap: spacing.xs, marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.line },
   dnfTitle: { color: colors.ink, fontWeight: '700' },
@@ -594,9 +626,9 @@ const styles = StyleSheet.create({
   posTxt: { fontFamily: fonts.serifBlack, color: colors.inkDim2 },
   posTxtOn: { fontFamily: fonts.serifBlack, color: '#fff' },
   flex: { flex: 1 },
-  // Deux lignes de `Muted` (13 px, interligne 19) : le plancher qui empêche
-  // tout ce qui suit de remonter quand on passe du glisser au toucher.
-  modeEmploi: { minHeight: 38, justifyContent: 'center' },
+  // Le plancher réel vient de la mesure (`plancherEmploi`) : voir sa
+  // déclaration. Ici, seulement ce qui ne dépend pas du texte.
+  modeEmploi: { justifyContent: 'center' },
   // 44 px de haut réels : `hitSlop` est inerte sur `Pressable` en
   // react-native-web, et un lien de 17 px se rate au pouce.
   modeLien: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', paddingRight: spacing.sm },

@@ -170,7 +170,10 @@ test('course à venir (non-admin, non inscrit) : « Rejoindre » en barre fixe, 
     'rest/v1/participations': PARTICIPANTS.filter((p) => p.id !== 'p1'),
     'rest/v1/results': [],
   });
-  await page.goto('/race/r1');
+  // `?j=` : le jeton du lien de partage de l'admin. Depuis le 2026-08-01,
+  // rejoindre l'exige — « seul l'admin invite ». Sans lui, l'écran affiche la
+  // règle au lieu du bouton (couvert par e2e/lot-c3.spec.ts).
+  await page.goto('/race/r1?j=un-jeton');
   await expect(page.getByText('Rejoindre la course', { exact: true })).toBeVisible({
     timeout: 20_000,
   });
