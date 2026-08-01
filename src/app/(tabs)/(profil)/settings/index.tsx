@@ -87,7 +87,7 @@ export default function SettingsScreen() {
               onPress={row.onPress}
               disabled={row.soon}
               accessibilityRole="button"
-              accessibilityState={{ disabled: !!row.soon }}>
+              aria-disabled={!!row.soon}>
               <Card style={row.soon ? styles.soonCard : undefined}>
                 <View style={styles.row}>
                   <View style={styles.flex}>

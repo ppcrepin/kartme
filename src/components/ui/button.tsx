@@ -21,7 +21,11 @@ export function Button({
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityState={{ disabled: !!disabled }}
+      // `accessibilityState` n'est pas lu par react-native-web : seules les
+      // props `aria-*` atteignent le DOM. C'est le composant de TOUS les
+      // boutons — un « Valider » grisé n'était annoncé à personne, et un
+      // lecteur d'écran n'a même pas la couleur pour compenser.
+      aria-disabled={!!disabled}
       style={({ pressed }) => [
         styles.base,
         variant === 'primary' ? styles.primary : styles.ghost,

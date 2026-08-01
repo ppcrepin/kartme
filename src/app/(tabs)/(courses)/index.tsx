@@ -85,8 +85,6 @@ export default function CoursesScreen() {
   const avancement = (premiere?.courseCreee ? 1 : 0) + (premiere?.pilotesAjoutes ? 1 : 0);
   const checklistVisible = !!premiere && (masqueeA === null || avancement > masqueeA);
 
-
-
   return (
     <Screen title={t.tabs.races} headerAction={<NotificationBell />}>
       {/* ── TOUT défile ensemble, sauf le bouton du bas ────────────────────
@@ -134,7 +132,9 @@ export default function CoursesScreen() {
             <Pressable
               onPress={() => router.push('/notifications?vue=amis')}
               accessibilityRole="button"
-              hitSlop={8}>
+              // `hitSlop` est inerte sur `Pressable` en web : la cible venait
+              // du texte de 12 px, soit ~15 px de haut.
+              style={styles.feedLinkZone}>
               <Muted style={styles.feedLink}>{t.feed.seeAll} ›</Muted>
             </Pressable>
           </View>
@@ -174,7 +174,13 @@ export default function CoursesScreen() {
           list.map((race) => {
             const { day, month } = dayAndMonth(race.scheduled_at);
             return (
-              <Pressable key={race.id} onPress={() => router.push(`/race/${race.id}`)} accessibilityRole="button">
+              <Pressable
+                key={race.id}
+                onPress={() => router.push(`/race/${race.id}`)}
+                accessibilityRole="button"
+                // La carte empile un jour, un mois, un karting et une date : sans
+                // nom explicite, un lecteur d'écran les recolle en bouillie.
+                accessibilityLabel={`${t.races.cardAria} ${day} ${month} · ${race.circuit?.name ?? t.races.noCircuit}`}>
                 <Card>
                   <View style={styles.raceRow}>
                     <View style={styles.cal}>
@@ -206,6 +212,7 @@ export default function CoursesScreen() {
 const styles = StyleSheet.create({
   feedHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   feedTitle: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
+  feedLinkZone: { minHeight: 44, justifyContent: 'center', paddingLeft: spacing.md },
   feedLink: { color: colors.accentTexte, fontSize: 12, fontWeight: '700' },
   page: { gap: spacing.sm, paddingBottom: spacing.md },
   filters: { flexDirection: 'row', gap: spacing.sm },

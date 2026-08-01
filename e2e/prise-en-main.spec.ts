@@ -131,9 +131,19 @@ test('le « ✕ » chasse la checklist, et elle revient au palier suivant', asyn
   });
   await page.reload();
   await expect(page.getByText('1/3', { exact: true })).toBeVisible({ timeout: 20_000 });
+
+  // LE comportement neuf : on la rechasse à 1/3, et elle RESTE chassée à 1/3.
+  // Un booléen remis à faux à chaque palier passerait tout ce qui précède et
+  // échouerait ici — c'est la seule assertion qui distingue les deux modèles.
+  await page.getByLabel('Masquer cette aide').click();
+  await page.reload();
+  await expect(page.getByText('Courses', { exact: true }).and(sceneActive(page)).first()).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByText('Ta première course', { exact: true })).toHaveCount(0);
 });
 
-test('« À venir » : la course la plus PROCHE en tête', async ({ page }) => {
+test('« À venir » : la plus proche en tête, les oubliées à la fin', async ({ page }) => {
   await sessionSimulee(page);
   const dans = (j: number) => ({
     ...course('upcoming'),
@@ -141,8 +151,13 @@ test('« À venir » : la course la plus PROCHE en tête', async ({ page }) => {
     scheduled_at: new Date(Date.now() + j * 864e5).toISOString(),
   });
   await reseauSimule(page, {
-    // Servies dans le désordre : c'est au client de trancher.
-    'rest/v1/races': [dans(30), dans(2), dans(12)],
+    // Servies dans le désordre : c'est au client de trancher. Deux courses
+    // EN RETARD (J-20, J-5) — leur date est passée mais leur classement n'a
+    // jamais été saisi, donc elles restent « à venir ». Un tri croissant NU
+    // les mettrait en tête, au-dessus de la course de demain : c'est
+    // exactement ce que le jeu de données précédent, tout en futur, ne
+    // pouvait pas voir.
+    'rest/v1/races': [dans(30), dans(-20), dans(2), dans(-5), dans(12)],
     'rest/v1/participations': [],
   });
   await page.goto('/');
@@ -150,15 +165,18 @@ test('« À venir » : la course la plus PROCHE en tête', async ({ page }) => {
     timeout: 20_000,
   });
 
-  // Le tri était décroissant — juste pour l'historique, inversé pour ce qui
-  // vient : la course du mois prochain passait avant celle d'après-demain,
-  // c'est-à-dire enterrait la seule qu'il faut préparer.
-  const dates = await page
-    .locator('xpath=//*[not(ancestor-or-self::*[@aria-hidden="true"])]')
-    .getByText(/^\d{1,2}$/)
-    .allTextContents();
+  // On lit les jours DANS les cartes de course, pas au hasard de la page : la
+  // pastille de la cloche est un nombre nu placé plus haut dans le DOM, et un
+  // balayage global la ramasserait le jour où une fixture la peuple.
+  const cartes = page.getByLabel(/^Course du /);
+  const jours: string[] = [];
+  for (let i = 0; i < (await cartes.count()); i++) {
+    jours.push(((await cartes.nth(i).getAttribute('aria-label')) ?? '').split(' ')[2]);
+  }
   const jour = (j: number) => String(new Date(Date.now() + j * 864e5).getDate());
-  expect(dates.slice(0, 3)).toEqual([jour(2), jour(12), jour(30)]);
+  // Le futur d'abord, du plus proche au plus lointain ; puis les oubliées, la
+  // plus récente en tête (c'est celle dont on se souvient assez pour la classer).
+  expect(jours).toEqual([jour(2), jour(12), jour(30), jour(-5), jour(-20)]);
 });
 
 test('une course terminée : la checklist a fini son travail et disparaît', async ({ page }) => {

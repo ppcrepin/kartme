@@ -159,7 +159,8 @@ export default function CompteScreen() {
                     disabled={photoBusy}
                     accessibilityRole="button"
                     accessibilityLabel={t.profile.photoChangeA11y}
-                    accessibilityState={{ disabled: photoBusy, busy: photoBusy }}>
+                    aria-disabled={photoBusy}
+                    aria-busy={photoBusy}>
                     <Muted style={styles.photoLink}>
                       {photoBusy
                         ? t.profile.photoBusy
@@ -174,7 +175,7 @@ export default function CompteScreen() {
                       disabled={photoBusy}
                       accessibilityRole="button"
                       accessibilityLabel={t.profile.photoRemoveA11y}
-                      accessibilityState={{ disabled: photoBusy }}>
+                      aria-disabled={photoBusy}>
                       <Muted style={styles.photoLink}>{t.profile.photoRemove}</Muted>
                     </Pressable>
                   ) : null}

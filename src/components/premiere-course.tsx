@@ -126,7 +126,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'center',
     marginRight: -spacing.xs,
-    marginVertical: -spacing.sm,
+    // Marge négative EN HAUT seulement. En bas, la boîte débordait sur celle
+    // du sous-titre — peint APRÈS elle, donc vainqueur : 8 px de la cible
+    // partaient au paragraphe, et la croix ne faisait que 36 px réellement
+    // tapables. Mesuré au navigateur, pas déduit.
+    marginTop: -spacing.sm,
   },
   fermerTxt: { fontSize: 15 },
   etapes: { marginTop: spacing.sm, gap: spacing.xs },

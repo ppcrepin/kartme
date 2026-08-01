@@ -4,6 +4,9 @@
  * Thème sombre unique au lancement (pas de mode clair).
  */
 
+/** Voir `colors.accentTexte` — sorti du littéral pour servir aussi aux grades. */
+const accentTexteBrut = '#ff5c45';
+
 export const colors = {
   bg: '#0a0706', // fond principal (noir chaud)
   bgVignette: '#241210', // halo radial haut
@@ -13,7 +16,11 @@ export const colors = {
   line2: '#3a2a25', // bordures accentuées
   ink: '#f2ede9', // texte principal (blanc cassé chaud)
   inkDim: '#a08d87', // texte secondaire
-  inkDim2: '#8a746d', // texte discret
+  // Texte discret. Éclairci de #8a746d, qui donnait 4,06 à 4,27:1 selon le
+  // fond — sous le seuil AA de 4,5 alors qu'il porte des choses qui comptent :
+  // le « ✕ » de retrait d'un pilote, le marqueur « ABD » d'un abandon, les
+  // chevrons de navigation. Reste nettement en retrait de `inkDim`.
+  inkDim2: '#957f76',
   accent: '#e10600', // Rosso Corsa (marque) — APLATS : fonds, bordures, pastilles
   /**
    * Le même rouge, éclairci, réservé au TEXTE posé sur fond sombre.
@@ -28,7 +35,7 @@ export const colors = {
    * (boutons pleins, pastilles sélectionnées, épingles, courbe Elo) — seule
    * la teinte du texte rouge change. 5,8 à 6,6:1 selon le fond.
    */
-  accentTexte: '#ff5c45',
+  accentTexte: accentTexteBrut,
   pos: '#6fae82', // gain d'Elo (toujours doublé d'un signe ▲/+)
   gold: '#e2c14d', // liseré premium / focus
 } as const;
@@ -55,7 +62,24 @@ export const gradeColors = {
   rookie: '#cfd4d8', // argent
   missile: '#ecc63f', // jaune
   fusee: '#ef7f27', // orange
-  legende: '#e10600', // rouge (marque)
+  legende: '#e10600', // rouge (marque) — APLAT du médaillon
+} as const;
+
+/**
+ * Les mêmes couleurs de grade, en version TEXTE.
+ *
+ * Cinq des six passent le seuil AA telles quelles (5,2 à 13,4:1) ; « Légende »
+ * porte le rouge de marque et plafonne à 3,76:1. Ce n'est pas un cas de niche
+ * réservé aux 2100 Elo : l'écran « Grades » liste les six paliers, nommés dans
+ * leur couleur, à TOUT LE MONDE — c'est le nom du grade le plus convoité de
+ * l'app qui était le moins lisible.
+ *
+ * Le médaillon (`GradeMedal`) garde `gradeColors` : c'est un aplat, et il doit
+ * rester du Rosso Corsa.
+ */
+export const gradeTextColors = {
+  ...gradeColors,
+  legende: accentTexteBrut,
 } as const;
 
 export const radius = {

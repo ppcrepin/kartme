@@ -31,7 +31,11 @@ function stockage(): Storage | null {
  * ceux qui le préfèrent — ils ne le rechoisissent qu'une fois.
  */
 export function modePrefere(): ModeSaisie {
-  return stockage()?.getItem(CLE_MODE) === 'drag' ? 'drag' : 'tap';
+  try {
+    return stockage()?.getItem(CLE_MODE) === 'drag' ? 'drag' : 'tap';
+  } catch {
+    return 'tap';
+  }
 }
 
 export function memoriserMode(mode: ModeSaisie): void {
@@ -48,6 +52,11 @@ const CLE_CHECKLIST = 'ks_checklist_masquee';
 /**
  * On ne mémorise pas « masquée » mais l'AVANCEMENT au moment du masquage.
  *
+ * Chassée à 2/3 — l'avancement maximum, l'étape 3 ne se cochant jamais —, la
+ * carte ne revient plus : c'est voulu. À ce stade le pilote a créé sa course
+ * et rempli sa grille ; s'il chasse le mode d'emploi là, c'est qu'il n'en a
+ * plus besoin.
+ *
  * Un simple booléen poserait un dilemme sans issue : la carte doit revenir
  * quand le pilote s'y met vraiment (décision PO), or si le retour dépend de
  * « une course existe », alors re-masquer après création la ferait
@@ -58,9 +67,38 @@ const CLE_CHECKLIST = 'ks_checklist_masquee';
  * elle revient à 2/3. Elle ne repasse jamais deux fois au même endroit.
  */
 export function checklistMasqueeA(): number | null {
-  const v = stockage()?.getItem(CLE_CHECKLIST);
-  const n = v === null || v === undefined ? NaN : Number(v);
-  return Number.isInteger(n) && n >= 0 ? n : null;
+  try {
+    const v = stockage()?.getItem(CLE_CHECKLIST);
+    // `Number('')` vaut 0 : sans ce garde, une valeur vide masquerait la carte
+    // au premier palier. Et la lecture est protégée — `stockage()` n'attrape
+    // que l'accès au getter, pas l'appel de méthode, qui lève encore en iframe
+    // aux cookies tiers bloqués. Une exception ici partirait de l'initialiseur
+    // d'un `useState` : écran d'accueil BLANC, pas de dégradation douce.
+    if (!v) return null;
+    const n = Number(v);
+    return Number.isInteger(n) && n >= 0 ? Math.min(n, 2) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Efface les préférences locales. Appelé à la DÉCONNEXION : la clé n'est pas
+ * portée par un compte, et sur un navigateur partagé — la tablette du club —
+ * le pilote suivant héritait de la checklist chassée par le précédent, donc
+ * d'aucun mode d'emploi au moment exact où il en a besoin. Même raisonnement
+ * que la libération de l'abonnement push, qui se fait déjà là.
+ */
+export function oublierPreferences(): void {
+  try {
+    const s = stockage();
+    if (!s) return;
+    for (const cle of Object.keys(s)) {
+      if (cle.startsWith('ks_')) s.removeItem(cle);
+    }
+  } catch {
+    /* rien à nettoyer */
+  }
 }
 
 export function masquerChecklist(avancement: number): void {

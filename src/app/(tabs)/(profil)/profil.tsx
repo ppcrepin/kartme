@@ -85,8 +85,10 @@ export default function ProfilScreen() {
         <Pressable
           onPress={() => router.push('/settings')}
           accessibilityRole="button"
-          accessibilityLabel={t.settings.title}
-          hitSlop={10}>
+          // Pas de `hitSlop` : inerte sur `Pressable` en react-native-web.
+          // La zone vient de `gear`, qui mesurait 20 × 21 px — quatre fois
+          // moins que le minimum, pour la porte de tous les réglages.
+          accessibilityLabel={t.settings.title}>
           <Body style={styles.gear}>⚙︎</Body>
         </Pressable>
       }>
@@ -101,7 +103,7 @@ export default function ProfilScreen() {
             <Avatar name={profile.username} size={48} uri={avatarUrl} cacheKey={profile.avatarPath} />
             <View style={styles.flex}>
               <Title style={styles.username}>{profile.username}</Title>
-              <Body style={[styles.gradeName, { color: gp.current.color }]}>
+              <Body style={[styles.gradeName, { color: gp.current.colorTexte }]}>
                 {gp.current.name} · {profile.elo}
               </Body>
             </View>
@@ -219,5 +221,13 @@ const styles = StyleSheet.create({
   historyElo: { alignItems: 'flex-end' },
   historyDelta: { fontWeight: '800', fontSize: 13 },
   historyAfter: { fontSize: 11 },
-  gear: { fontSize: 22, color: colors.ink },
+  gear: {
+    fontSize: 22,
+    color: colors.ink,
+    minWidth: 44,
+    minHeight: 44,
+    lineHeight: 44,
+    textAlign: 'center',
+    marginRight: -spacing.sm,
+  },
 });

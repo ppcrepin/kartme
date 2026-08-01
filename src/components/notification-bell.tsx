@@ -76,7 +76,9 @@ export function NotificationBell() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { padding: spacing.xs },
+  // 44 px : la cloche mesurait 32 × 32. C'est la porte de « on t'attend » et
+  // de « ça bouge » — et `hitSlop` est inerte sur web.
+  wrap: { padding: spacing.xs, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   badge: {
     position: 'absolute',
     top: -2,

@@ -206,12 +206,25 @@ export async function listMyRaces(): Promise<{ upcoming: Race[]; past: Race[] }>
   const races = [...parId.values()];
   const quand = (r: Race) => new Date(r.scheduled_at).getTime();
   return {
-    // Les courses clôturées (« prêtes ») restent dans « à venir ».
-    // Tri CROISSANT : « à venir » se lit de demain vers plus tard. Un tri
-    // décroissant — correct pour l'historique — mettait la course du mois
-    // prochain avant celle de demain, c'est-à-dire enterrait la seule qu'il
-    // faut préparer (décision PO 2026-08-01).
-    upcoming: races.filter((r) => r.status !== 'completed').sort((a, b) => quand(a) - quand(b)),
+    // « À venir » = tout ce qui n'est pas terminé, ce qui inclut les courses
+    // dont la DATE est passée mais dont le classement n'a jamais été saisi.
+    //
+    // Tri CROISSANT sur ce qui vient : « à venir » se lit de demain vers plus
+    // tard. Un tri décroissant — correct pour l'historique — mettait la course
+    // du mois prochain avant celle de demain, c'est-à-dire enterrait la seule
+    // qu'il faut préparer (décision PO 2026-08-01).
+    //
+    // Mais un croissant NU ferait remonter les oubliées en tête : trois
+    // sorties dont on n'a pas saisi l'arrivée, et la course de samedi se
+    // retrouve quatrième. Elles passent donc après, les plus récentes d'abord
+    // — ce sont celles dont on se souvient encore assez pour les classer.
+    upcoming: races
+      .filter((r) => r.status !== 'completed')
+      .sort((a, b) => {
+        const retardA = quand(a) < Date.now() ? 1 : 0;
+        const retardB = quand(b) < Date.now() ? 1 : 0;
+        return retardA - retardB || (retardA ? quand(b) - quand(a) : quand(a) - quand(b));
+      }),
     // Décroissant : la dernière course courue en tête, comme tout historique.
     past: races.filter((r) => r.status === 'completed').sort((a, b) => quand(b) - quand(a)),
   };

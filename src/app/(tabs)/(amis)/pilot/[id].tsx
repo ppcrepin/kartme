@@ -199,7 +199,7 @@ export default function PilotScreen() {
                       {pilot.eloExact ? ` · ${pilot.elo}` : ''}
                     </Muted>
                   ) : (
-                    <Muted style={{ color: grade.color }}>
+                    <Muted style={{ color: grade.colorTexte }}>
                       {grade.name}
                       {pilot.eloExact ? ` · ${pilot.elo}` : ''}
                     </Muted>

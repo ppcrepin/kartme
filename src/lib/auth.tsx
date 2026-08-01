@@ -7,6 +7,7 @@ import { Platform } from 'react-native';
 import { trackSignup } from '@/lib/analytics';
 import { TERMS_VERSION } from '@/lib/legal';
 import { disablePush } from '@/lib/push';
+import { oublierPreferences } from '@/lib/preferences';
 import { supabase } from '@/lib/supabase';
 import { appBaseUrl } from '@/lib/url';
 
@@ -151,6 +152,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // sinon, sur un navigateur partagé, le compte suivant hériterait des
     // notifications de celui-ci (cf. confidentialité). No-op hors web.
     await disablePush().catch(() => {});
+    // Même raisonnement, même endroit : les préférences locales (`ks_*`) ne
+    // sont pas portées par un compte. Sur la tablette du club, le pilote
+    // suivant héritait de la checklist chassée par le précédent — donc
+    // d'aucun mode d'emploi, au moment exact où il en a besoin.
+    oublierPreferences();
     await supabase.auth.signOut();
     setHasProfile(null);
   }

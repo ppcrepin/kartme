@@ -595,7 +595,11 @@ const styles = StyleSheet.create({
   },
   modeChipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   modeChipTxt: { color: colors.inkDim, fontWeight: '700' },
-  modeChipTxtOn: { color: colors.ink },
+  // BLANC PUR, pas `ink` (#f2ede9). Le blanc cassé est le jeton du texte sur
+  // fond SOMBRE ; posé sur l'aplat de marque il donnait 4,27:1, seul
+  // texte-sur-rouge de l'app à rater le seuil AA — tous les autres boutons
+  // pleins sont en blanc pur, à 4,97:1.
+  modeChipTxtOn: { color: '#ffffff' },
   error: { color: colors.accentTexte },
   actions: { gap: spacing.sm, marginTop: spacing.sm },
 });

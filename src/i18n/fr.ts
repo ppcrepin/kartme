@@ -76,6 +76,8 @@ export const fr = {
   },
   races: {
     homeEmpty: 'Aucune course pour le moment. Crée la première !',
+    // Nom accessible d'une carte de course sur l'accueil.
+    cardAria: 'Course du',
     upcoming: 'À venir',
     past: 'Passées',
     create: 'Créer une course',

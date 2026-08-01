@@ -155,7 +155,7 @@ export default function AmisScreen() {
                       />
                       <View style={styles.flex}>
                         <Body>{p.username}</Body>
-                        <Muted style={{ color: grade.color }}>
+                        <Muted style={{ color: grade.colorTexte }}>
                           {grade.name}
                           {p.eloExact ? ` · ${p.elo}` : ''}
                         </Muted>
@@ -246,7 +246,7 @@ export default function AmisScreen() {
                         />
                           <View style={styles.flex}>
                             <Body>{f.username}</Body>
-                            <Muted style={{ color: grade.color }}>{grade.name} · {f.elo}</Muted>
+                            <Muted style={{ color: grade.colorTexte }}>{grade.name} · {f.elo}</Muted>
                           </View>
                           <GradeMedal grade={grade} size={28} />
                         </View>

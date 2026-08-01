@@ -208,7 +208,7 @@ export default function ClassementsScreen() {
             </View>
             <View style={styles.posRight}>
               {scope === 'global' && topPct ? (
-                <Body style={[styles.posPct, { color: myGrade.color }]}>
+                <Body style={[styles.posPct, { color: myGrade.colorTexte }]}>
                   {t.rankings.topPercent.replace('%p', String(topPct))}
                 </Body>
               ) : null}
@@ -217,7 +217,7 @@ export default function ClassementsScreen() {
                   {t.profile.calibrating} · {mr.elo}
                 </Muted>
               ) : (
-                <Muted style={{ color: myGrade.color }}>
+                <Muted style={{ color: myGrade.colorTexte }}>
                   {myGrade.name} · {mr.elo}
                 </Muted>
               )}
@@ -340,7 +340,7 @@ function RangRow({
             {t.profile.calibrating} · {row.elo}
           </Muted>
         ) : (
-          <Muted style={[styles.rowSub, { color: grade.color }]}>
+          <Muted style={[styles.rowSub, { color: grade.colorTexte }]}>
             {grade.name} · {row.elo}
           </Muted>
         )

@@ -3,7 +3,7 @@
  * 6 paliers, bornes régulières sur l'échelle 100–2500, Elo de départ = 1000.
  * La logique de calcul de l'Elo lui-même arrive au lot 1.3.
  */
-import { gradeColors } from '@/constants/theme';
+import { gradeColors, gradeTextColors } from '@/constants/theme';
 
 export type GradeKey =
   | 'kartambolage'
@@ -19,17 +19,24 @@ export interface Grade {
   monogram: string; // monogramme 2 lettres (stand-in avant l'icône définitive)
   min: number;
   max: number | null; // null = pas de plafond
+  /** Couleur d'APLAT (médaillon, jauge). */
   color: string;
+  /**
+   * Couleur du NOM du grade quand il s'écrit. Identique à `color` pour cinq
+   * grades sur six ; « Légende » porte le rouge de marque, illisible en texte
+   * (3,76:1) — il s'écrit dans la variante éclaircie.
+   */
+  colorTexte: string;
 }
 
 /** Ordonné du plus bas au plus haut. Bornes contiguës, sans trou ni chevauchement. */
 export const GRADES: Grade[] = [
-  { key: 'kartambolage', name: 'Kartambolage', monogram: 'KA', min: 100, max: 699, color: gradeColors.kartambolage },
-  { key: 'roueLibre', name: 'Roue Libre', monogram: 'RL', min: 700, max: 999, color: gradeColors.roueLibre },
-  { key: 'rookie', name: 'Rookie', monogram: 'RK', min: 1000, max: 1299, color: gradeColors.rookie },
-  { key: 'missile', name: 'Missile des Stands', monogram: 'MS', min: 1300, max: 1699, color: gradeColors.missile },
-  { key: 'fusee', name: 'Fusée du Paddock', monogram: 'FP', min: 1700, max: 2099, color: gradeColors.fusee },
-  { key: 'legende', name: 'Légende du Bitume', monogram: 'LB', min: 2100, max: null, color: gradeColors.legende },
+  { key: 'kartambolage', name: 'Kartambolage', monogram: 'KA', min: 100, max: 699, color: gradeColors.kartambolage, colorTexte: gradeTextColors.kartambolage },
+  { key: 'roueLibre', name: 'Roue Libre', monogram: 'RL', min: 700, max: 999, color: gradeColors.roueLibre, colorTexte: gradeTextColors.roueLibre },
+  { key: 'rookie', name: 'Rookie', monogram: 'RK', min: 1000, max: 1299, color: gradeColors.rookie, colorTexte: gradeTextColors.rookie },
+  { key: 'missile', name: 'Missile des Stands', monogram: 'MS', min: 1300, max: 1699, color: gradeColors.missile, colorTexte: gradeTextColors.missile },
+  { key: 'fusee', name: 'Fusée du Paddock', monogram: 'FP', min: 1700, max: 2099, color: gradeColors.fusee, colorTexte: gradeTextColors.fusee },
+  { key: 'legende', name: 'Légende du Bitume', monogram: 'LB', min: 2100, max: null, color: gradeColors.legende, colorTexte: gradeTextColors.legende },
 ];
 
 /** Plancher d'Elo (cahier §5.1) : l'Elo ne descend jamais sous 100. */

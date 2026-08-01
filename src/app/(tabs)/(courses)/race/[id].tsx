@@ -893,7 +893,7 @@ export default function RaceDetailScreen() {
                               r.isGuest ? (
                                 <Muted style={styles.rowSub}>{t.races.guest}</Muted>
                               ) : (
-                                <Muted style={[styles.rowSub, { color: grade.color }]}>
+                                <Muted style={[styles.rowSub, { color: grade.colorTexte }]}>
                                   {grade.name} · {r.eloAfter}
                                 </Muted>
                               )
@@ -1167,7 +1167,7 @@ export default function RaceDetailScreen() {
                                 {t.profile.calibrating} · {p.elo}
                               </Muted>
                             ) : (
-                              <Muted style={[styles.rowSub, { color: grade.color }]}>
+                              <Muted style={[styles.rowSub, { color: grade.colorTexte }]}>
                                 {grade.name} · {p.elo}
                               </Muted>
                             )
@@ -1443,7 +1443,9 @@ const styles = StyleSheet.create({
   // 11 × 19 px, à six pixels du médaillon de grade voisin (`hitSlop` n'existe
   // pas sur `Pressable` en react-native-web). 40 px de large : de quoi viser
   // sans repousser la ligne au-delà de sa hauteur de 44.
-  removeZone: { minWidth: 40, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
+  // 44 et non 40 : retirer un pilote est destructif, et sur une grille de huit
+  // les croix se suivent de près. Quatre pixels de moins, c'est le voisin.
+  removeZone: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   // Une « marche » du bloc d'ajout : léger encart pour que les trois options
   // se lisent comme une descente d'escalier, pas comme trois champs en vrac.
   addBox: { gap: spacing.sm },

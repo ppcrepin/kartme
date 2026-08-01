@@ -47,13 +47,13 @@ export default function GradesScreen() {
                 <View style={styles.row}>
                   <GradeMedal grade={g} size={44} />
                   <View style={styles.flex}>
-                    <Body style={[styles.name, { color: g.color }]}>{g.name}</Body>
+                    <Body style={[styles.name, { color: g.colorTexte }]}>{g.name}</Body>
                     <Muted>
                       {g.max === null ? `${g.min}+` : `${g.min} – ${g.max}`}
                       {mine && myElo !== null ? `   ·   ${t.profile.you} : ${myElo}` : ''}
                     </Muted>
                   </View>
-                  {mine ? <Label style={{ color: g.color }}>◈</Label> : null}
+                  {mine ? <Label style={{ color: g.colorTexte }}>◈</Label> : null}
                 </View>
               </Card>
             );
