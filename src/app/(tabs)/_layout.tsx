@@ -6,11 +6,17 @@ import { colors } from '@/constants/theme';
 import { t } from '@/i18n';
 
 /**
- * Les 5 onglets, chacun portant sa propre pile d'écrans (décision PO
+ * Les 4 onglets, chacun portant sa propre pile d'écrans (décision PO
  * 2026-07-30 : la barre d'onglets reste visible partout, pour se promener
  * d'une section à l'autre sans enchaîner les « précédent »). Les groupes ne
  * changent aucune URL ; les écrans de détail vivent dans la pile de leur
  * section et gardent leur cycle de vie normal (montage neuf à chaque visite).
+ *
+ * Ils étaient CINQ : l'onglet Amis a fusionné dans le classement le 2026-08-01
+ * (décision PO). Les deux écrans montraient les mêmes pilotes — la liste
+ * d'amis était déjà le classement en portée « Amis » — et un testeur avait
+ * relevé la redondance. La fiche pilote a suivi dans la pile du classement :
+ * rangée ailleurs, l'ouvrir depuis le classement faisait CHANGER d'onglet.
  */
 /**
  * La couleur d'un pictogramme d'onglet : le rouge de MARQUE quand il est actif,
@@ -66,10 +72,6 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="(classements)"
         options={{ title: t.tabs.rankings, tabBarIcon: ({ color }) => <TabIcon name="rankings" color={teinteIcone(color)} /> }}
-      />
-      <Tabs.Screen
-        name="(amis)"
-        options={{ title: t.tabs.friends, tabBarIcon: ({ color }) => <TabIcon name="friends" color={teinteIcone(color)} /> }}
       />
       <Tabs.Screen
         name="(kartings)"

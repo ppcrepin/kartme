@@ -4,7 +4,9 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { EloCurve } from '@/components/elo-curve';
 import { Screen } from '@/components/screen';
-import { Avatar, Button, Card, Gauge, GradeMedal, ListRow, SkeletonCard } from '@/components/ui';
+import { ShareCard } from '@/components/share-card';
+import { Avatar, Button, Card, Gauge, GradeMedal, ListRow, Sheet, SkeletonCard } from '@/components/ui';
+import { appBaseUrl } from '@/lib/url';
 import { signedAvatarUrls } from '@/lib/avatar';
 import { Body, Label, Muted, Title } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
@@ -37,6 +39,7 @@ export default function ProfilScreen() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [badges, setBadges] = useState<Map<BadgeKey, UnlockedBadge>>(new Map());
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [inviteOuvert, setInviteOuvert] = useState(false);
 
   const load = useCallback(async (alive: () => boolean = () => true) => {
     const [p, c, h, b] = await Promise.all([
@@ -186,6 +189,25 @@ export default function ProfilScreen() {
         {/* Échelle des grades */}
         <Button label={t.profile.gradesLadder} variant="ghost" onPress={() => router.push('/grades')} />
 
+        {/* ── Inviter un ami : déménagé de l'onglet Amis, supprimé le
+            2026-08-01. C'est le canal d'acquisition n°1 — quelqu'un qui n'a PAS
+            l'application s'inscrit par ce lien et vous êtes amis en un tap,
+            sans demande à valider. Il atterrit sur le profil et non sur le
+            classement : c'est un geste qui part de SOI, et c'est là qu'on va
+            chercher son propre lien. ── */}
+        <Pressable
+          onPress={() => setInviteOuvert(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t.invite.shareTitle}>
+          <Card style={styles.inviteRow}>
+            <View style={styles.flex}>
+              <Body style={styles.inviteTitle}>{t.invite.shareTitle}</Body>
+              <Muted style={styles.inviteHint}>{t.invite.shareHint}</Muted>
+            </View>
+            <Body style={styles.chevron}>›</Body>
+          </Card>
+        </Pressable>
+
         {/* ── Historique : 5 dernières + écran dédié (décision PO) — le
             profil complet tient d'un coup, la tendance récente reste. ── */}
         <View style={styles.section}>
@@ -226,6 +248,19 @@ export default function ProfilScreen() {
             />
           ) : null}
         </View>
+        <Sheet
+          open={inviteOuvert}
+          onClose={() => setInviteOuvert(false)}
+          title={t.invite.shareTitle}>
+          {/* PAS de `?ref=` ajouté : l'identifiant est déjà dans le chemin, le
+              doubler faisait un lien de 106 caractères qu'on ne dicte pas au
+              bord d'une piste. Le parrainage se mesure à l'arrivée. */}
+          <ShareCard
+            url={`${appBaseUrl()}invite/${profile.id}`}
+            title={t.invite.shareCta}
+            noRef
+          />
+        </Sheet>
       </ScrollView>
     </Screen>
   );
@@ -258,6 +293,10 @@ const styles = StyleSheet.create({
   historyElo: { alignItems: 'flex-end' },
   historyDelta: { fontWeight: '800', fontSize: 13 },
   historyAfter: { fontSize: 11 },
+  inviteRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  inviteTitle: { fontWeight: '700' },
+  inviteHint: { fontSize: 11, lineHeight: 15 },
+  chevron: { color: colors.inkDim2, fontSize: 20 },
   gear: {
     fontSize: 22,
     color: colors.ink,

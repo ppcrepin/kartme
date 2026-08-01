@@ -151,7 +151,7 @@ export default function PilotScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
         <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/amis'))}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/classements'))}
           accessibilityRole="button"
           accessibilityLabel="Retour"
           hitSlop={10}
@@ -166,7 +166,7 @@ export default function PilotScreen() {
             <Button
               label={t.invite.toFriends}
               variant="ghost"
-              onPress={() => router.replace('/amis')}
+              onPress={() => router.replace('/classements')}
             />
           </View>
         ) : etat === 'introuvable' ? (
@@ -175,7 +175,7 @@ export default function PilotScreen() {
             <Button
               label={t.invite.toFriends}
               variant="ghost"
-              onPress={() => router.replace('/amis')}
+              onPress={() => router.replace('/classements')}
             />
           </View>
         ) : !pilot || !grade ? (

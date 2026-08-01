@@ -126,11 +126,11 @@ export default function InviteScreen() {
   return (
     <Screen
       title={t.invite.title}
-      onBack={() => (router.canGoBack() ? router.back() : router.replace('/amis'))}>
+      onBack={() => (router.canGoBack() ? router.back() : router.replace('/classements'))}>
       {!idValide || etat === 'inconnu' ? (
         <View style={styles.bloc}>
           <Muted>{t.invite.unknown}</Muted>
-          <Button label={t.invite.toFriends} variant="ghost" onPress={() => router.replace('/amis')} />
+          <Button label={t.invite.toFriends} variant="ghost" onPress={() => router.replace('/classements')} />
         </View>
       ) : etat === 'chargement' ? (
         <SkeletonCard />
@@ -144,12 +144,12 @@ export default function InviteScreen() {
               setEssai((n) => n + 1);
             }}
           />
-          <Button label={t.invite.toFriends} variant="ghost" onPress={() => router.replace('/amis')} />
+          <Button label={t.invite.toFriends} variant="ghost" onPress={() => router.replace('/classements')} />
         </View>
       ) : etat === 'moi' ? (
         <View style={styles.bloc}>
           <Muted>{t.invite.self}</Muted>
-          <Button label={t.invite.toFriends} variant="ghost" onPress={() => router.replace('/amis')} />
+          <Button label={t.invite.toFriends} variant="ghost" onPress={() => router.replace('/classements')} />
         </View>
       ) : inviter ? (
         <View style={styles.bloc}>
@@ -184,7 +184,7 @@ export default function InviteScreen() {
               <Button
                 label={t.invite.toFriends}
                 variant="ghost"
-                onPress={() => router.replace('/amis')}
+                onPress={() => router.replace('/classements')}
               />
             </>
           ) : (

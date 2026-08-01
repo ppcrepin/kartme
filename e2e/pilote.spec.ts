@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { reseauSimule, sceneActive, sessionSimulee } from './harness';
+import { reseauSimule, sceneActive, sessionSimulee, UID } from './harness';
 
 /**
  * La fiche pilote, atteinte d'un tap sur « Voir son profil » juste après avoir
@@ -73,8 +73,12 @@ test('un pilote introuvable le dit, SANS « Réessayer »', async ({ page }) => 
  */
 test('les zones tapables tiennent le plancher de 44 px', async ({ page }) => {
   await sessionSimulee(page);
-  await reseauSimule(page);
-  await page.goto('/amis');
+  await reseauSimule(page, {
+    'rest/v1/profiles': { id: UID, username: 'Moi', elo: 1210, races: 6, deleted_at: null, avatar_path: null },
+  });
+  // Le lien d'invitation a suivi le PROFIL : l'onglet Amis a fusionné dans le
+  // classement le 2026-08-01.
+  await page.goto('/profil');
 
   const bouton = page.getByText('Inviter un ami', { exact: true }).first();
   await expect(bouton).toBeVisible({ timeout: 20_000 });

@@ -3,18 +3,22 @@ import { expect, test } from '@playwright/test';
 import { reseauSimule, sceneActive, sessionSimulee, UID } from './harness';
 
 /**
- * Smoke test du shell : l'app démarre et les 5 onglets sont présents.
+ * Smoke test du shell : l'app démarre et les 4 onglets sont présents.
+ * Ils étaient cinq jusqu'au 2026-08-01 : Amis a fusionné dans le classement.
  * Session simulée : sans elle, la garde de routes renvoie vers la connexion
  * et le test mesurait un écran qui n'a pas d'onglets.
  */
-test('le shell affiche les 5 onglets', async ({ page }) => {
+test('le shell affiche les 4 onglets', async ({ page }) => {
   await sessionSimulee(page);
   await reseauSimule(page);
   await page.goto('/');
 
-  for (const label of ['Courses', 'Classement', 'Amis', 'Kartings', 'Profil']) {
+  for (const label of ['Courses', 'Classement', 'Kartings', 'Profil']) {
     await expect(page.getByText(label, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
   }
+  // Et Amis a bien DISPARU de la barre : le laisser aurait gardé deux écrans
+  // montrant les mêmes pilotes.
+  await expect(page.getByRole('tab', { name: 'Amis' })).toHaveCount(0);
 });
 
 /**
@@ -39,14 +43,14 @@ test('la barre d’onglets reste visible sur un écran de détail', async ({ pag
     timeout: 20_000,
   });
 
-  // Les 5 onglets sont là, SUR la fiche circuit — et RIEN QUE ces 5 : un
-  // fichier route égaré directement sous (tabs) deviendrait un 6e bouton.
+  // Les 4 onglets sont là, SUR la fiche circuit — et RIEN QUE ces 4 : un
+  // fichier route égaré directement sous (tabs) deviendrait un 5e bouton.
   // Par RÔLE : la liste Kartings est montée sous la fiche dans la pile, et
   // son TITRE caché ferait trébucher un repérage par texte.
-  for (const label of ['Courses', 'Classement', 'Amis', 'Kartings', 'Profil']) {
+  for (const label of ['Courses', 'Classement', 'Kartings', 'Profil']) {
     await expect(page.getByRole('tab', { name: label })).toBeVisible();
   }
-  await expect(page.getByRole('tab')).toHaveCount(5);
+  await expect(page.getByRole('tab')).toHaveCount(4);
 
   // Et ils fonctionnent : sauter DIRECTEMENT de la fiche vers Courses.
   await page.getByRole('tab', { name: 'Courses' }).click();

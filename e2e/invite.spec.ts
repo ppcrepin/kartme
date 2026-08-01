@@ -195,10 +195,15 @@ test('un lien de course sans session ouvre la connexion, sans rappel d’invitat
   await expect(page.getByText(/Une invitation t’attend/)).toHaveCount(0);
 });
 
-test('l’onglet Amis propose le lien à partager', async ({ page }) => {
+test('le PROFIL propose le lien à partager', async ({ page }) => {
   await sessionSimulee(page);
-  await reseauSimule(page);
-  await page.goto('/amis');
+  await reseauSimule(page, {
+    'rest/v1/profiles': { id: UID, username: 'Moi', elo: 1210, races: 6, deleted_at: null, avatar_path: null },
+  });
+  // Le lien vivait sur l'onglet Amis, supprimé le 2026-08-01. Il atterrit sur
+  // le PROFIL : c'est un geste qui part de soi, et c'est là qu'on va chercher
+  // son propre lien.
+  await page.goto('/profil');
 
   await expect(page.getByText('Inviter un ami', { exact: true }).first()).toBeVisible({
     timeout: 20_000,

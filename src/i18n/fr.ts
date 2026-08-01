@@ -442,6 +442,12 @@ export const fr = {
     myRank: 'Ta place : %r · %e Elo',
     myPosition: 'Ma position',
     topPercent: 'Top %p%',
+    // Les amis que `get_leaderboard` ne renvoie pas : il filtre sur
+    // « au moins une course ». Sans cette section, quelqu'un qu'on vient
+    // d'inviter restait invisible jusqu'à sa première course — donc aucune
+    // preuve que le lien d'invitation a fonctionné.
+    friendsUnranked: 'Pas encore classés',
+    noRaceYet: 'Aucune course pour l’instant',
     notRankedYet: 'Termine ta première course pour entrer au classement.',
     emptyFriends: 'Aucun pilote classé parmi tes amis — courez ensemble !',
     emptyGlobal: 'Aucun pilote classé pour l’instant.',

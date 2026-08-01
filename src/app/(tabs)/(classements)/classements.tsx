@@ -1,13 +1,22 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Screen } from '@/components/screen';
-import { Avatar, Button, Card, GradeMedal, ListRow, Tag } from '@/components/ui';
-import { Body, Muted } from '@/components/ui/text';
+import { Avatar, Button, Card, Field, GradeMedal, ListRow, Tag } from '@/components/ui';
+import { Body, Label, Muted } from '@/components/ui/text';
 import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { SIGNED_TTL_S, signedAvatarUrls } from '@/lib/avatar';
+import {
+  acceptFriendRequest,
+  deleteFriendship,
+  listFriendships,
+  searchPilots,
+  type FriendEntry,
+  type FriendLists,
+  type Pilot,
+} from '@/lib/friends';
 import { gradeForElo, isCalibrating } from '@/lib/grade';
 import {
   getLeaderboard,
@@ -47,6 +56,14 @@ const ordinal = (n: number) => (n === 1 ? '1ᵉʳ' : `${n}ᵉ`);
 export default function ClassementsScreen() {
   const router = useRouter();
   const [scope, setScope] = useState<LeaderboardScope>('friends');
+  // ── Ce qui vient de l'onglet Amis, supprimé le 2026-08-01 ──────────────
+  // La liste d'amis ÉTAIT déjà ce classement en portée « Amis » : les deux
+  // écrans montraient les mêmes pilotes. Ne restaient que deux choses à
+  // reloger : chercher un pilote, et répondre aux demandes reçues.
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<Pilot[]>([]);
+  const [searched, setSearched] = useState(false);
+  const [liens, setLiens] = useState<FriendLists>({ received: [], sent: [], friends: [] });
   // État rangé PAR portée : une réponse tardive de l'autre portée ne peut
   // jamais écraser celle affichée, et re-basculer retrouve le cache.
   const [loaded, setLoaded] = useState<Partial<Record<LeaderboardScope, Loaded>>>({});
@@ -126,11 +143,67 @@ export default function ClassementsScreen() {
       });
   }, [mergeAvatars]);
 
+  /** Demandes d'amitié en attente (reçues et envoyées). */
+  const chargerLiens = useCallback(() => {
+    let vivant = true;
+    listFriendships()
+      .then(async (l) => {
+        if (!vivant) return;
+        setLiens(l);
+    void mergeAvatars([...l.received, ...l.sent, ...l.friends]);
+      })
+      .catch(() => {});
+    return () => {
+      vivant = false;
+    };
+  }, [mergeAvatars]);
+
   useFocusEffect(
     useCallback(() => {
       load(scope);
-    }, [load, scope]),
+      return chargerLiens();
+    }, [load, scope, chargerLiens]),
   );
+
+  // Recherche de pilote, avec un léger anti-rebond. Elle vivait sur l'onglet
+  // Amis : c'est le SEUL chemin vers un pilote qu'on n'a pas encore en amis,
+  // et le supprimer avec l'onglet aurait fermé la porte d'entrée du réseau.
+  useEffect(() => {
+    let actif = true;
+    const id = setTimeout(async () => {
+      if (!actif) return;
+      if (query.trim().length < 2) {
+        setResults([]);
+        setSearched(false);
+        return;
+      }
+      try {
+        const lignes = await searchPilots(query);
+        if (!actif) return;
+        setResults(lignes);
+        setSearched(true);
+        void mergeAvatars(lignes);
+      } catch {
+        /* silencieux : la liste reste vide, l'écran le dit */
+      }
+    }, 300);
+    return () => {
+      actif = false;
+      clearTimeout(id);
+    };
+  }, [query, mergeAvatars]);
+
+  async function repondre(f: FriendEntry, accepter: boolean) {
+    try {
+      await (accepter ? acceptFriendRequest(f.friendshipId) : deleteFriendship(f.friendshipId));
+    } catch {
+      /* réseau : la liste sera resynchronisée au prochain retour */
+    }
+    chargerLiens();
+    // Accepter change la portée « Amis » : on la recharge, sinon le pilote
+    // qu'on vient d'accepter manque au classement jusqu'à la visite suivante.
+    load(scope);
+  }
 
   const current = loaded[scope];
   const showError = !current && failed[scope] === true;
@@ -178,8 +251,77 @@ export default function ClassementsScreen() {
   const topPct = mr && mr.total > 0 ? Math.max(1, Math.ceil((mr.rank / mr.total) * 100)) : null;
   const myGrade = mr ? gradeForElo(mr.elo) : null;
 
+  const cherche = query.trim().length >= 2;
+
+  /**
+   * Les amis ABSENTS du classement — ceux qui n'ont pas encore couru.
+   *
+   * `get_leaderboard` filtre sur `races > 0` : un ami fraîchement inscrit n'y
+   * figure PAS. L'onglet Amis, lui, listait tout le monde. Sans ce rattrapage,
+   * la fusion aurait rendu invisible exactement la personne qu'on vient
+   * d'inviter — c'est-à-dire la sortie du canal d'acquisition n°1, et la seule
+   * preuve visible que le lien a fonctionné.
+   *
+   * Affiché seulement quand TOUTES les pages sont chargées : sinon un ami de la
+   * page suivante passerait à tort pour « pas encore classé ».
+   */
+  const amisSansCourse =
+    scope === 'friends' && current && !current.mayHaveMore
+      ? liens.friends.filter((f) => !current.rows.some((r) => r.pilotId === f.pilotId))
+      : [];
+
   return (
     <Screen title={t.tabs.rankings}>
+      <Field
+        label={t.friends.search}
+        value={query}
+        onChangeText={setQuery}
+        autoCapitalize="none"
+      />
+
+      {cherche ? (
+        <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
+          {results.length === 0 && searched ? <Muted>{t.friends.searchEmpty}</Muted> : null}
+          <Card>
+            {results.map((p, i) => {
+              const grade = gradeForElo(p.elo);
+              return (
+                <ListRow
+                  key={p.id}
+                  first={i === 0}
+                  onPress={() => router.push(`/pilot/${p.id}`)}
+                  left={
+                    <Avatar
+                      name={p.username}
+                      size={28}
+                      uri={p.avatarPath ? (avatars.get(p.avatarPath) ?? null) : null}
+                      cacheKey={p.avatarPath}
+                    />
+                  }
+                  title={
+                    <Body style={styles.rowName} numberOfLines={1}>
+                      {p.username}
+                    </Body>
+                  }
+                  sub={
+                    <Muted style={[styles.rowSub, { color: grade.colorTexte }]}>
+                      {grade.name}
+                      {p.eloExact ? ` · ${p.elo}` : ''}
+                    </Muted>
+                  }
+                  right={
+                    <View style={styles.rowRight} aria-hidden>
+                      <GradeMedal grade={grade} size={24} />
+                      <Muted style={styles.chevron}>›</Muted>
+                    </View>
+                  }
+                />
+              );
+            })}
+          </Card>
+        </ScrollView>
+      ) : (
+        <>
       <View style={styles.filters}>
         <Tag
           label={t.rankings.scopeFriends}
@@ -227,6 +369,111 @@ export default function ClassementsScreen() {
       ) : null}
 
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+        {/* ── Demandes d'amitié ────────────────────────────────────────────
+            Elles vivaient sur l'onglet Amis. Une notification en prévient, et
+            la fiche du pilote porte le bouton « Accepter » — mais une
+            notification se rate, et un lien qu'on ne retrouve nulle part est un
+            lien perdu. Elles se posent donc EN TÊTE du classement, là où vivent
+            désormais les autres pilotes, et seulement quand il y en a. ── */}
+        {liens.received.length > 0 ? (
+          <View style={styles.demandes}>
+            <Label>
+              {t.friends.received} · {liens.received.length}
+            </Label>
+            <Card>
+              {liens.received.map((f, i) => (
+                <ListRow
+                  key={f.friendshipId}
+                  first={i === 0}
+                  onPress={() => router.push(`/pilot/${f.pilotId}`)}
+                  // Nom EXPLICITE : sans lui, celui de la ligne se compose de
+                  // son contenu — donc des libellés des deux boutons qu'elle
+                  // porte. Un lecteur d'écran annonçait « Kévin_R Kévin_R
+                  // Accepter · Kév… », et « Accepter » désignait deux
+                  // commandes différentes dans la même vue.
+                  accessibilityLabel={`${f.username} — ${t.friends.received}`}
+                  left={
+                    <Avatar
+                      name={f.username}
+                      size={28}
+                      uri={f.avatarPath ? (avatars.get(f.avatarPath) ?? null) : null}
+                      cacheKey={f.avatarPath}
+                    />
+                  }
+                  title={
+                    <Body style={styles.rowName} numberOfLines={1}>
+                      {f.username}
+                    </Body>
+                  }
+                  right={
+                    <View style={styles.actions}>
+                      {/* Deux boutons DANS une ligne tapable : chacun porte son
+                          propre nom accessible, sinon un lecteur d'écran
+                          annonce trois fois « bouton » sans les distinguer. */}
+                      <Pressable
+                        onPress={() => repondre(f, true)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t.friends.accept} · ${f.username}`}
+                        style={styles.action}>
+                        <Body style={styles.accepter}>{t.friends.accept}</Body>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => repondre(f, false)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t.friends.decline} · ${f.username}`}
+                        style={styles.action}>
+                        <Muted>{t.friends.decline}</Muted>
+                      </Pressable>
+                    </View>
+                  }
+                />
+              ))}
+            </Card>
+          </View>
+        ) : null}
+
+        {/* Envoyées : sans elles, on ne peut plus annuler une demande partie
+            par erreur — le seul écran qui le permettait a disparu. */}
+        {liens.sent.length > 0 ? (
+          <View style={styles.demandes}>
+            <Label>
+              {t.friends.sent} · {liens.sent.length}
+            </Label>
+            <Card>
+              {liens.sent.map((f, i) => (
+                <ListRow
+                  key={f.friendshipId}
+                  first={i === 0}
+                  onPress={() => router.push(`/pilot/${f.pilotId}`)}
+                  accessibilityLabel={`${f.username} — ${t.friends.sent}`}
+                  left={
+                    <Avatar
+                      name={f.username}
+                      size={28}
+                      uri={f.avatarPath ? (avatars.get(f.avatarPath) ?? null) : null}
+                      cacheKey={f.avatarPath}
+                    />
+                  }
+                  title={
+                    <Body style={styles.rowName} numberOfLines={1}>
+                      {f.username}
+                    </Body>
+                  }
+                  right={
+                    <Pressable
+                      onPress={() => repondre(f, false)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t.friends.cancel} · ${f.username}`}
+                      style={styles.action}>
+                      <Muted>{t.friends.cancel}</Muted>
+                    </Pressable>
+                  }
+                />
+              ))}
+            </Card>
+          </View>
+        ) : null}
+
         {showError ? (
           <View style={styles.center}>
             <Muted>{t.rankings.loadError}</Muted>
@@ -293,7 +540,45 @@ export default function ClassementsScreen() {
             {!current.myRank ? <Muted style={styles.hint}>{t.rankings.notRankedYet}</Muted> : null}
           </>
         )}
+
+        {amisSansCourse.length > 0 ? (
+          <View style={styles.demandes}>
+            <Label>
+              {t.rankings.friendsUnranked} · {amisSansCourse.length}
+            </Label>
+            <Card>
+              {amisSansCourse.map((f, i) => (
+                <ListRow
+                  key={f.friendshipId}
+                  first={i === 0}
+                  onPress={() => router.push(`/pilot/${f.pilotId}`)}
+                  left={
+                    <Avatar
+                      name={f.username}
+                      size={28}
+                      uri={f.avatarPath ? (avatars.get(f.avatarPath) ?? null) : null}
+                      cacheKey={f.avatarPath}
+                    />
+                  }
+                  title={
+                    <Body style={styles.rowName} numberOfLines={1}>
+                      {f.username}
+                    </Body>
+                  }
+                  sub={<Muted style={styles.rowSub}>{t.rankings.noRaceYet}</Muted>}
+                  right={
+                    <View style={styles.rowRight} aria-hidden>
+                      <Muted style={styles.chevron}>›</Muted>
+                    </View>
+                  }
+                />
+              ))}
+            </Card>
+          </View>
+        ) : null}
       </ScrollView>
+        </>
+      )}
     </Screen>
   );
 }
@@ -400,6 +685,11 @@ const styles = StyleSheet.create({
     marginHorizontal: -spacing.xs,
   },
   hint: { marginTop: spacing.xs },
+  demandes: { gap: spacing.xs, marginBottom: spacing.sm },
+  actions: { flexDirection: 'row', alignItems: 'center' },
+  // 44 px de haut : `hitSlop` est inerte sur `Pressable` en react-native-web.
+  action: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.sm },
+  accepter: { color: colors.pos, fontWeight: '800' },
   center: { gap: spacing.md, alignItems: 'flex-start' },
   posCard: { borderColor: colors.accent, marginBottom: spacing.xs },
   posRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

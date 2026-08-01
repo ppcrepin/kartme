@@ -53,10 +53,10 @@ test('une ligne de classement DIT qu’elle s’ouvre, et elle s’ouvre', async
   await ligne.click();
   await expect(page).toHaveURL(/pilot\/u2/, { timeout: 15_000 });
 
-  // Et le chemin du RETOUR, qui est là où le doute portait : la fiche pilote
-  // vit dans l'onglet Amis, donc l'ouvrir depuis le classement change
-  // d'onglet. Mesuré : le « ← » ramène bien au classement, et l'onglet
-  // redevient Classement. Ce test l'écrit, pour qu'on cesse d'en douter.
+  // Et le chemin du RETOUR. La fiche pilote vivait dans l'onglet Amis : son
+  // ouverture depuis le classement faisait CHANGER d'onglet, et l'indicateur
+  // sautait le temps de la visite. Elle a suivi le classement dans sa pile le
+  // 2026-08-01 — plus de saut, et le « ← » ramène au classement.
   await page.getByLabel('Retour').first().click();
   await expect(page).toHaveURL(/classements/, { timeout: 15_000 });
   await expect(page.getByText('Sophie_K', { exact: false }).first()).toBeVisible();
