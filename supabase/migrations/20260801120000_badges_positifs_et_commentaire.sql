@@ -350,7 +350,8 @@ begin
   if v_status <> 'upcoming' then raise exception 'Les inscriptions sont closes'; end if;
   -- La comparaison est faite AVANT le blocage : un jeton faux et un blocage ne
   -- doivent pas se distinguer par leur message, sinon l'un renseigne sur
-  -- l'autre. `is not distinct from` traite le jeton nul comme une non-égalité.
+  -- l'autre. Les deux `is null` sont explicites parce qu'une comparaison avec
+  -- NULL ne vaut PAS « faux » en SQL — elle vaut NULL, et la garde s'ouvrirait.
   if v_uid <> v_admin and (p_token is null or v_token is null or p_token <> v_token) then
     raise exception 'Seul l''organisateur peut inviter sur cette course';
   end if;
