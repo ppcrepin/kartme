@@ -6,6 +6,8 @@
  * « il a déjà accepté », pour ne pas redemander à chaque écran.
  */
 
+import { Platform } from 'react-native';
+
 export type GeoErrorCode = 'denied' | 'unavailable' | 'timeout' | 'unsupported';
 
 export class GeoError extends Error {
@@ -31,6 +33,12 @@ export interface Position {
  * kilomètre, une position de cinq minutes est exactement la même.
  */
 export function currentPosition(): Promise<Position> {
+  // NATIF : `navigator.geolocation` n'existe pas sous React Native, et cette
+  // fonction rejetait donc en `unsupported` sur iPhone — « Me localiser » et
+  // le tri par distance étaient morts dans l'application installée. On passe
+  // par `expo-location`, dont l'import est différé pour que le bundle web ne
+  // l'embarque pas (il n'y a rien à y faire).
+  if (Platform.OS !== 'web') return positionNative();
   return new Promise((resolve, reject) => {
     const geo = typeof navigator !== 'undefined' ? navigator.geolocation : undefined;
     if (!geo) {
@@ -54,6 +62,38 @@ export function currentPosition(): Promise<Position> {
       { enableHighAccuracy: false, timeout: 45_000, maximumAge: 5 * 60_000 },
     );
   });
+}
+
+/**
+ * La position sous iOS et Android.
+ *
+ * `requestForegroundPermissionsAsync` déclenche la fenêtre système : elle
+ * n'est appelée QUE depuis « Me localiser », jamais à l'ouverture d'un écran —
+ * une application qui demande la position sans qu'on l'ait demandée est
+ * refusée par Apple, et de toute façon on ne s'en sert que pour trier.
+ *
+ * Les codes d'erreur sont les mêmes que côté web pour que l'appelant n'ait
+ * qu'un seul jeu de messages à écrire.
+ */
+async function positionNative(): Promise<Position> {
+  let Location: typeof import('expo-location');
+  try {
+    Location = await import('expo-location');
+  } catch {
+    throw new GeoError('unsupported');
+  }
+  const { status } = await Location.requestForegroundPermissionsAsync();
+  if (status !== 'granted') throw new GeoError('denied');
+  try {
+    const p = await Location.getLastKnownPositionAsync({ maxAge: 5 * 60_000 });
+    // Une position déjà connue évite de réveiller le GPS : à l'échelle du
+    // kilomètre, celle d'il y a cinq minutes est exactement la même.
+    const point =
+      p ?? (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }));
+    return { lat: point.coords.latitude, lon: point.coords.longitude };
+  } catch {
+    throw new GeoError('unavailable');
+  }
 }
 
 /** Distance orthodromique en kilomètres (même formule que le serveur). */
