@@ -17,7 +17,7 @@ import { pluriel } from '@/lib/nombre';
 
 type Cible =
   | { genre: 'grade'; grade: Grade; sujet: SujetGrade }
-  | { genre: 'badge'; badge: BadgeKey; obtenuLe: string | null };
+  | { genre: 'badge'; badge: BadgeKey; obtenuLe: string | null; pseudo: string | null };
 
 /** Le titre de la feuille, qui dit DE QUI l'on parle. */
 function titreDe(cible: Cible | null): string {
@@ -50,9 +50,12 @@ export function FournisseurExplications({ children }: { children: ReactNode }) {
   const expliquerGrade = useCallback((grade: Grade, sujet?: SujetGrade) => {
     setCible({ genre: 'grade', grade, sujet: sujet ?? {} });
   }, []);
-  const expliquerBadge = useCallback((badge: BadgeKey, obtenuLe?: string | null) => {
-    setCible({ genre: 'badge', badge, obtenuLe: obtenuLe ?? null });
-  }, []);
+  const expliquerBadge = useCallback(
+    (badge: BadgeKey, obtenuLe?: string | null, pseudo?: string | null) => {
+      setCible({ genre: 'badge', badge, obtenuLe: obtenuLe ?? null, pseudo: pseudo ?? null });
+    },
+    [],
+  );
 
   const api = useMemo<Explications>(
     () => ({ expliquerGrade, expliquerBadge }),
@@ -70,7 +73,7 @@ export function FournisseurExplications({ children }: { children: ReactNode }) {
           <FicheGrade grade={cible.grade} sujet={cible.sujet} />
         ) : null}
         {cible?.genre === 'badge' ? (
-          <FicheBadge badge={cible.badge} obtenuLe={cible.obtenuLe} />
+          <FicheBadge badge={cible.badge} obtenuLe={cible.obtenuLe} pseudo={cible.pseudo} />
         ) : null}
       </Sheet>
     </ContexteExplications.Provider>
@@ -151,7 +154,16 @@ function FicheGrade({ grade, sujet }: { grade: Grade; sujet: SujetGrade }) {
   );
 }
 
-function FicheBadge({ badge, obtenuLe }: { badge: BadgeKey; obtenuLe: string | null }) {
+function FicheBadge({
+  badge,
+  obtenuLe,
+  pseudo,
+}: {
+  badge: BadgeKey;
+  obtenuLe: string | null;
+  /** Le pilote regardé, quand ce n'est pas soi. */
+  pseudo: string | null;
+}) {
   // Ceinture et bretelles : `listBadges` filtre déjà les clés inconnues,
   // mais une feuille ouverte sur une clé venue d'ailleurs afficherait un écran
   // blanc plutôt qu'un libellé imparfait.
@@ -167,7 +179,13 @@ function FicheBadge({ badge, obtenuLe }: { badge: BadgeKey; obtenuLe: string | n
           <Body style={[styles.titre, got && { color: colors.accentTexte }]}>{item.name}</Body>
           <Muted>
             {got
-              ? t.explications.badgeObtenu.replace('%d', formatJour(obtenuLe))
+              ? // « Décroché par Untel » sur la fiche d'un autre pilote : une
+                // date nue se lit comme la sienne, exactement le piège relevé
+                // sur les grades aux deux audits du 2026-08-01.
+                (pseudo
+                  ? t.explications.badgeObtenuPar.replace('%p', pseudo)
+                  : t.explications.badgeObtenu
+                ).replace('%d', formatJour(obtenuLe))
               : t.explications.badgeAFaire}
           </Muted>
         </View>

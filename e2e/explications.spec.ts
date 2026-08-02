@@ -187,3 +187,38 @@ test('la feuille et la carte disent LA MÊME chose sur la calibration', async ({
   const feuilleEnCalibration = await page.getByText(/de calibration/).count();
   expect(feuilleEnCalibration > 0).toBe(carteEnCalibration > 0);
 });
+
+test('sur la vitrine d’un AUTRE pilote, un badge dit à quoi il correspond', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, {
+    'rpc/get_pilot': [
+      { id: 'u9', username: 'Zoe_P', elo: 1400, elo_exact: true, is_private: false, races: 12, avatar_path: null },
+    ],
+    'rest/v1/user_badges': [
+      { badge_key: 'champagne', unlocked_at: '2026-07-12T20:00:00Z', race_id: 'r1' },
+    ],
+  });
+  await page.goto('/pilot/u9');
+
+  // La vitrine ne montrait que des pictogrammes MUETS : on voyait que Zoe
+  // avait décroché quelque chose, jamais quoi (demande PO 2026-08-01). Le
+  // canal d'explication existait depuis C2 et ne servait que sur SA propre
+  // vitrine.
+  const badge = page.getByRole('button', { name: 'Champagne !' }).first();
+  await expect(badge).toBeVisible({ timeout: 20_000 });
+
+  // 44 px : c'est une commande, et `hitSlop` est inerte en react-native-web.
+  const b = await badge.boundingBox();
+  expect(b && b.width >= 44 && b.height >= 44).toBeTruthy();
+
+  await badge.click();
+  await expect(page.getByText('Remporter sa première victoire.').first()).toBeVisible({
+    timeout: 10_000,
+  });
+
+  // Et la date est attribuée à ZOE. Une date nue (« Décroché le 12 juil. ») se
+  // lirait comme la sienne — c'est le piège déjà corrigé sur les grades, où
+  // « Ton Elo : 1450 » s'affichait sur la fiche de quelqu'un d'autre.
+  await expect(page.getByText(/Décroché par Zoe_P le/).first()).toBeVisible();
+  await expect(page.getByText(/^Décroché le/)).toHaveCount(0);
+});

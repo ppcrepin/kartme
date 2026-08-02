@@ -556,6 +556,9 @@ export const fr = {
     echelle: 'Les six grades',
     badgeTitre: 'À propos de ce badge',
     badgeObtenu: 'Décroché le %d.',
+    // Sur la vitrine d'un AUTRE pilote : sans le pseudo, « Décroché le 12
+    // juil. » se lit comme sa propre date.
+    badgeObtenuPar: 'Décroché par %p le %d.',
     badgeAFaire: 'Pas encore décroché.',
   },
   badges: {

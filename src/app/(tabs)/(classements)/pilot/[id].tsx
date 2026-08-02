@@ -10,6 +10,7 @@ import { colors, fonts, spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import { pluriel } from '@/lib/nombre';
 import { useAuth } from '@/lib/auth';
+import { useExplications } from '@/lib/explications';
 import { listBadges, type BadgeKey, type UnlockedBadge } from '@/lib/badges';
 import { formatRaceDate } from '@/lib/datetime';
 import {
@@ -49,6 +50,9 @@ export default function PilotScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { session } = useAuth();
+  // `null` hors du fournisseur (galerie de composants, test unitaire) : la
+  // vitrine reste alors un simple aplat, sans se présenter comme tapable.
+  const explications = useExplications();
 
   const [pilot, setPilot] = useState<Pilot | null>(null);
   const [friendship, setFriendship] = useState<FriendshipState>({ status: 'none', friendshipId: null });
@@ -330,13 +334,30 @@ export default function PilotScreen() {
                   <Card>
                     <Label>{t.profile.badges}</Label>
                     <View style={styles.badgesRow}>
-                      {[...badges.keys()].map((key) => (
-                        <View
+                      {/* TAPABLE (demande PO 2026-08-01 : « quand je clique
+                          sur le badge de quelqu'un, je veux voir à quoi il
+                          correspond »). La vitrine montrait des pictogrammes
+                          muets : on voyait qu'il avait décroché quelque chose,
+                          jamais quoi. Le canal existe depuis C2 et servait
+                          déjà sur MA vitrine — il manquait ici.
+
+                          Le pseudo est passé à la fiche : sans lui, « Décroché
+                          le 12 juil. » se lirait comme sa propre date. */}
+                      {[...badges.entries()].map(([key, obtenu]) => (
+                        <Pressable
                           key={key}
-                          style={styles.badgeMedal}
-                          accessibilityLabel={t.badges.items[key]?.name ?? key}>
+                          onPress={() =>
+                            explications?.expliquerBadge(
+                              key,
+                              obtenu.unlockedAt,
+                              cestMoi ? null : (pilot.username ?? null),
+                            )
+                          }
+                          accessibilityRole={explications ? 'button' : 'none'}
+                          accessibilityLabel={t.badges.items[key]?.name ?? key}
+                          style={styles.badgeMedal}>
                           <BadgeIcon badge={key} size={26} color={colors.accent} />
-                        </View>
+                        </Pressable>
                       ))}
                     </View>
                   </Card>
@@ -463,9 +484,12 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 11 },
   badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   badgeMedal: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    // 44 px : c'est une COMMANDE depuis qu'elle ouvre la fiche du badge, et
+    // `hitSlop` n'est pas implémenté sur `Pressable` par react-native-web —
+    // la taille réelle est le seul levier.
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1.5,
     borderColor: colors.accent,
     backgroundColor: colors.surface,

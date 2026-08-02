@@ -38,8 +38,13 @@ export interface SujetGrade {
 export interface Explications {
   /** Ouvre la fiche d'un grade. */
   expliquerGrade: (grade: Grade, sujet?: SujetGrade) => void;
-  /** Ouvre la fiche d'un badge. `obtenuLe` = date ISO, ou null s'il reste à décrocher. */
-  expliquerBadge: (badge: BadgeKey, obtenuLe?: string | null) => void;
+  /**
+   * Ouvre la fiche d'un badge. `obtenuLe` = date ISO, ou null s'il reste à
+   * décrocher. `pseudo` = le pilote regardé quand ce n'est PAS soi : la fiche
+   * dit alors « Décroché PAR Untel », sinon on lit la date de quelqu'un
+   * d'autre comme si c'était la sienne — le même piège que sur les grades.
+   */
+  expliquerBadge: (badge: BadgeKey, obtenuLe?: string | null, pseudo?: string | null) => void;
 }
 
 /**
