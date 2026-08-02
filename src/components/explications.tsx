@@ -29,6 +29,23 @@ function titreDe(cible: Cible | null): string {
   return sien ? t.explications.gradeTitre : t.explications.gradeTitreAutre;
 }
 
+/**
+ * Substitution des jetons d'un libellé, en UN SEUL passage.
+ *
+ * `chaine.replace('%p', pseudo).replace('%d', date)` est un piège dès qu'une
+ * valeur injectée est un TEXTE D'UTILISATEUR : le second `replace` relit ce que
+ * le premier vient d'écrire. Un pilote nommé « 100%du top » donnait
+ * « Décroché par 10012 juil. 2026u top le %d. » — pseudo mutilé, gabarit à
+ * l'écran. Et `$&` dans un pseudo est un motif de remplacement spécial de
+ * `String.replace`, qui réinjectait le jeton précédent.
+ *
+ * Un balayage unique avec fonction de remplacement neutralise les deux : ce
+ * qu'on écrit n'est jamais relu, et le retour d'une fonction est littéral.
+ */
+function remplir(gabarit: string, valeurs: Record<string, string>): string {
+  return gabarit.replace(/%[a-z]/g, (jeton) => valeurs[jeton] ?? jeton);
+}
+
 /** La plage d'Elo d'un grade, écrite pour être lue à voix haute. */
 function plage(g: Grade): string {
   return g.max === null
@@ -104,7 +121,7 @@ function FicheGrade({ grade, sujet }: { grade: Grade; sujet: SujetGrade }) {
               le texte explicatif qui le surplombe. */}
           <Heading style={styles.chiffre}>
             {autre
-              ? t.explications.eloDe.replace('%p', autre).replace('%e', String(elo))
+              ? remplir(t.explications.eloDe, { '%p': autre, '%e': String(elo) })
               : t.explications.tonElo.replace('%e', String(elo))}
           </Heading>
           {gp?.next ? (
@@ -182,10 +199,14 @@ function FicheBadge({
               ? // « Décroché par Untel » sur la fiche d'un autre pilote : une
                 // date nue se lit comme la sienne, exactement le piège relevé
                 // sur les grades aux deux audits du 2026-08-01.
-                (pseudo
-                  ? t.explications.badgeObtenuPar.replace('%p', pseudo)
-                  : t.explications.badgeObtenu
-                ).replace('%d', formatJour(obtenuLe))
+                //
+                // `pseudo !== null` et non sa véracité : un pseudo vide ferait
+                // sinon retomber la fiche d'un AUTRE pilote sur le libellé à la
+                // première personne — le défaut même qu'on corrige.
+                remplir(
+                  pseudo !== null ? t.explications.badgeObtenuPar : t.explications.badgeObtenu,
+                  { '%p': pseudo ?? '', '%d': formatJour(obtenuLe) },
+                )
               : t.explications.badgeAFaire}
           </Muted>
         </View>

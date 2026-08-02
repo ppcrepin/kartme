@@ -346,14 +346,23 @@ export default function PilotScreen() {
                       {[...badges.entries()].map(([key, obtenu]) => (
                         <Pressable
                           key={key}
-                          onPress={() =>
-                            explications?.expliquerBadge(
-                              key,
-                              obtenu.unlockedAt,
-                              cestMoi ? null : (pilot.username ?? null),
-                            )
+                          // Le gestionnaire est ABSENT hors fournisseur, et pas
+                          // seulement inerte : react-native-web rendait sinon un
+                          // vrai bouton, focalisable au clavier, qui n'ouvre
+                          // rien. `username` n'est jamais nul (contrainte en
+                          // base, 3 à 20 caractères) — pas de repli qui
+                          // laisserait croire le contraire.
+                          onPress={
+                            explications
+                              ? () =>
+                                  explications.expliquerBadge(
+                                    key,
+                                    obtenu.unlockedAt,
+                                    cestMoi ? null : pilot.username,
+                                  )
+                              : undefined
                           }
-                          accessibilityRole={explications ? 'button' : 'none'}
+                          accessibilityRole={explications ? 'button' : undefined}
                           accessibilityLabel={t.badges.items[key]?.name ?? key}
                           style={styles.badgeMedal}>
                           <BadgeIcon badge={key} size={26} color={colors.accent} />

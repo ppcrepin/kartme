@@ -222,3 +222,31 @@ test('sur la vitrine d’un AUTRE pilote, un badge dit à quoi il correspond', a
   await expect(page.getByText(/Décroché par Zoe_P le/).first()).toBeVisible();
   await expect(page.getByText(/^Décroché le/)).toHaveCount(0);
 });
+
+test('un pseudo contenant « % » ne casse pas la phrase', async ({ page }) => {
+  await sessionSimulee(page);
+  await reseauSimule(page, {
+    'rpc/get_pilot': [
+      // `%d` est le jeton de la DATE dans le libellé. Injecté avant lui, le
+      // pseudo était relu par la substitution suivante : « Décroché par
+      // 10012 juil. 2026u top le %d. » — pseudo mutilé, gabarit à l'écran.
+      // Rien n'interdit « % » dans un pseudo (3 à 20 caractères, filtre de
+      // mots ; aucune restriction de casse ni de ponctuation).
+      { id: 'u8', username: '100%du top', elo: 1400, elo_exact: true, is_private: false, races: 12, avatar_path: null },
+    ],
+    'rest/v1/user_badges': [
+      { badge_key: 'champagne', unlocked_at: '2026-07-12T20:00:00Z', race_id: 'r1' },
+    ],
+  });
+  await page.goto('/pilot/u8');
+  await page.getByRole('button', { name: 'Champagne !' }).first().click({ timeout: 20_000 });
+
+  await expect(page.getByText('Décroché par 100%du top le 12 juil. 2026.').first()).toBeVisible({
+    timeout: 10_000,
+  });
+  // Aucun gabarit NON RÉSOLU ne doit atteindre l'écran. On cible « le %d. » et
+  // « %p » : un « %d » nu se trouve dans le pseudo lui-même, c'est tout le sel
+  // du cas.
+  await expect(page.getByText(/le %d\./)).toHaveCount(0);
+  await expect(page.getByText(/%p/)).toHaveCount(0);
+});
