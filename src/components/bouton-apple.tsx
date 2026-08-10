@@ -2,7 +2,6 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { useEffect, useState } from 'react';
 import { Platform, StyleSheet } from 'react-native';
 
-import { radius } from '@/constants/theme';
 
 /**
  * « Se connecter avec Apple » (iOS).
@@ -43,9 +42,20 @@ export function BoutonApple({ onPress, disabled }: { onPress: () => void; disabl
       // Le fond de l'application est carbone : le bouton BLANC est le seul des
       // trois styles d'Apple qui s'y détache. Le noir s'y fondrait.
       buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-      cornerRadius={radius.pill}
+      // 24 et non `radius.pill` (999) : la valeur est transmise telle quelle
+      // à `ASAuthorizationAppleIDButton.cornerRadius`, et rien ne garantit
+      // qu'Apple l'écrête à la moitié de la hauteur. 24 = la moitié de 48,
+      // donc visuellement identique, sans pari.
+      cornerRadius={24}
       style={[styles.bouton, disabled && styles.eteint]}
-      onPress={disabled ? () => {} : onPress}
+      // `AppleAuthenticationButton` n'a PAS de prop `disabled` (vérifié dans
+      // le module : il ne relaie que `onPress`). Un gestionnaire vide laissait
+      // VoiceOver annoncer « bouton », l'activer, et ne rien produire — ni
+      // retour, ni annonce. On le retire vraiment de l'arbre interactif.
+      pointerEvents={disabled ? 'none' : 'auto'}
+      accessibilityElementsHidden={disabled}
+      importantForAccessibility={disabled ? 'no-hide-descendants' : 'auto'}
+      onPress={onPress}
     />
   );
 }

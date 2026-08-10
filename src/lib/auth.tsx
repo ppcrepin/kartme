@@ -4,7 +4,9 @@ import * as WebBrowser from 'expo-web-browser';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 
+import { t } from '@/i18n';
 import { trackSignup } from '@/lib/analytics';
+import { messageFr } from '@/lib/erreur-fr';
 import { connexionApple } from '@/lib/apple-auth';
 import type { AuthResult } from '@/lib/auth-result';
 import { TERMS_VERSION } from '@/lib/legal';
@@ -129,7 +131,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       provider: 'google',
       options: { redirectTo, skipBrowserRedirect: Platform.OS !== 'web' },
     });
-    if (error) return { error: error.message };
+    // Même règle que pour Apple : les erreurs d'OAuth remontent en anglais.
+    if (error) return { error: messageFr(error, t.auth.appleFailed) };
 
     // Sur le web, le navigateur est redirigé automatiquement. Sur natif, on
     // ouvre la session d'auth puis on échange le code (PKCE) contre une session.
@@ -139,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const code = Linking.parse(res.url).queryParams?.code;
         if (typeof code === 'string') {
           const { error: exErr } = await supabase.auth.exchangeCodeForSession(code);
-          if (exErr) return { error: exErr.message };
+          if (exErr) return { error: messageFr(exErr, t.auth.appleFailed) };
         }
       }
     }

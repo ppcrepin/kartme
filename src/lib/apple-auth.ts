@@ -1,5 +1,6 @@
 import type { AuthResult } from '@/lib/auth-result';
 import { t } from '@/i18n';
+import { messageFr } from '@/lib/erreur-fr';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -31,7 +32,10 @@ export async function connexionApple(): Promise<AuthResult> {
       provider: 'apple',
       token: credential.identityToken,
     });
-    return { error: error?.message ?? null };
+    // Si le fournisseur Apple n'est pas activé côté Supabase, l'erreur brute
+    // est « Unsupported provider: provider is not enabled » — de l'anglais
+    // technique sous un bouton, dans une application intégralement française.
+    return { error: error ? messageFr(error, t.auth.appleFailed) : null };
   } catch (e) {
     // Fermer la feuille système n'est PAS une erreur. Sans ce cas, annuler
     // affichait un message rouge sous le bouton — le même défaut que le
@@ -40,6 +44,11 @@ export async function connexionApple(): Promise<AuthResult> {
     if (code === 'ERR_REQUEST_CANCELED' || code === 'ERR_CANCELED') {
       return { error: null };
     }
-    return { error: e instanceof Error ? e.message : t.auth.appleFailed };
+    // `messageFr` et NON `e.message` : les huit exceptions du module Apple
+    // portent des libellés anglais bruts (« The authorization attempt failed
+    // for an unknown reason » est le cas le plus fréquent après l'annulation),
+    // et comme ce sont toutes des `Error`, le repli français n'était JAMAIS
+    // servi. Un pilote sans réseau lisait de l'anglais en rouge.
+    return { error: messageFr(e, t.auth.appleFailed) };
   }
 }

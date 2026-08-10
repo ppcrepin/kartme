@@ -148,6 +148,8 @@ export function CircuitsExplorer({
   const geoMessage =
     geoError === 'denied'
       ? t.races.circuitGeoDenied
+      : geoError === 'denied-reglages'
+        ? t.races.circuitGeoReglages
       : geoError === 'unsupported'
         ? t.races.circuitGeoUnsupported
         : geoError === 'timeout'

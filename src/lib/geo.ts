@@ -8,7 +8,22 @@
 
 import { Platform } from 'react-native';
 
-export type GeoErrorCode = 'denied' | 'unavailable' | 'timeout' | 'unsupported';
+export type GeoErrorCode =
+  | 'denied'
+  /**
+   * iOS a mémorisé un refus antérieur : la fenêtre d'autorisation ne
+   * s'affichera PLUS. Distinct de `denied`, où l'on peut encore redemander —
+   * ici, toucher « Me localiser » ne produit rien de visible, et le seul
+   * recours passe par les réglages du téléphone. Le message doit le dire,
+   * sinon le pilote appuie trois fois sur un bouton mort.
+   */
+  | 'denied-reglages'
+  | 'unavailable'
+  | 'timeout'
+  | 'unsupported';
+
+/** Délai maximum d'une demande de position, web comme natif. */
+const DELAI_MS = 45_000;
 
 export class GeoError extends Error {
   constructor(public code: GeoErrorCode) {
@@ -59,7 +74,7 @@ export function currentPosition(): Promise<Position> {
       // Pendant l'utilisation / Refuser » et de choisir dépassait largement
       // dix secondes — on abandonnait donc en annonçant « position
       // indisponible » alors que le pilote était en train d'accepter.
-      { enableHighAccuracy: false, timeout: 45_000, maximumAge: 5 * 60_000 },
+      { enableHighAccuracy: false, timeout: DELAI_MS, maximumAge: 5 * 60_000 },
     );
   });
 }
@@ -82,16 +97,39 @@ async function positionNative(): Promise<Position> {
   } catch {
     throw new GeoError('unsupported');
   }
-  const { status } = await Location.requestForegroundPermissionsAsync();
-  if (status !== 'granted') throw new GeoError('denied');
+  const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
+  if (status !== 'granted') {
+    // `canAskAgain === false` : iOS a mémorisé un refus et n'affichera plus
+    // rien. Sans cette distinction, le pilote touchait un bouton qui ne
+    // produisait AUCUN retour visible, et lisait un message lui demandant de
+    // rouvrir l'accès « dans les réglages du site » — un texte de navigateur,
+    // sur un téléphone.
+    throw new GeoError(canAskAgain ? 'denied' : 'denied-reglages');
+  }
   try {
-    const p = await Location.getLastKnownPositionAsync({ maxAge: 5 * 60_000 });
     // Une position déjà connue évite de réveiller le GPS : à l'échelle du
     // kilomètre, celle d'il y a cinq minutes est exactement la même.
-    const point =
-      p ?? (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }));
+    const connue = await Location.getLastKnownPositionAsync({ maxAge: 5 * 60_000 });
+    if (connue) return { lat: connue.coords.latitude, lon: connue.coords.longitude };
+
+    // GARDE-FOU DE DURÉE. `getCurrentPositionAsync` n'en a aucun, ni côté JS ni
+    // côté Swift : il s'en remet entièrement au délai interne de CoreLocation.
+    // Celui-ci rend la main dans l'immense majorité des cas — mais s'il ne le
+    // fait pas, le bouton « Recherche de ta position… » reste figé POUR
+    // TOUJOURS, sans sortie. Le web s'accorde 45 s explicites ; le natif
+    // s'aligne, pour que les deux plateformes échouent de la même façon.
+    const point = await Promise.race([
+      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }),
+      new Promise<never>((_, rejeter) =>
+        setTimeout(() => rejeter(new GeoError('timeout')), DELAI_MS),
+      ),
+    ]);
     return { lat: point.coords.latitude, lon: point.coords.longitude };
-  } catch {
+  } catch (e) {
+    // Le dépassement de délai garde son code : l'écraser en « indisponible »
+    // ferait afficher « cherche par nom » là où « réessaie » est le bon
+    // conseil.
+    if (e instanceof GeoError) throw e;
     throw new GeoError('unavailable');
   }
 }

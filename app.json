@@ -47,7 +47,6 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.ppcrepin.kartsquad",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "KartSquad s’en sert uniquement pour trier les circuits du plus proche au plus loin. La position n’est ni enregistrée, ni partagée.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "usesAppleSignIn": true

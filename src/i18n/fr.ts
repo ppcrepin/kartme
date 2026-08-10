@@ -108,7 +108,6 @@ export const fr = {
     mapTitle: 'Circuits',
     mapSubtitle: '%n circuits en France',
     mapLoading: 'Chargement de la carte…',
-    mapWebOnly: 'La carte n’est disponible que dans le navigateur pour le moment.',
     mapLocate: 'Me localiser',
     mapCreateHere: 'Créer une course ici',
     mapAttribution: 'Fond de carte et données : © contributeurs OpenStreetMap',
@@ -218,6 +217,11 @@ export const fr = {
     // du navigateur ; on décrit le principe, pas un chemin de menus.
     circuitGeoDenied:
       'Position refusée. Ton navigateur a mémorisé le refus : rouvre-lui l’accès dans ses réglages de site (et vérifie que la localisation lui est autorisée dans les réglages du téléphone). Sinon, cherche par nom ou par ville ci-dessous.',
+    // iOS a mémorisé le refus : la fenêtre ne reviendra plus, et le message
+    // ci-dessus parlerait de « réglages de site » à quelqu'un qui n'a pas de
+    // navigateur sous les yeux. Le chemin est nommé, parce qu'il est le seul.
+    circuitGeoReglages:
+      'Position refusée. Pour la rouvrir : Réglages du téléphone → KartSquad → Position. Sinon, cherche par nom ou par ville ci-dessous.',
     circuitGeoTimeout:
       'Pas de réponse à la demande de position. Réessaie — et laisse la fenêtre d’autorisation ouverte le temps de choisir.',
     circuitGeoUnavailable: 'Position indisponible pour le moment. Cherche par nom ou par ville.',
