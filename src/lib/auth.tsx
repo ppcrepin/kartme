@@ -5,6 +5,8 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { Platform } from 'react-native';
 
 import { trackSignup } from '@/lib/analytics';
+import { connexionApple } from '@/lib/apple-auth';
+import type { AuthResult } from '@/lib/auth-result';
 import { TERMS_VERSION } from '@/lib/legal';
 import { disablePush } from '@/lib/push';
 import { oublierPreferences } from '@/lib/preferences';
@@ -17,7 +19,9 @@ if (typeof window !== 'undefined') {
   WebBrowser.maybeCompleteAuthSession();
 }
 
-type AuthResult = { error: string | null };
+// Défini dans `lib/auth-result` : les modules scindés par plateforme en ont
+// besoin sans pouvoir importer ce fichier (cycle).
+export type { AuthResult };
 
 interface AuthState {
   initializing: boolean;
@@ -27,6 +31,8 @@ interface AuthState {
   signInWithEmail: (email: string, password: string) => Promise<AuthResult>;
   signUpWithEmail: (email: string, password: string, username: string) => Promise<AuthResult>;
   signInWithGoogle: () => Promise<AuthResult>;
+  /** iOS uniquement — voir `signInWithApple`. Obligatoire pour la revue Apple. */
+  signInWithApple: () => Promise<AuthResult>;
   createProfile: (username: string) => Promise<AuthResult>;
   resetPassword: (email: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
@@ -140,6 +146,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null };
   }
 
+  /**
+   * « Se connecter avec Apple » — iOS uniquement.
+   *
+   * Ce n'est pas un confort : la règle 4.8 de l'App Store l'EXIGE dès lors
+   * qu'on propose une connexion par un tiers, et nous proposons Google. Sans
+   * elle, l'application est refusée à la revue, sans discussion.
+   *
+   * Le travail est fait dans `lib/apple-auth`, scindé par plateforme : voir
+   * ce fichier pour la raison (Metro embarquait le module Apple dans le
+   * bundle web malgré l'import différé).
+   */
+  async function signInWithApple(): Promise<AuthResult> {
+    // Délégué à un module scindé par plateforme : voir `lib/apple-auth`.
+    return connexionApple();
+  }
+
   async function resetPassword(email: string): Promise<AuthResult> {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: appBaseUrl(),
@@ -169,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithEmail,
       signUpWithEmail,
       signInWithGoogle,
+      signInWithApple,
       createProfile,
       resetPassword,
       signOut,

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { AuthShell } from '@/components/auth-shell';
+import { BoutonApple } from '@/components/bouton-apple';
 import { Button, Field } from '@/components/ui';
 import { Body, Muted } from '@/components/ui/text';
 import { colors, spacing } from '@/constants/theme';
@@ -12,7 +13,7 @@ import { hasPendingInvite } from '@/lib/pending-route';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 export default function SignInScreen() {
-  const { signInWithEmail, signInWithGoogle } = useAuth();
+  const { signInWithEmail, signInWithGoogle, signInWithApple } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,6 +32,14 @@ export default function SignInScreen() {
     setBusy(true);
     setError(null);
     const { error } = await signInWithGoogle();
+    setBusy(false);
+    if (error) setError(error);
+  }
+
+  async function onApple() {
+    setBusy(true);
+    setError(null);
+    const { error } = await signInWithApple();
     setBusy(false);
     if (error) setError(error);
   }
@@ -71,6 +80,10 @@ export default function SignInScreen() {
       {error ? <Body style={styles.error}>{error}</Body> : null}
 
       <Button label={t.auth.signIn} onPress={onSignIn} disabled={busy} />
+      {/* Apple AVANT Google : leurs règles d'interface demandent que « Se
+          connecter avec Apple » ne soit pas moins en vue que les autres
+          connexions par un tiers. Le composant ne rend rien hors iOS. */}
+      <BoutonApple onPress={onApple} disabled={busy} />
       <Button label={t.auth.google} variant="ghost" onPress={onGoogle} disabled={busy} />
 
       <Pressable

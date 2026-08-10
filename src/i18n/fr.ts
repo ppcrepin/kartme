@@ -53,6 +53,12 @@ export const fr = {
     signIn: 'Se connecter',
     signUp: 'Créer mon compte',
     google: 'Continuer avec Google',
+    // « Se connecter avec Apple » — le libellé du bouton vient d'Apple
+    // lui-même (composant système), donc rien à traduire ici : seuls les
+    // messages d'échec sont à nous.
+    appleUnavailable: 'La connexion Apple n’existe que sur iPhone et iPad.',
+    appleNoToken: 'Apple n’a pas renvoyé de jeton. Réessaie.',
+    appleFailed: 'La connexion Apple a échoué. Réessaie.',
     forgotLink: 'Mot de passe oublié ?',
     noAccount: 'Pas encore de compte ? Créer un compte',
     hasAccount: 'Déjà un compte ? Se connecter',
