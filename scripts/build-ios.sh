@@ -70,6 +70,14 @@ vert "Dépendances en place"
 # le champ `environment` d'eas.json (postérieur à eas-cli 12).
 EAS="npx --yes eas-cli@latest"
 
+# Le PREMIER appel télécharge eas-cli, et c'est un gros paquet : plusieurs
+# minutes sur une connexion d'entreprise. On le fait ici, À VOIX HAUTE, plutôt
+# qu'au premier `whoami` dont la sortie est masquée — sinon le script paraît
+# figé pendant tout le téléchargement, sans un mot. Vécu.
+bleu "Outil EAS (premier lancement : téléchargement de quelques minutes)"
+$EAS --version
+vert "EAS prêt"
+
 # ── 1. Le compte Expo ───────────────────────────────────────────────────────
 bleu "Compte Expo"
 if $EAS whoami >/dev/null 2>&1; then
