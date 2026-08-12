@@ -131,15 +131,21 @@ if [ "$manque" = "1" ]; then
     rouge "Valeurs vides — j'arrête plutôt que de produire une application inerte."
     exit 1
   fi
-  # `plaintext`, pas `plain` : les eas-cli récents refusent `plain` avec
-  # « Expected --visibility=plain to be one of: plaintext, sensitive, secret »
-  # et interrompent tout le script (vécu — ça a bloqué le PO en pleine
-  # manipulation, juste après avoir collé ses deux valeurs).
+  # `env:set`, PAS `env:create` : cette dernière est purement et simplement
+  # abandonnée par les eas-cli récents (« This command is deprecated. Use eas
+  # env:set instead. ») et refuse même de s'exécuter. Deux pièges de suite ont
+  # bloqué le PO en plein milieu de la saisie de ses clés :
+  #   1. `env:create` n'existe plus du tout ;
+  #   2. L'ENVIRONNEMENT (`preview`/`production`) est un argument POSITIONNEL
+  #      de `env:set`, pas une valeur de `--environment` — `--environment` sur
+  #      cette commande sert à autre chose (project|account) et la confusion
+  #      produit « Unexpected arguments ».
+  # Vérifié contre `eas env:set --help` en direct, pas deviné.
   for env in preview production; do
-    $EAS env:create --environment "$env" --name EXPO_PUBLIC_SUPABASE_URL \
-      --value "$url" --visibility plaintext --non-interactive --force
-    $EAS env:create --environment "$env" --name EXPO_PUBLIC_SUPABASE_ANON_KEY \
-      --value "$anon" --visibility plaintext --non-interactive --force
+    $EAS env:set "$env" --name EXPO_PUBLIC_SUPABASE_URL \
+      --value "$url" --visibility plaintext --non-interactive
+    $EAS env:set "$env" --name EXPO_PUBLIC_SUPABASE_ANON_KEY \
+      --value "$anon" --visibility plaintext --non-interactive
   done
   vert "Clés enregistrées pour preview et production"
 fi
