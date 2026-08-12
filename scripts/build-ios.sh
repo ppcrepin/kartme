@@ -65,6 +65,28 @@ if [ ! -d node_modules ]; then
 fi
 vert "Dépendances en place"
 
+# Les modules Expo natifs sont livrés PRÉ-COMPILÉS. Deux versions du même SDK
+# qui ne se correspondent pas produisent un binaire qui se construit sans une
+# erreur, passe la validation d'Apple, s'installe — et meurt à la seconde où on
+# le touche, sur un « Symbol not found » que seul le rapport de plantage de
+# l'iPhone révèle.
+#
+# Vécu, build 1 : expo-modules-core 57.0.3 face à expo-location 57.0.7. La
+# signature interne `_decorateModule(object:in:)` avait changé entre les deux.
+# Les plages `~57.0.x` de package.json autorisaient parfaitement cette paire.
+#
+# Cette vérification ne coûte rien et aurait épargné un build entier. Elle
+# n'interrompt PAS : sans réseau vers api.expo.dev elle échoue, et ce n'est pas
+# une raison de bloquer un build.
+bleu "Cohérence des versions Expo"
+if npx --yes expo install --check >/dev/null 2>&1; then
+  vert "Versions alignées sur le SDK"
+else
+  jaune "Versions non alignées, ou vérification impossible (réseau)."
+  jaune "En cas de plantage AU LANCEMENT sur l'iPhone, commence par ici :"
+  jaune "  npx expo install --fix"
+fi
+
 # `npx eas-cli@latest` plutôt qu'une installation globale : pas de droits
 # administrateur à demander, et on est certain d'avoir une version qui connaît
 # le champ `environment` d'eas.json (postérieur à eas-cli 12).
