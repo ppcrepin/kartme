@@ -29,6 +29,31 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 vert "Node $(node --version)"
 
+# ── Le proxy qui réécrit les certificats ────────────────────────────────────
+#
+# Sur un poste d'entreprise, le pare-feu déchiffre le HTTPS et le re-signe avec
+# son propre certificat racine. Windows lui fait confiance — d'où un navigateur
+# et un Git qui fonctionnent — mais Node embarque SA liste d'autorités et ignore
+# celle du système : il refuse tout, avec un
+# `UNABLE_TO_GET_ISSUER_CERT_LOCALLY` qui ne dit rien à personne.
+#
+# Vécu : deux tentatives de trente minutes avant de comprendre, parce que npm
+# réessaie longtemps avant d'avouer. `--use-system-ca` (Node 22.15+) lui fait
+# lire le magasin de Windows.
+#
+# On teste l'option au lieu de comparer des numéros de version : un Node trop
+# ancien refuse de DÉMARRER avec une option inconnue, ce qui casserait tout.
+if [ -z "${NODE_OPTIONS:-}" ] || ! printf '%s' "${NODE_OPTIONS:-}" | grep -q -- '--use-system-ca'; then
+  if node --use-system-ca -e '' >/dev/null 2>&1; then
+    export NODE_OPTIONS="${NODE_OPTIONS:-} --use-system-ca"
+    vert "Certificats du système activés (proxy d'entreprise géré)"
+  else
+    jaune "Ce Node ne connaît pas --use-system-ca (il faut la 22.15 ou plus)."
+    jaune "Si tu vois UNABLE_TO_GET_ISSUER_CERT_LOCALLY, c'est de là que ça vient :"
+    jaune "mets Node à jour, ou passe par le partage de connexion de ton téléphone."
+  fi
+fi
+
 if [ ! -f package.json ] || [ ! -f eas.json ]; then
   rouge "Lance ce script depuis la RACINE du dépôt kartme (là où se trouve package.json)."
   exit 1
