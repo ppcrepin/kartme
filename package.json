@@ -13,7 +13,8 @@
     "test": "jest",
     "test:e2e": "playwright test",
     "db:test": "bash supabase/tests/run.sh",
-    "icons": "python3 scripts/logo.py"
+    "icons": "python3 scripts/logo.py",
+    "ios:build": "bash scripts/build-ios.sh"
   },
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",
