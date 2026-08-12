@@ -1,3 +1,7 @@
+// EN PREMIER, avant tout autre import : la boîte noire doit être en place
+// avant que le reste du code ait la moindre occasion d'échouer.
+import '@/lib/boite-noire';
+
 import { Fraunces_700Bold, Fraunces_900Black, useFonts } from '@expo-google-fonts/fraunces';
 import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
