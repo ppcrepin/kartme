@@ -131,11 +131,15 @@ if [ "$manque" = "1" ]; then
     rouge "Valeurs vides — j'arrête plutôt que de produire une application inerte."
     exit 1
   fi
+  # `plaintext`, pas `plain` : les eas-cli récents refusent `plain` avec
+  # « Expected --visibility=plain to be one of: plaintext, sensitive, secret »
+  # et interrompent tout le script (vécu — ça a bloqué le PO en pleine
+  # manipulation, juste après avoir collé ses deux valeurs).
   for env in preview production; do
     $EAS env:create --environment "$env" --name EXPO_PUBLIC_SUPABASE_URL \
-      --value "$url" --visibility plain --non-interactive --force
+      --value "$url" --visibility plaintext --non-interactive --force
     $EAS env:create --environment "$env" --name EXPO_PUBLIC_SUPABASE_ANON_KEY \
-      --value "$anon" --visibility plain --non-interactive --force
+      --value "$anon" --visibility plaintext --non-interactive --force
   done
   vert "Clés enregistrées pour preview et production"
 fi
