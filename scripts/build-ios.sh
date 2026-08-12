@@ -125,8 +125,11 @@ if [ "$manque" = "1" ]; then
   jaune "dans le site web. Elle ne donne accès qu'à ce que les règles de"
   jaune "sécurité de la base autorisent."
   echo
-  read -r -p "  URL du projet (https://xxxx.supabase.co) : " url
-  read -r -p "  Clé anon (eyJ...) : " anon
+  # `</dev/tty` et `|| true` : voir la note sur la confirmation plus bas. Les
+  # commandes EAS qui précèdent peuvent avoir vidé l'entrée standard, et sans
+  # ces deux gardes le script MEURT ici sans afficher quoi que ce soit.
+  read -r -p "  URL du projet (https://xxxx.supabase.co) : " url </dev/tty || url=""
+  read -r -p "  Clé anon (eyJ...) : " anon </dev/tty || anon=""
   if [ -z "$url" ] || [ -z "$anon" ]; then
     rouge "Valeurs vides — j'arrête plutôt que de produire une application inerte."
     exit 1
@@ -166,7 +169,14 @@ cat <<'TXT'
     les épingles de la carte s'affichent réellement.
 
 TXT
-read -r -p "  On y va ? [o/N] " reponse
+# `</dev/tty` : les commandes EAS qui précèdent consomment l'entrée standard,
+# si bien que `read` recevait une FIN DE FLUX au lieu d'attendre une touche.
+# `read` renvoie alors 1, et `set -e` tuait le script SANS UN MOT, juste après
+# avoir affiché la question — le PO a vu la question, tapé « o », et sa réponse
+# est tombée dans le terminal (« bash: o: command not found »). Lire le
+# terminal directement, et ne jamais laisser un `read` faire mourir le script.
+reponse=""
+read -r -p "  On y va ? [o/N] " reponse </dev/tty || reponse=""
 case "$reponse" in
   [oO]*) ;;
   *) jaune "Interrompu. Relance quand tu veux, les étapes déjà faites seront sautées."; exit 0 ;;
