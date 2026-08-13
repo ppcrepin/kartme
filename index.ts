@@ -1,21 +1,22 @@
 /**
- * Le point d'entrée de l'application. Ce fichier existe pour UNE raison :
- * installer la boîte noire AVANT tout le reste.
+ * Le point d'entrée NATIF de l'application (le web a le sien : index.web.ts).
  *
- * Avec `"main": "expo-router/entry"`, le premier code applicatif à s'exécuter
- * était `src/app/_layout.tsx` — mais expo-router et ses dépendances
- * (reanimated, worklets, gesture-handler, screens…) s'initialisent AVANT lui.
- * Une erreur fatale dans cette zone échappait à tous les filets : builds 3,
- * 4 et 5, trois plantages muets au lancement, l'alerte de la boîte noire
- * jamais affichée. Certaines de ces bibliothèques lèvent précisément ce
- * genre d'erreur à l'import quand leur partie native manque — par exemple
- * react-native-worklets : « Native part of Worklets doesn't seem to be
- * initialized » (NativeWorklets.native.js, constructeur).
+ * Deux étages, dans cet ordre strict :
+ *   1. la boîte noire — le listener d'erreurs fatales, posé à la première
+ *      instruction du bundle ;
+ *   2. le SAS (src/components/sas.tsx) — un écran minimal qui se monte seul,
+ *      PUIS charge la vraie application dans un try/catch. Après six builds
+ *      TestFlight plantés au lancement sans jamais livrer leur message
+ *      d'erreur, c'est la seule construction qui ne dépend d'aucun mécanisme
+ *      interne de React Native : voir le commentaire du sas.
  *
- * Ici, la boîte noire s'enregistre à la PREMIÈRE instruction du bundle :
- * il ne reste plus une seule ligne de JavaScript applicatif ou de
- * bibliothèque hors de sa portée. (Le cœur de React Native lui-même reste
- * hors champ, mais ses erreurs à lui produisent des rapports natifs lisibles.)
+ * Surtout ne rien importer d'autre ici : chaque import de ce fichier
+ * s'exécute AVANT le sas, donc hors de sa protection.
  */
 import '@/lib/boite-noire';
-import 'expo-router/entry';
+
+import { registerRootComponent } from 'expo';
+
+import { Sas } from '@/components/sas';
+
+registerRootComponent(Sas);
