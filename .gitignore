@@ -55,3 +55,7 @@ example
 # Cache Python (scripts/logo.py)
 __pycache__/
 *.pyc
+
+# Archive de livraison des captures App Store — les PNG source sont
+# versionnés dans captures-appstore/, le zip n'est qu'un emballage.
+kartsquad-captures-appstore.zip
