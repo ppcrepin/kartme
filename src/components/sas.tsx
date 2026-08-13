@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text } from 'react-native';
 
 import { GardeErreur } from '@/components/garde-erreur';
 import { colors, radius, spacing } from '@/constants/theme';
+import { logError } from '@/lib/analytics';
 
 /**
  * Le sas de lancement (natif uniquement — le web garde l'entrée classique).
@@ -55,6 +56,12 @@ export function Sas() {
   const [erreur, setErreur] = useState<string | null>(null);
 
   useEffect(() => {
+    // Journal N9bis : chaque passage ici = une NAISSANCE de processus. Les
+    // « déconnexions » sur croix se sont révélées être des redémarrages
+    // complets sans rapport de plantage — ce marqueur permet de compter les
+    // processus et de dater leurs naissances dans le même journal SQL que
+    // les événements de session.
+    logError('sas:naissance du processus', 'journal-auth');
     // 150 ms : le sas est peint AVANT la tentative. Si le chargement tue le
     // processus au niveau natif (hors de portée de tout catch), le dernier
     // écran visible dit au moins où on en était.

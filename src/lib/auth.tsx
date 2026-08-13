@@ -93,15 +93,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data, error }) => {
-      journalAuth(
-        `demarrage:${data.session ? 'session restaurée' : 'AUCUNE session'}` +
-          (error ? ` erreur=${error.message}` : ''),
-      );
+    // Restauration en DEUX temps. Le journal du 13/08 (12:59:28 puis
+    // 12:59:35) prouve qu'au démarrage, la relecture de la session peut
+    // rendre « rien » alors que la session EST sur le disque : sept secondes
+    // plus tard, sans aucune connexion entre les deux, elle se restaurait.
+    // Conclure « déconnecté » sur cette première lecture envoyait le pilote
+    // à l'écran de connexion. On accorde donc une SECONDE lecture, 700 ms
+    // plus tard, avant de conclure — le coût est invisible (l'écran d'attente
+    // est déjà là), l'erreur de conclusion ne l'était pas.
+    (async () => {
+      let { data, error } = await supabase.auth.getSession();
+      if (!data.session) {
+        await new Promise((r) => setTimeout(r, 700));
+        ({ data, error } = await supabase.auth.getSession());
+        journalAuth(
+          `demarrage:2e lecture ${data.session ? 'session restaurée' : 'toujours AUCUNE session'}`,
+        );
+      } else {
+        journalAuth('demarrage:session restaurée');
+      }
+      if (error) journalAuth(`demarrage:erreur ${error.message}`);
       setSession(data.session);
       await refreshProfile(data.session?.user.id);
       setInitializing(false);
-    });
+    })();
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, next) => {
       // La séquence brute des événements est LA donnée qui manque : qui a
