@@ -7,6 +7,7 @@ import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 
 import { captureReferralFromUrl, logError, track } from '@/lib/analytics';
 import { GardeErreur } from '@/components/garde-erreur';
@@ -102,7 +103,15 @@ export default function RootLayout() {
   // Analytics maison : capture le parrain de l'URL + garde-fou d'erreurs global.
   useEffect(() => {
     captureReferralFromUrl();
-    if (typeof window === 'undefined') return;
+    // ⚠ `typeof window` ne suffit PAS ici : React Native définit un `window`
+    // (alias de l'objet global) qui n'a PAS addEventListener. Cette garde-là,
+    // seule, laissait passer le natif — et l'appel plantait l'application AU
+    // LANCEMENT : « TypeError: undefined is not a function » dans le montage
+    // des effets, la cause unique des sept builds TestFlight morts sur le
+    // splash. Le nom du coupable n'est apparu qu'au build 7, affiché par le
+    // sas de lancement. Les écouteurs error/unhandledrejection sont des API
+    // DOM : ils n'ont de sens que sur le web (le natif a la boîte noire).
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     // Contexte réduit au pathname (pas de query string : évite de journaliser un
     // éventuel token/identifiant présent dans l'URL — minimisation RGPD).
     const cleanPath = (u?: string) => {
