@@ -6,6 +6,6 @@ module.exports = defineConfig([
   expoConfig,
   {
     // supabase/functions = Edge Functions Deno (runtime & imports différents).
-    ignores: ['dist/*', 'node_modules/*', '.expo/*', 'e2e/*', 'supabase/functions/*'],
+    ignores: ['dist/*', 'node_modules/*', '.expo/*', 'e2e/*', 'supabase/functions/*', 'jest.setup.js'],
   },
 ]);

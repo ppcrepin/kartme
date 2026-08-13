@@ -6,6 +6,8 @@
  */
 import { supabase } from '@/lib/supabase';
 
+import { ecrireLocal, effacerLocal, lireLocal } from '@/lib/stockage-local';
+
 const REF_KEY = 'ks_ref';
 let referrer: string | null = null;
 
@@ -13,14 +15,6 @@ let referrer: string | null = null;
 // falsifiable par un ?ref= arbitraire). La correspondance à un vrai profil et
 // l'exclusion de l'auto-parrainage sont revérifiées côté serveur (get_metrics).
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function safeLocalStorage(): Storage | null {
-  try {
-    return typeof window !== 'undefined' ? window.localStorage : null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Capture le parrain depuis l'URL (web) au démarrage, puis le mémorise. Deux
@@ -48,12 +42,11 @@ export function captureReferralFromUrl(): void {
     // `?ref=<autre>` la lui VOLAIT — sur un lien public, trivial à altérer
     // avant de le repartager.
     const ref = deLaQuery && UUID_RE.test(deLaQuery) ? deLaQuery : duChemin;
-    const store = safeLocalStorage();
     if (ref && UUID_RE.test(ref)) {
       referrer = ref;
-      store?.setItem(REF_KEY, ref);
+      ecrireLocal(REF_KEY, ref);
     } else if (!referrer) {
-      referrer = store?.getItem(REF_KEY) ?? null;
+      referrer = lireLocal(REF_KEY);
     }
   } catch {
     /* URL invalide : on ignore */
@@ -61,13 +54,13 @@ export function captureReferralFromUrl(): void {
 }
 
 export function getReferrer(): string | null {
-  if (!referrer) referrer = safeLocalStorage()?.getItem(REF_KEY) ?? null;
+  if (!referrer) referrer = lireLocal(REF_KEY);
   return referrer;
 }
 
 export function clearReferrer(): void {
   referrer = null;
-  safeLocalStorage()?.removeItem(REF_KEY);
+  effacerLocal(REF_KEY);
 }
 
 /** Ajoute ?ref=<id> à un lien de partage (pour attribuer les inscriptions). */

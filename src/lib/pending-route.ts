@@ -4,6 +4,8 @@
  * inscrit/connecté. Sans ça, le canal d'acquisition n°1 (l'invitation) ne
  * convertit pas : l'invité atterrit sur l'accueil au lieu de la course.
  */
+import { ecrireLocal, effacerLocal, lireLocal } from '@/lib/stockage-local';
+
 const KEY = 'ks_pending_route';
 
 // Routes que l'on juge « partageables » et donc dignes d'être restaurées.
@@ -14,11 +16,7 @@ const SHAREABLE = /^(race|pilot|invite)\//;
 
 export function rememberPendingRoute(path: string): void {
   if (!SHAREABLE.test(path)) return;
-  try {
-    window?.localStorage?.setItem(KEY, path);
-  } catch {
-    /* pas de storage : on ignore */
-  }
+  ecrireLocal(KEY, path);
 }
 
 /**
@@ -30,12 +28,8 @@ export function rememberPendingRoute(path: string): void {
  * l'efface, et seulement une fois le pilote connecté ET profilé.
  */
 export function peekPendingRoute(): string | null {
-  try {
-    const v = window?.localStorage?.getItem(KEY) ?? null;
-    return v && SHAREABLE.test(v) ? v : null;
-  } catch {
-    return null;
-  }
+  const v = lireLocal(KEY);
+  return v && SHAREABLE.test(v) ? v : null;
 }
 
 /** Vrai si la destination mémorisée est une INVITATION d'ami. */
@@ -45,11 +39,7 @@ export function hasPendingInvite(): boolean {
 
 /** Récupère ET efface la destination mémorisée (usage unique). */
 export function takePendingRoute(): string | null {
-  try {
-    const v = window?.localStorage?.getItem(KEY) ?? null;
-    if (v) window.localStorage.removeItem(KEY);
-    return v && SHAREABLE.test(v) ? v : null;
-  } catch {
-    return null;
-  }
+  const v = lireLocal(KEY);
+  if (v) effacerLocal(KEY);
+  return v && SHAREABLE.test(v) ? v : null;
 }

@@ -10,17 +10,11 @@
  * Le geste de saisie est maintenant un choix explicite, et il se mémorise :
  * quelqu'un qui a tranché ne doit pas revoir la question à chaque course.
  */
+import { ecrireLocal, effacerLocal, lireLocal } from '@/lib/stockage-local';
+
 const CLE_MODE = 'ks_mode_saisie';
 
 export type ModeSaisie = 'drag' | 'tap';
-
-function stockage(): Storage | null {
-  try {
-    return typeof window !== 'undefined' ? window.localStorage : null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Le mode à ouvrir. Défaut : `drag`.
@@ -37,19 +31,11 @@ function stockage(): Storage | null {
  * à un tap, en retrait.
  */
 export function modePrefere(): ModeSaisie {
-  try {
-    return stockage()?.getItem(CLE_MODE) === 'tap' ? 'tap' : 'drag';
-  } catch {
-    return 'drag';
-  }
+  return lireLocal(CLE_MODE) === 'tap' ? 'tap' : 'drag';
 }
 
 export function memoriserMode(mode: ModeSaisie): void {
-  try {
-    stockage()?.setItem(CLE_MODE, mode);
-  } catch {
-    /* pas de storage (navigation privée) : on garde le défaut */
-  }
+  ecrireLocal(CLE_MODE, mode);
 }
 
 // ── Checklist « ta première course » ──────────────────────────────────────
@@ -73,19 +59,13 @@ const CLE_CHECKLIST = 'ks_checklist_masquee';
  * elle revient à 2/3. Elle ne repasse jamais deux fois au même endroit.
  */
 export function checklistMasqueeA(): number | null {
-  try {
-    const v = stockage()?.getItem(CLE_CHECKLIST);
-    // `Number('')` vaut 0 : sans ce garde, une valeur vide masquerait la carte
-    // au premier palier. Et la lecture est protégée — `stockage()` n'attrape
-    // que l'accès au getter, pas l'appel de méthode, qui lève encore en iframe
-    // aux cookies tiers bloqués. Une exception ici partirait de l'initialiseur
-    // d'un `useState` : écran d'accueil BLANC, pas de dégradation douce.
-    if (!v) return null;
-    const n = Number(v);
-    return Number.isInteger(n) && n >= 0 ? Math.min(n, 2) : null;
-  } catch {
-    return null;
-  }
+  // `Number('')` vaut 0 : sans ce garde, une valeur vide masquerait la carte
+  // au premier palier. (`lireLocal` n'expose plus d'exception : la protection
+  // navigation-privée vit dans stockage-local.)
+  const v = lireLocal(CLE_CHECKLIST);
+  if (!v) return null;
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 0 ? Math.min(n, 2) : null;
 }
 
 /**
@@ -96,21 +76,11 @@ export function checklistMasqueeA(): number | null {
  * que la libération de l'abonnement push, qui se fait déjà là.
  */
 export function oublierPreferences(): void {
-  try {
-    const s = stockage();
-    if (!s) return;
-    for (const cle of Object.keys(s)) {
-      if (cle.startsWith('ks_')) s.removeItem(cle);
-    }
-  } catch {
-    /* rien à nettoyer */
+  for (const cle of ['ks_mode_saisie', 'ks_checklist_masquee', 'ks_ref', 'ks_pending_route']) {
+    effacerLocal(cle);
   }
 }
 
 export function masquerChecklist(avancement: number): void {
-  try {
-    stockage()?.setItem(CLE_CHECKLIST, String(avancement));
-  } catch {
-    /* pas de storage : la carte restera, c'est le moindre mal */
-  }
+  ecrireLocal(CLE_CHECKLIST, String(avancement));
 }
