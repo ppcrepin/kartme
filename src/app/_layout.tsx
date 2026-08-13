@@ -9,6 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
 
 import { captureReferralFromUrl, logError, track } from '@/lib/analytics';
+import { GardeErreur } from '@/components/garde-erreur';
 import { colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { rememberPendingRoute, takePendingRoute } from '@/lib/pending-route';
@@ -128,9 +129,11 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <StatusBar style="light" />
-      <RootNavigator />
-    </AuthProvider>
+    <GardeErreur>
+      <AuthProvider>
+        <StatusBar style="light" />
+        <RootNavigator />
+      </AuthProvider>
+    </GardeErreur>
   );
 }
