@@ -1,20 +1,25 @@
-import { ReactNode, useEffect, useState } from 'react';
-import { Animated, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ReactNode, useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/constants/theme';
 import { Heading } from '@/components/ui/text';
+import { effacerFeuille, publierFeuille } from '@/components/ui/portail-feuille';
 
 /**
- * Feuille qui monte du bas (décision PO 2026-07-30, audit A17).
+ * Feuille qui monte du bas — version NATIVE, SANS le `Modal` de React Native.
  *
- * Héberge les sections « on s'en sert une fois par course » — les trois
- * façons d'ajouter un pilote, le partage QR — qui occupaient ~900 px en
- * permanence dans le flux de l'écran de course. Un Modal transparent plutôt
- * qu'une vue absolue : il passe PAR-DESSUS la barre d'onglets et intercepte
- * le fond, sans dépendre de la hiérarchie de l'écran appelant.
+ * L'implémentation d'origine (conservée telle quelle sur le web :
+ * sheet.web.tsx) posait le contenu dans un `Modal` natif. Sur iOS, la
+ * FERMETURE de ce Modal faisait renaître l'application entière : arbre React
+ * neuf, session relue trop tôt, pilote éjecté vers l'écran de connexion —
+ * les « déconnexions » des builds TestFlight 8 à 11, prouvées par le journal
+ * de session N9 (renaissances sans le moindre rapport de plantage). Le
+ * composant natif est donc simplement retiré du chemin.
  *
- * Fermeture : tap sur le voile, ou la poignée. La feuille plafonne à 85 % de
- * l'écran et défile à l'intérieur si son contenu déborde.
+ * Ici, la feuille est une vue ordinaire, PUBLIÉE au portail de la racine
+ * (portail-feuille) pour passer par-dessus la barre d'onglets — le service
+ * que le Modal rendait. Même apparence, même geste, mêmes appelants :
+ * `explications`, le profil, l'écran de course ne changent pas d'une ligne.
  */
 export function Sheet({
   open,
@@ -27,11 +32,14 @@ export function Sheet({
   title?: string;
   children: ReactNode;
 }) {
-  // PAS useAnimatedValue : le hook n'existe pas dans react-native-web (écran
-  // rouge attrapé par l'audit navigateur — il plantait TOUTES les vues de
-  // course). Un initialiseur d'état donne la même valeur stable sans lire de
-  // ref au rendu (contrainte du lint).
+  // Voir sheet.web.tsx : initialiseur d'état plutôt que useAnimatedValue.
   const [glisse] = useState(() => new Animated.Value(0));
+  // Identité de CETTE feuille auprès du portail. L'écran de course monte
+  // DEUX <Sheet> (partage, menu admin) : sans identité, la feuille fermée
+  // qui se re-rendait effaçait celle qui venait de s'ouvrir — attrapé par
+  // la relecture adversariale avant tout build.
+  const moi = useRef<symbol | null>(null);
+  if (moi.current === null) moi.current = Symbol('feuille');
 
   useEffect(() => {
     if (!open) return;
@@ -39,28 +47,24 @@ export function Sheet({
     Animated.timing(glisse, { toValue: 1, duration: 220, useNativeDriver: true }).start();
   }, [open, glisse]);
 
-  if (!open) return null;
-
-  const translateY = glisse.interpolate({ inputRange: [0, 1], outputRange: [80, 0] });
-
-  return (
-    // `aria-label` : react-native-web pose bien `role="dialog"` et
-    // `aria-modal`, mais AUCUN nom — un lecteur d'écran annonçait « dialogue »
-    // sans dire lequel, alors que le titre est juste là. Le prop traverse le
-    // `rest` de Modal jusqu'à la `View` qui porte le rôle.
-    <Modal transparent visible animationType="none" onRequestClose={onClose} aria-label={title}>
-      <View style={styles.voileZone}>
-        {/* Le voile ferme au tap mais n'est PAS annoncé comme un bouton : la
-            poignée ci-dessous est la commande de fermeture, et deux boutons
-            « Fermer » identiques dans la même vue sont une gêne pour un lecteur
-            d'écran autant qu'une ambiguïté pour un test — `getByLabel('Fermer')`
-            en trouvait deux, et le premier dans l'ordre du DOM était ce voile
-            plein écran, dont le centre est RECOUVERT par une feuille haute.
-            D'où un clic parfois intercepté, donc un test instable. */}
+  // Publication à CHAQUE rendu tant que la feuille est ouverte : le contenu
+  // (children) est vivant — la liste des pilotes s'y met à jour pendant
+  // qu'elle est affichée — et le portail ne fait que le déplacer à la racine.
+  useEffect(() => {
+    if (!open) {
+      // N'efface que SA propre publication : un Sheet fermé qui se re-rend
+      // ne doit pas toucher à la feuille ouverte d'un autre.
+      effacerFeuille(moi.current!);
+      return;
+    }
+    const translateY = glisse.interpolate({ inputRange: [0, 1], outputRange: [80, 0] });
+    publierFeuille(
+      moi.current!,
+      // `accessibilityViewIsModal` : ce que le Modal offrait aux lecteurs
+      // d'écran (le fond devient inerte pour VoiceOver), redéclaré ici.
+      <View style={styles.plein} accessibilityViewIsModal aria-label={title}>
         <Pressable style={styles.voile} onPress={onClose} />
         <Animated.View style={[styles.feuille, { transform: [{ translateY }] }]}>
-          {/* Zone tapable de 44 px : `hitSlop` seul ne fait rien sur web, la
-              poignée ne mesurait que 13 px de haut. */}
           <Pressable
             onPress={onClose}
             accessibilityRole="button"
@@ -78,13 +82,31 @@ export function Sheet({
             {children}
           </ScrollView>
         </Animated.View>
-      </View>
-    </Modal>
-  );
+      </View>,
+    );
+  });
+
+  // Démontage de l'écran appelant (navigation pendant qu'une feuille est
+  // ouverte) : la feuille ne doit pas survivre orpheline à la racine.
+  useEffect(() => {
+    const qui = moi.current!;
+    return () => effacerFeuille(qui);
+  }, []);
+
+  return null;
 }
 
 const styles = StyleSheet.create({
-  voileZone: { flex: 1, justifyContent: 'flex-end' },
+  plein: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'flex-end',
+    zIndex: 1000,
+    elevation: 1000,
+  },
   voile: {
     position: 'absolute',
     top: 0,

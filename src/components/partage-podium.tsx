@@ -139,9 +139,10 @@ export function PartagePodium({ donnees }: { donnees: DonneesPodium }) {
   if (etat === 'impossible') return null;
 
   // Ce que l'image MONTRE, énoncé pour qui ne peut pas la voir. Le classement
-  // de l'écran ne le supplée pas : la feuille est un `Modal`, il est hors de
-  // l'arbre d'accessibilité tant qu'elle est ouverte. Sans cette énumération,
-  // on invite quelqu'un à envoyer à des tiers un contenu qu'il ne peut pas lire.
+  // de l'écran ne le supplée pas : la feuille rend le fond inerte pour les
+  // lecteurs d'écran (`Modal` sur web, `accessibilityViewIsModal` sur natif
+  // depuis N10). Sans cette énumération, on invite quelqu'un à envoyer à des
+  // tiers un contenu qu'il ne peut pas lire.
   const contenuLu = [
     t.races.podiumImageAria.replace('%c', donnees.circuit).replace('%d', donnees.date),
     ...donnees.lignes.map(

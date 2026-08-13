@@ -11,6 +11,7 @@ import { Platform } from 'react-native';
 
 import { captureReferralFromUrl, logError, track } from '@/lib/analytics';
 import { GardeErreur } from '@/components/garde-erreur';
+import { HotePortail } from '@/components/ui/portail-feuille';
 import { colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { rememberPendingRoute, takePendingRoute } from '@/lib/pending-route';
@@ -148,6 +149,11 @@ export default function RootLayout() {
       <AuthProvider>
         <StatusBar style="light" />
         <RootNavigator />
+        {/* L'hôte des feuilles natives (portail-feuille) : APRÈS le
+            navigateur, donc peint PAR-DESSUS tout — barre d'onglets
+            comprise. C'est le service que rendait le Modal natif, retiré
+            car sa fermeture faisait renaître l'application (N10). */}
+        <HotePortail />
       </AuthProvider>
     </GardeErreur>
   );
