@@ -58,6 +58,9 @@ function RootNavigator() {
 
     if (!session) {
       if (!inAuth) {
+        // Journal N9 : l'instant où l'app renvoie un pilote vers la connexion
+        // est LE symptôme vécu (« ça me déconnecte ») — consigner d'où.
+        logError(`redirige:connexion depuis ${path || '(accueil)'}`, 'journal-auth');
         rememberPendingRoute(path); // ex. « race/abc » → on y reviendra après connexion
         // Arrivée par un LIEN D'AMI : cette personne n'a très probablement pas
         // de compte — c'est la raison d'être du lien. L'envoyer sur « Content
@@ -66,7 +69,10 @@ function RootNavigator() {
         router.replace(path.startsWith('invite/') ? '/sign-up' : '/sign-in');
       }
     } else if (hasProfile === false) {
-      if (!inOnboarding) router.replace('/username');
+      if (!inOnboarding) {
+        logError(`redirige:pseudo depuis ${path || '(accueil)'}`, 'journal-auth');
+        router.replace('/username');
+      }
     } else if (hasProfile === true) {
       // Consommer la destination mémorisée dès qu'on est connecté+profilé, quel
       // que soit le groupe : après un retour OAuth (redirection plein écran vers

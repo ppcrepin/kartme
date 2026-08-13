@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { Platform } from 'react-native';
 
 import { t } from '@/i18n';
-import { trackSignup } from '@/lib/analytics';
+import { logError, trackSignup } from '@/lib/analytics';
 import { messageFr } from '@/lib/erreur-fr';
 import { connexionApple } from '@/lib/apple-auth';
 import type { AuthResult } from '@/lib/auth-result';
@@ -42,6 +42,21 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+/**
+ * Journal de bord de la session (campagne TestFlight, N9).
+ *
+ * Les « déconnexions » du natif résistent à deux correctifs successifs
+ * fondés sur des théories plausibles mais invérifiées — faute d'outillage
+ * sur l'appareil. Ce journal écrit chaque événement d'authentification dans
+ * `error_logs` (insertion permise même SANS session, précisément pour capter
+ * l'instant de la perte). Le PO reproduit, exécute un SELECT, et la séquence
+ * réelle des événements remplace les hypothèses. À retirer une fois la cause
+ * confirmée et corrigée — c'est un instrument, pas une fonctionnalité.
+ */
+function journalAuth(message: string): void {
+  logError(message.slice(0, 200), 'journal-auth');
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [initializing, setInitializing] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
@@ -62,7 +77,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // réveil de l'app…) : on ne conclut RIEN. Conclure « pas de profil » sur
     // un simple raté renvoyait un pilote connecté à l'écran de choix du
     // pseudo — vécu comme une déconnexion, alors que sa session était saine.
-    if (error) return;
+    if (error) {
+      journalAuth(`profil:echec ${error.code ?? ''} ${error.message}`.trim());
+      return;
+    }
     // Compte supprimé (RGPD) : on ferme toute session résiduelle (ex. autre
     // appareil encore connecté) au lieu de laisser entrer un compte anonymisé.
     if (data && (data as { deleted_at: string | null }).deleted_at) {
@@ -75,13 +93,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
+    supabase.auth.getSession().then(async ({ data, error }) => {
+      journalAuth(
+        `demarrage:${data.session ? 'session restaurée' : 'AUCUNE session'}` +
+          (error ? ` erreur=${error.message}` : ''),
+      );
       setSession(data.session);
       await refreshProfile(data.session?.user.id);
       setInitializing(false);
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, next) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, next) => {
+      // La séquence brute des événements est LA donnée qui manque : qui a
+      // retiré la session, et à quel instant exact.
+      journalAuth(`evenement:${event}${next ? '' : ' (session PERDUE)'}`);
       setSession(next);
       await refreshProfile(next?.user.id);
     });
@@ -178,6 +203,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    // Distingue, dans le journal, la déconnexion VOULUE (ce bouton) de toute
+    // perte de session subie : si « evenement:SIGNED_OUT » apparaît sans
+    // cette ligne juste avant, quelque chose d'autre a tué la session.
+    journalAuth('signout:demandé par le pilote');
     // Libère l'abonnement push de CET appareil avant de quitter la session :
     // sinon, sur un navigateur partagé, le compte suivant hériterait des
     // notifications de celui-ci (cf. confidentialité). No-op hors web.
