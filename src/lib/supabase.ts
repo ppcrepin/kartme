@@ -30,6 +30,16 @@ export const supabase = createClient(url, anonKey, {
     persistSession: true,
     // Le web récupère la session dans l'URL après une redirection OAuth.
     detectSessionInUrl: Platform.OS === 'web',
+    // NATIF : flux PKCE, ce que `signInWithGoogle` attend. Sans lui,
+    // supabase-js reste en flux « implicite » : après Google, l'app est
+    // rappelée avec les jetons en FRAGMENT (#access_token=…) alors que le
+    // code de connexion cherche `?code=` pour l'échanger — il ne trouve
+    // rien, ne fait RIEN, et le pilote reste sur l'écran de connexion.
+    // Vécu (TestFlight, 13/08) une fois le retour kartsquad:// autorisé
+    // côté Supabase. Le WEB reste en implicite : c'est le flux qui tourne
+    // en production depuis le début (OAuth ET liens de réinitialisation),
+    // on ne le change pas par effet de bord.
+    flowType: Platform.OS === 'web' ? 'implicit' : 'pkce',
   },
 });
 
