@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 /**
  * Client Supabase de KartSquad.
@@ -32,3 +32,23 @@ export const supabase = createClient(url, anonKey, {
     detectSessionInUrl: Platform.OS === 'web',
   },
 });
+
+// Sur NATIF, le rafraîchissement du jeton doit suivre le cycle de vie de
+// l'application — c'est le branchement que la documentation Supabase impose
+// pour React Native, et son absence était un bug : l'app passe en arrière-
+// plan, iOS gèle ses minuteurs, le jeton expire… et au retour, les requêtes
+// partent avec un jeton mort. Symptôme vécu (TestFlight, build 8) : des
+// « déconnexions » à répétition, déclenchées en apparence par une simple
+// fermeture de fenêtre — en réalité par le premier rechargement de données
+// venant après le réveil. `startAutoRefresh` au retour au premier plan
+// rafraîchit immédiatement ce qui doit l'être ; `stopAutoRefresh` évite de
+// laisser tourner un minuteur que le système gèlera de toute façon.
+if (Platform.OS !== 'web') {
+  AppState.addEventListener('change', (etat) => {
+    if (etat === 'active') {
+      supabase.auth.startAutoRefresh();
+    } else {
+      supabase.auth.stopAutoRefresh();
+    }
+  });
+}

@@ -53,11 +53,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setHasProfile(null);
       return;
     }
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('id, deleted_at')
       .eq('id', userId)
       .maybeSingle();
+    // Échec de REQUÊTE (réseau coupé, jeton en cours de rafraîchissement au
+    // réveil de l'app…) : on ne conclut RIEN. Conclure « pas de profil » sur
+    // un simple raté renvoyait un pilote connecté à l'écran de choix du
+    // pseudo — vécu comme une déconnexion, alors que sa session était saine.
+    if (error) return;
     // Compte supprimé (RGPD) : on ferme toute session résiduelle (ex. autre
     // appareil encore connecté) au lieu de laisser entrer un compte anonymisé.
     if (data && (data as { deleted_at: string | null }).deleted_at) {
