@@ -396,9 +396,17 @@ export default function RankScreen() {
                   une erreur. Le « Valider » grisé juste dessous suffit à dire
                   qu'il manque un geste. */}
               <Muted
-                onLayout={(e) =>
-                  setPlancherEmploi((h) => Math.max(h, e.nativeEvent.layout.height))
-                }>
+                onLayout={(e) => {
+                  // La hauteur se LIT ICI, de façon synchrone. La lire dans la
+                  // fonction de mise à jour (`(h) => … e.nativeEvent …`) la
+                  // différait au rendu suivant — et React Native natif a
+                  // recyclé l'événement entre-temps : « Cannot read property
+                  // 'layout' of null », plein écran, à l'ouverture de la
+                  // saisie du classement (TestFlight, build 13). Le web ne
+                  // recycle pas ses événements, d'où un site sain.
+                  const hauteur = e.nativeEvent.layout.height;
+                  setPlancherEmploi((h) => Math.max(h, hauteur));
+                }}>
                 {isCorrect
                   ? t.races.correctHint
                   : enAttenteDeGeste
